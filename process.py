@@ -207,9 +207,15 @@ def spectrogram(data, windowSize=512, overlap=None, fs=48000, windowType='hannin
         return f,t,spect
         
         
+def acoustic_complexity(spect,tstep,t):
+    ts = np.arange(0,spect.shape[1]-tstep,tstep)
+    subspecs = [np.array(spect[:,t:t+tstep]) for t in ts]
+    ts += tstep//2
+    aci = [np.sum((np.sum(abs(np.diff(subspec)), axis=1) / np.sum(subspec, axis=1))) for subspec in subspecs] 
+    return t[ts], np.array(aci)
     
     
-# Ambisonics
+
 
 
     
