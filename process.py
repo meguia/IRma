@@ -190,31 +190,46 @@ def apply_bands(data, bankname='fbank_10_1', fs=48000, norma=True):
 def spectrogram(data, windowSize=512, overlap=None, fs=48000, windowType='hanning', normalized=False, logf=False):
     """
     Computa el espetrograma de la senal data
+    devuelve spec un diccionario con keys 
     """
     #force to power of two
     windowSize = np.power(2,int(np.around(np.log2(windowSize))))
     if overlap is None:
         overlap = windowSize//8
-    f,t,spect = signal.spectrogram(data, fs, window=windowType, nperseg=windowSize, noverlap=overlap)
+    if type(data) is str:
+        fs, data = wavfile.read(ir + '.wav')
+    if data.ndim == 1:
+        data = data[:,np.newaxis] # el array debe ser 2D
+    nsamples, nchan = np.shape(data)
+    nt = int(np.ceil((nsamples-windowSize)/(windowSize-overlap)))
+    # Dict for spectrogram
+    listofkeys = ['nchan','f','t','s','nt','window','type','overlap','log']
+    spec = dict.fromkeys(listofkeys,0 )
+    spec['nchan'] = nchan
+    spec['s'] = np.zeros((nchan,windowSize//2+1,nt))
+    spec['window'] = windowSize
+    spec['type'] = windowType
+    spec['overlap'] = overlap
+    spec['logf'] = logf
+    spec['nt'] = nt
+    for n in np.arange(nchan):       
+        f,t,spectro = signal.spectrogram(data[:,n], fs, window=windowType, nperseg=windowSize, noverlap=overlap)
+        print(spectro.shape)
+        if logf:
+            lf = np.power(2,np.linspace(np.log2(f[1]),np.log2(f[-1]),windowSize+1))
+            fint = interp1d(f,spectro.T,fill_value="extrapolate")
+            spec['f'] = lf
+            spec['s'][n] = fint(lf)
+        else:
+            spec['f'] = f
+            spec['s'][n] = spectro
     if normalized:
-        spect = spect/np.max(spect)
-    if logf:
-        lf = np.power(2,np.linspace(np.log2(f[1]),np.log2(f[-1]),windowSize))
-        fint = interp1d(f,spect.T,fill_value="extrapolate")
-        spect = fint(lf)
-        return lf,t,spect.T
-    else:
-        return f,t,spect
+        spec['s'] = spec['s']/np.max(spec['s'])
+    spec['t'] = t    
+    return spec    
         
-        
-def acoustic_complexity(spect,tstep,t):
-    ts = np.arange(0,spect.shape[1]-tstep,tstep)
-    subspecs = [np.array(spect[:,t:t+tstep]) for t in ts]
-    ts += tstep//2
-    aci = [np.sum((np.sum(abs(np.diff(subspec)), axis=1) / np.sum(subspec, axis=1))) for subspec in subspecs] 
-    return t[ts], np.array(aci)
-    
-    
+
+
 
 
 
