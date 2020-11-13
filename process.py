@@ -4,8 +4,29 @@ import pandas as pd
 from scipy import signal
 from scipy.io import wavfile
 from scipy.stats import linregress
+from scipy.interpolate import interp1d
 from matplotlib import pyplot as plt
 from IPython.display import display, HTML
+
+def time_rec(filerec,duration,delay=0,chanin=[0],fs=48000,sdevice=None,write_wav=True):
+    '''
+    funcion grabar durante dur segundos en una cantidad arbitraria de canales de entrada dada por chanin (lista)
+    en archivo filerec. 
+    '''
+    #agregar una alerta de clipeo y la opcion de correr dummy
+    if sdevice is not None:
+        sd.default.device = sdevice
+    sd.default.samplerate = fs
+    nchanin = chanin[-1]+1
+    # loop sobre repeat
+    rec = sd.rec(int(duration*fs),samplerate=fs,channels=nchanin,dtype='float64') # graba con 64 bits para proceso
+    sd.wait() # espera que termine la grabacion
+    print('listo')
+    rec = rec[:,chanin]
+    if write_wav:
+        wavfile.write(filerec + '.wav',fs,rec) # guarda el array grabado en wav con 32 bits
+    # fin loop   
+    return rec
 
 def play_rec(fileplay,filerec,delay=0,repeat=1,chanout=[0],chanin=[0],revtime=2.0,sdevice=None,write_wav=True):
     '''
@@ -84,10 +105,10 @@ def irsweep(sweep,invsweepfft):
     return ir
 
 # funcion para hacer time stretch y compensar variaciones de temperatura
-def ir_stretch(ir,threshold):
+#def ir_stretch(ir,threshold):
 
 # funcion para detectar outliers en un conjunto de IR
-def ir_average(ir,reject_outliers=True,threshold): # con opcion de eliminar outliers
+#def ir_average(ir,reject_outliers=True,threshold): # con opcion de eliminar outliers
 
 
 #filtros
@@ -164,10 +185,33 @@ def apply_bands(data, bankname='fbank_10_1', fs=48000, norma=True):
         data_filt[:,n] = temp
     # agregar fadeinfadeout    
     return data_filt    
+# Spectrogram
 
+def spectrogram(data, windowSize=512, overlap=None, fs=48000, windowType='hanning', normalized=False, logf=False):
+    """
+    Computa el espetrograma de la senal data
+    """
+    #force to power of two
+    windowSize = np.power(2,int(np.around(np.log2(windowSize))))
+    if overlap is None:
+        overlap = windowSize//8
+    f,t,spect = signal.spectrogram(data, fs, window=windowType, nperseg=windowSize, noverlap=overlap)
+    if normalized:
+        spect = spect/np.max(spect)
+    if logf:
+        lf = np.power(2,np.linspace(np.log2(f[1]),np.log2(f[-1]),windowSize))
+        fint = interp1d(f,spect.T,fill_value="extrapolate")
+        spect = fint(lf)
+        return lf,t,spect.T
+    else:
+        return f,t,spect
+        
+        
+    
+    
 # Ambisonics
 
-def A2B():
+
     
     
     
