@@ -11,9 +11,21 @@ def acoustic_complexity(spec,tstep):
     return spec['t'][ts], aci
     
     
-def bioacoustic_index(spect, f, fmin=1000, fmax=8000):
-    
-    return
+def bioacoustic_index(spec, tstep, frange=[2000,8000]):
+    if spec['logf']:
+        raise ValueError('NDSI compute for linear frequency only')
+    ts = np.arange(0,spec['nt']-tstep,tstep)
+    nts = len(ts)
+    df = spec['f'][1]
+    f_bin = [int(np.around(a/df)) for a in frange]
+    BI = np.zeros((spec['nchan'],nts))
+    for n in np.arange(spec['nchan']):
+        spec_BI = 20*np.log10(spec['s'][n,:]/np.max(spec['s']))
+        spec_BI_mean = 10*np.log10(np.mean(np.power(10,(spec_BI/10)), axis=1))
+        spec_BI_mean_segment =  spec_BI_mean[f_bin[0]:f_bin[1]]
+        spec_BI_mean_segment_normalized = spec_BI_mean_segment - min(spec_BI_mean_segment)
+        BI[n,:] = np.sum(spec_BI_mean_segment_normalized/df)
+    return spec['t'][ts],BI
 
 def spectral_entropy(spect):
     return
@@ -23,7 +35,7 @@ def temporal_entropy(spect):
 
 def ndsi(spec, tstep, anthrophony=[1000,2000], biophony=[2000,11000]):
     """
-    Using Spectrogram
+    Computes NDSI Using Spectrogram 
     """
     if spec['logf']:
         raise ValueError('NDSI compute for linear frequency only')
@@ -40,5 +52,13 @@ def ndsi(spec, tstep, anthrophony=[1000,2000], biophony=[2000,11000]):
       
     return spec['t'][ts],ndsi
     
-
+def gini(values):
+    """
+    Compute the Gini index of values.
+    """
+    y = sorted(values)
+    n = len(y)
+    G = np.sum([i*j for i,j in zip(y,range(1,n+1))])
+    G = 2 * G / np.sum(y) - (n+1)
+    return G/n
     
