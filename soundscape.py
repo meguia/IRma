@@ -18,13 +18,13 @@ def bioacoustic_index(spec, tstep, frange=[2000,8000]):
     nts = len(ts)
     df = spec['f'][1]
     f_bin = [int(np.around(a/df)) for a in frange]
-    BI = np.zeros((spec['nchan'],nts))
+    BI = np.zeros((spec['nchan'],nts)) 
     for n in np.arange(spec['nchan']):
         spec_BI = 20*np.log10(spec['s'][n,:]/np.max(spec['s']))
-        spec_BI_mean = 10*np.log10(np.mean(np.power(10,(spec_BI/10)), axis=1))
-        spec_BI_mean_segment =  spec_BI_mean[f_bin[0]:f_bin[1]]
-        spec_BI_mean_segment_normalized = spec_BI_mean_segment - min(spec_BI_mean_segment)
-        BI[n,:] = np.sum(spec_BI_mean_segment_normalized/df)
+        spec_BI_mean = np.array([10*np.log10(np.mean(np.power(10,(spec_BI[:,t0:t0+tstep]/10)), axis=1))for t0 in ts])
+        spec_BI_mean_segment =  spec_BI_mean[:,f_bin[0]:f_bin[1]]
+        spec_BI_mean_segment_normalized = spec_BI_mean_segment - np.min(spec_BI_mean_segment)
+        BI[n,:] = np.sum(spec_BI_mean_segment_normalized/df,axis=1)
     return spec['t'][ts],BI
 
 def spectral_entropy(spect):
