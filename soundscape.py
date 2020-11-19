@@ -30,8 +30,6 @@ def bioacoustic_index(spec, tstep, frange=[2000,8000]):
 def spectral_entropy(spect):
     return
 
-def temporal_entropy(spect):
-    return
 
 def ndsi(spec, tstep, anthrophony=[1000,2000], biophony=[2000,11000]):
     """

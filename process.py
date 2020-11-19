@@ -216,10 +216,10 @@ def spectrogram(data, windowSize=512, overlap=None, fs=48000, windowType='hannin
         f,t,spectro = signal.spectrogram(data[:,n], fs, window=windowType, nperseg=windowSize, noverlap=overlap)
         print(spectro.shape)
         if logf:
-            lf = np.power(2,np.linspace(np.log2(f[1]),np.log2(f[-1]),windowSize+1))
+            lf = np.power(2,np.linspace(np.log2(f[1]),np.log2(f[-1]),windowSize//2+1))
             fint = interp1d(f,spectro.T,fill_value="extrapolate")
             spec['f'] = lf
-            spec['s'][n] = fint(lf)
+            spec['s'][n] = fint(lf).T
         else:
             spec['f'] = f
             spec['s'][n] = spectro
