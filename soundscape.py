@@ -56,7 +56,8 @@ def gini(values,ax=0):
     """
     values.sort(axis=ax)
     n = values.shape[ax]
-    G = np.arange(1, n+1).reshape(-1,1)*np.ones_like(values)
+    idx = np.arange(1, n+1).reshape(-1,1)*np.ones_like(values)
+    G = np.sum(values*idx,axis=ax)
     G = 2*G/np.sum(values,axis=ax) - (n+1)
     return G/n
 
@@ -66,7 +67,7 @@ def acoustic_diversity_even(spec, tstep, max_freq=10000, db_threshold = -50, fre
     """
     subspec,t = subspecs(spec,tstep)
     bands_Hz = range(0, max_freq, freq_step)
-    bands_bin = [f / spec['df'] for f in bands_Hz]
+    bands_bin = [int(np.around(f / spec['df'])) for f in bands_Hz]
     spec_AEI = 20*np.log10(subspec/np.amax(subspec,axis=(-2,-1))[...,np.newaxis,np.newaxis])
     spec_AEI_bands = np.array([spec_AEI[:,:,bb:bb+bands_bin[1],:] for bb in bands_bin])
     val = np.average(spec_AEI_bands>db_threshold,axis=(-2,-1)).swapaxes(0,1)
@@ -108,7 +109,7 @@ def indices(spec,tstep,ACI=True,BI=True,NDSI=True,AEI=True,ADI=True,HS=True,HT=T
         ind['hs'] = -np.sum(spec_av*np.log2(spec_av),axis=-1)/np.log2(spec['nf'])    
     if AEI or ADI:
         bands_Hz = range(0, max_f, f_step)
-        bands_bin = [f / spec['df'] for f in bands_Hz]
+        bands_bin = [int(np.around(f / spec['df'])) for f in bands_Hz]
         spec_AEI = 20*np.log10(spec_norm)
         spec_AEI_bands = np.array([spec_AEI[:,:,bb:bb+bands_bin[1],:] for bb in bands_bin])
         val = np.average(spec_AEI_bands>db_thresh,axis=(-2,-1)).swapaxes(0,1)
