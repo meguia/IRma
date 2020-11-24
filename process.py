@@ -55,7 +55,7 @@ def play_rec(fileplay,filerec,delay=0,repeat=1,chanout=[0],chanin=[0],revtime=2.
     # fin loop   
     return rec
 
-def ir_extract(rec,fileinv,fileout='ir_out',loopback=None,dur=None):
+def ir_extract(rec,fileinv,fileout='ir_out',loopback=None,dur=None,fs=48000):
     '''
     extrae la respuesta impulso a partir de la grabacion del sweep (rec) y el filtro inverso 
     almacenado en fileinv (archivo npy), ambos parametros obligatorios.
@@ -172,7 +172,7 @@ def apply_bands(data, bankname='fbank_10_1', fs=48000, norma=True):
     try:     
         fbank = np.load(bankname + '.npz')
     except:
-        make_filterbank(bankname=fbank)
+        make_filterbank(bankname=bankname)
         fbank = np.load(bankname + '.npz')
     data = data - np.mean(data)
     nsamples = len(data)
@@ -197,7 +197,7 @@ def spectrogram(data, windowSize=512, overlap=None, fs=48000, windowType='hannin
     if overlap is None:
         overlap = windowSize//8
     if type(data) is str:
-        fs, data = wavfile.read(ir + '.wav')
+        fs, data = wavfile.read(data + '.wav')
     if data.ndim == 1:
         data = data[:,np.newaxis] # el array debe ser 2D
     nsamples, nchan = np.shape(data)
