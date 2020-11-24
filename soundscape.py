@@ -1,31 +1,29 @@
 import numpy as np
 from scipy import signal
 
-def timewindow(spec,tstep):
+def subspecs(spec,tstep):
     ts = np.arange(0,spec['nt']-tstep,tstep)
     nts = len(ts)
+    subs = np.array([spec['s'][:,:,t0:t0+tstep] for t0 in ts])
     ts += tstep//2    
-    return ts,spec['t'][ts],nts
+    return subs.swapaxes(0,1),spec['t'][ts],nts
 
 
 def acoustic_complexity(spec,tstep):
-    ts,t,nts = timewindow(spec,tstep)
-    ACI = np.zeros((spec['nchan'],nts))
-    for n in np.arange(spec['nchan']):
-        subspecs = [np.array(spec['s'][n,:,t0:t0+tstep]) for t0 in ts]
-        ACI[n,:] = [np.sum((np.sum(abs(np.diff(subspec)), axis=1) / np.sum(subspec, axis=1))) for subspec in subspecs] 
+    subspec,t,nts = subspecs(spec,tstep)
+    ACI = np.sum(np.sum(np.diff(subspec),axis=-1)/np.sum(subspec[0],axis=-1),axis=-1)
     return t, ACI
     
     
 def bioacoustic_index(spec, tstep, frange=[2000,8000]):
     if spec['logf']:
         raise ValueError('NDSI compute for linear frequency only')
-    ts,t,nts = timewindow(spec,tstep)
+    subspec,t,nts = subspecs(spec,tstep)
     f_bin = [int(np.around(a/spec['df'])) for a in frange]
     BI = np.zeros((spec['nchan'],nts)) 
     for n in np.arange(spec['nchan']):
-        spec_BI = 20*np.log10(spec['s'][n,:]/np.max(spec['s']))
-        spec_BI_mean = np.array([10*np.log10(np.mean(np.power(10,(spec_BI[:,t0:t0+tstep]/10)), axis=1))for t0 in ts])
+        spec_BI = np.array([20*np.log10(ss/np.max(ss)) for ss in subspec[n]])
+        spec_BI_mean = 10*np.log10(np.mean(np.power(10,spec_BI), axis=-1))
         spec_BI_mean_segment =  spec_BI_mean[:,f_bin[0]:f_bin[1]]
         spec_BI_mean_segment_normalized = spec_BI_mean_segment - np.min(spec_BI_mean_segment)
         BI[n,:] = np.sum(spec_BI_mean_segment_normalized/spec['df'],axis=1)
@@ -35,13 +33,12 @@ def spectral_entropy(spec, tstep):
     """
     Computes Spectral entropy of Shannon from spectrogram spect
     """
-    ts,t,nts = timewindow(spec,tstep)
+    subspec,t,nts = subspecs(spec,tstep)
     N = spec['nf']
     HS = np.zeros((spec['nchan'],nts))
     for n in np.arange(spec['nchan']):
-        spec_av =  np.array([np.sum(spec['s'][n,:,t0:t0+tstep],axis=-1) for t0 in ts])
-        spec_avav = np.sum(spec_av,axis=-1)
-        spec_av /= spec_avav[:,np.newaxis]
+        spec_av =  np.sum(subspec[n],axis=-1)
+        spec_av /= np.sum(spec_av,axis=-1)[:,np.newaxis]
         HS[n,:] = -np.sum([y*np.log2(y) for y in spec_av],axis=1)/np.log2(N)
     return t,HS
 
