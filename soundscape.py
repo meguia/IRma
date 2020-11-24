@@ -3,14 +3,13 @@ from scipy import signal
 
 def subspecs(spec,tstep):
     ts = np.arange(0,spec['nt']-tstep,tstep)
-    nts = len(ts)
     subs = np.array([spec['s'][:,:,t0:t0+tstep] for t0 in ts])
     ts += tstep//2    
-    return subs.swapaxes(0,1),spec['t'][ts],nts
+    return subs.swapaxes(0,1),spec['t'][ts]
 
 
 def acoustic_complexity(spec,tstep):
-    subspec,t,nts = subspecs(spec,tstep)
+    subspec,t = subspecs(spec,tstep)
     ACI = np.sum(np.sum(np.diff(subspec),axis=-1)/np.sum(subspec[0],axis=-1),axis=-1)
     return t, ACI
     
@@ -18,7 +17,7 @@ def acoustic_complexity(spec,tstep):
 def bioacoustic_index(spec, tstep, frange=[2000,8000]):
     if spec['logf']:
         raise ValueError('NDSI compute for linear frequency only')
-    subspec,t,nts = subspecs(spec,tstep)
+    subspec,t = subspecs(spec,tstep)
     f_bin = [int(np.around(a/spec['df'])) for a in frange]
     spec_norm = subspec/np.amax(subspec,axis=(-2,-1))[...,np.newaxis,np.newaxis]
     spec_mean = 10*np.log10(np.mean(np.square(spec_norm), axis=-1))
@@ -76,5 +75,52 @@ def acoustic_diversity_even(spec, tstep, max_freq=10000, db_threshold = -50, fre
     val[val<tol]=tol
     ADI = np.sum(-val/np.sum(val,axis=(0,1))*np.log(val/np.sum(val,axis=(0,1))),axis=1)
     return t, AEI, ADI       
+
+
+def indices(spec,tstep,ACI=True,BI=True,NDSI=True,AEI=True,ADI=True,HS=True,HT=True,H=True,
+            fbi=[2000,8000],fanthro=[1000,2000], fbio=[2000,11000],max_f=10000, db_thresh = -50, f_step=1000):
+    """
+    Compute ALL indices
+    """
+    listofkeys = ['nchan','t','aci','bi','ndsi','aei','adi','hs','ht','h']
+    ind = dict.fromkeys(listofkeys,0)
+    subspec,t = subspecs(spec,tstep)
+    ind['t']=t
+    ind['nchan']=spec['nchan']
+    spec_norm = subspec/np.amax(subspec,axis=(-2,-1))[...,np.newaxis,np.newaxis]
+    if ACI:
+        ind['aci'] = np.sum(np.sum(np.diff(subspec),axis=-1)/np.sum(subspec[0],axis=-1),axis=-1)
+    if BI:
+        f_bin = [int(np.around(a/spec['df'])) for a in fbi]
+        spec_mean = 10*np.log10(np.mean(np.square(spec_norm), axis=-1))
+        spec_mean_segment =  spec_mean[...,f_bin[0]:f_bin[1]]
+        spec_mean_segment_norm = spec_mean_segment - np.min(spec_mean_segment)
+        ind['bi'] = np.sum(spec_mean_segment_norm/spec['df'],axis=-1) 
+    if NDSI:
+        anthro_bin = [int(np.around(a/spec['df'])) for a in fanthro]
+        bio_bin = [int(np.around(a/spec['df'])) for a in fbio]
+        anthro = np.sum(subspec[:,:,anthro_bin[0]:anthro_bin[1],:],axis=(-2,-1))
+        bio = np.sum(subspec[:,:,bio_bin[0]:bio_bin[1],:],axis=(-2,-1))
+        ind['ndsi'] = (bio-anthro)/(bio+anthro)
+    if HS:
+        spec_av =  np.sum(subspec,axis=-1)
+        spec_av /= np.sum(spec_av,axis=-1)[...,np.newaxis]
+        ind['hs'] = -np.sum(spec_av*np.log2(spec_av),axis=-1)/np.log2(spec['nf'])    
+    if AEI or ADI:
+        bands_Hz = range(0, max_f, f_step)
+        bands_bin = [f / spec['df'] for f in bands_Hz]
+        spec_AEI = 20*np.log10(spec_norm)
+        spec_AEI_bands = np.array([spec_AEI[:,:,bb:bb+bands_bin[1],:] for bb in bands_bin])
+        val = np.average(spec_AEI_bands>db_thresh,axis=(-2,-1)).swapaxes(0,1)
+        if AEI:
+            ind['aei']=gini(val,ax=1)
+        if ADI:
+            tol = 1e-8
+            val[val<tol]=tol
+            ind['adi'] = np.sum(-val/np.sum(val,axis=(0,1))*np.log(val/np.sum(val,axis=(0,1))),axis=1)
+    return ind
+
+
+
 
 
