@@ -203,10 +203,11 @@ def spectrogram(data, windowSize=512, overlap=None, fs=48000, windowType='hannin
     nsamples, nchan = np.shape(data)
     nt = int(np.ceil((nsamples-windowSize)/(windowSize-overlap)))
     # Dict for spectrogram
-    listofkeys = ['nchan','f','t','s','nt','window','type','overlap','log']
+    listofkeys = ['nchan','f','t','s','nt','nf','df','window','type','overlap','log']
     spec = dict.fromkeys(listofkeys,0 )
     spec['nchan'] = nchan
-    spec['s'] = np.zeros((nchan,windowSize//2+1,nt))
+    spec['nf'] = windowSize//2+1
+    spec['s'] = np.zeros((nchan,spec['nf'],nt))
     spec['window'] = windowSize
     spec['type'] = windowType
     spec['overlap'] = overlap
@@ -214,9 +215,11 @@ def spectrogram(data, windowSize=512, overlap=None, fs=48000, windowType='hannin
     spec['nt'] = nt
     for n in np.arange(nchan):       
         f,t,spectro = signal.spectrogram(data[:,n], fs, window=windowType, nperseg=windowSize, noverlap=overlap)
+        spec['t'] = t
+        spec['df'] = f[1]
         print(spectro.shape)
         if logf:
-            lf = np.power(2,np.linspace(np.log2(f[1]),np.log2(f[-1]),windowSize//2+1))
+            lf = np.power(2,np.linspace(np.log2(f[1]),np.log2(f[-1]),spec['nf']))
             fint = interp1d(f,spectro.T,fill_value="extrapolate")
             spec['f'] = lf
             spec['s'][n] = fint(lf).T
@@ -224,8 +227,7 @@ def spectrogram(data, windowSize=512, overlap=None, fs=48000, windowType='hannin
             spec['f'] = f
             spec['s'][n] = spectro
     if normalized:
-        spec['s'] = spec['s']/np.max(spec['s'])
-    spec['t'] = t    
+        spec['s'] = spec['s']/np.max(spec['s'])    
     return spec    
         
 
