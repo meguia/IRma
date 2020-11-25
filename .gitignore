@@ -131,3 +131,4 @@ dmypy.json
 *.ipynb
 .vscode/settings.json
 *.ipynb
+*.ipynb
