@@ -8,6 +8,25 @@ from scipy.interpolate import interp1d
 from matplotlib import pyplot as plt
 from IPython.display import display, HTML
 
+def load_pcm(file,nchan,nbytes=4):
+    """
+    Function to load a raw PCM audio file with nchan channels and nbytes little endian
+    """
+    data=np.memmap(file, dtype='u1', mode='r')
+    nsamples=data.shape[0]//(nchan*nbytes)
+    if nbytes==4:
+        realdata=np.reshape(data.view(np.int32),(nsamples,nchan))
+    elif nbytes==2:
+        realdata=np.reshape(data.view(np.int16),(nsamples,nchan))
+    elif nbytes==1:
+        realdata=np.reshape(data.view(np.int8),(nsamples,nchan))
+    else:
+        raise Exception("Only 4,2 or 1 bytes allowed")
+    return realdata
+
+
+
+
 def time_rec(filerec,duration,delay=0,chanin=[0],fs=48000,sdevice=None,write_wav=True):
     '''
     funcion grabar durante dur segundos en una cantidad arbitraria de canales de entrada dada por chanin (lista)
@@ -161,7 +180,6 @@ def A_weighting(fs=48000):
     z_d, p_d, k_d = signal.bilinear_zpk(z, p, k, fs)
     return signal.zpk2sos(z_d, p_d, k_d)
    
-
 
 
 def apply_bands(data, bankname='fbank_10_1', fs=48000, norma=True):
