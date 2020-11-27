@@ -47,15 +47,17 @@ def spectrogram(data, windowSize=512, overlap=None, fs=48000, windowType='hannin
             spec['env'][n] = spec['env']/np.max(spec['env'][n])    
     return spec        
 
-def subspecs(spec,tstep,overlap=0.5):
+def subspecs(spec,**kwargs):
     """
     Creates subspectrograms and subenvelopes from spec of window size tstep/(1-overlap) with time step tstep
     """
-    twin = int(np.around(tstep/(1-overlap)))
-    ts = np.arange(0,spec['nt']-twin,tstep)
-    subs = np.array([spec['s'][:,:,t0:t0+twin] for t0 in ts])
-    subenv = np.array([spec['env'][:,t0:t0+twin] for t0 in ts])
-    ts += twin//2    
+    halfwin = kwargs['half_window']
+    nwin = kwargs['number_of_windows']
+    envwin = halfwin*kwargs['windowSize']
+    ts = np.linspace(halfwin,spec['nt']-halfwin,nwin,dtype='int')
+    te = np.linspace(envwin,spec['env'].shape[1]-envwin,nwin,dtype='int')
+    subs = np.array([spec['s'][:,:,t0-halfwin:t0+halfwin] for t0 in ts])
+    subenv = np.array([spec['env'][:,t0-envwin:t0+envwin] for t0 in te])
     return subs.swapaxes(0,1),subenv.swapaxes(0,1),spec['t'][ts]
 
     
@@ -70,13 +72,13 @@ def gini(values,ax=0):
     G = 2*G/np.sum(values,axis=ax) - (n+1)
     return G/n
 
-def indices(spec,tstep,**kwargs):
+def indices(spec,**kwargs):
     """
     Compute ALL indices
     """
     listofkeys = ['nchan','t','aci','bi','ndsi','aei','adi','hs','ht','sc','db']
     ind = dict.fromkeys(listofkeys,0)
-    subspec,subenv,t = subspecs(spec,tstep)
+    subspec,subenv,t = subspecs(spec,**kwargs)
     ind['t']=t
     ind['nchan']=spec['nchan']
     pars = kwargs['Parameters']
