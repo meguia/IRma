@@ -53,6 +53,34 @@ def subspecs(spec,tstep,overlap=0.5):
     ts += twin//2    
     return subs.swapaxes(0,1),spec['t'][ts]
 
+    
+def gini(values,ax=0):
+    """
+    Compute the Gini index of values.
+    """
+    values.sort(axis=ax)
+    n = values.shape[ax]
+    idx = np.arange(1, n+1).reshape(-1,1)*np.ones_like(values)
+    G = np.sum(values*idx,axis=ax)
+    G = 2*G/np.sum(values,axis=ax) - (n+1)
+    return G/n
+
+def acoustic_diversity_even(spec, tstep, max_freq=10000, db_threshold = -50, freq_step=1000):
+    """
+    Compute the Acoustic Evenness Index AEI and Acoustic Diversity Index ADI
+    """
+    subspec,t = subspecs(spec,tstep)
+    bands_Hz = range(0, max_freq, freq_step)
+    bands_bin = [int(np.around(f / spec['df'])) for f in bands_Hz]
+    spec_AEI = 20*np.log10(subspec/np.amax(subspec,axis=(-2,-1))[...,np.newaxis,np.newaxis])
+    spec_AEI_bands = np.array([spec_AEI[:,:,bb:bb+bands_bin[1],:] for bb in bands_bin])
+    val = np.average(spec_AEI_bands>db_threshold,axis=(-2,-1)).swapaxes(0,1)
+    AEI = gini(val,ax=1)
+    tol = 1e-8
+    val[val<tol]=tol
+    ADI = np.sum(-val/np.sum(val,axis=(0,1))*np.log(val/np.sum(val,axis=(0,1))),axis=1)
+    return t, AEI, ADI       
+
 
 def indices(spec,tstep,**kwargs):
     """
