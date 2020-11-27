@@ -34,7 +34,6 @@ def spectrogram(data, windowSize=512, overlap=None, fs=48000, windowType='hannin
         spec['t'] = t
         spec['df'] = f[1]
         spec['env'][n] = env
-        print(spectro.shape)
         if logf:
             lf = np.power(2,np.linspace(np.log2(f[1]),np.log2(f[-1]),spec['nf']))
             fint = interp1d(f,spectro.T,fill_value="extrapolate")
