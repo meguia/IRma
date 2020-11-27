@@ -30,4 +30,5 @@ Indices:
   max_freq: 10000
   freq_step: 1000
   db_threshold: -50
+  tol: 1e-12
 ...

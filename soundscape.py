@@ -101,7 +101,8 @@ def indices(spec,tstep,**kwargs):
         spec_av /= np.sum(spec_av,axis=-1)[...,np.newaxis]
         ind['hs'] = -np.sum(spec_av*np.log2(spec_av),axis=-1)/np.log2(spec['nf']) 
     if 'HT' in pars:
-        ind['ht'] = np.sum(subenv*np.log2(subenv),axis=-1)/np.log2(subenv.shape[-1])
+        subenv[subenv<kwargs['tol']]=kwargs['tol']
+        ind['ht'] = -np.sum(subenv*np.log2(subenv),axis=-1)/np.log2(subenv.shape[-1])
     if 'AEI' in pars or 'ADI' in pars:
         bands_Hz = range(0, kwargs['max_freq'], kwargs['freq_step'])
         bands_bin = [int(np.around(f / spec['df'])) for f in bands_Hz]
@@ -111,8 +112,7 @@ def indices(spec,tstep,**kwargs):
         if 'AEI' in pars:
             ind['aei']=gini(val,ax=1)
         if 'ADI' in pars:
-            tol = 1e-8
-            val[val<tol]=tol
+            val[val<kwargs['tol']]=kwargs['tol']
             ind['adi'] = np.sum(-val/np.sum(val,axis=(0,1))*np.log(val/np.sum(val,axis=(0,1))),axis=1)
     return ind
 
