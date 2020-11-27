@@ -1,0 +1,33 @@
+
+---
+Filtering:
+  type: butterworth
+  order: 8
+  frequency: 300
+
+Spectrogram:
+  windowSize: 1024
+  overlap: 0
+  fs: 48000
+  windowType: hanning
+  normalized: False
+  logf: False
+
+Indices:
+  Parameters:
+    - ACI
+    - ADI
+    - AEI
+    - BI
+    - NDSI
+    - HS
+    - HT
+    - H
+
+  freq_BI: [2000,8000]
+  freq_anthro: [1000,2000]
+  freq_bio: [2000,11000]
+  max_freq: 10000
+  freq_step: 1000
+  db_threshold: -50
+...
