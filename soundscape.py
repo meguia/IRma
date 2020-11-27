@@ -74,13 +74,15 @@ def indices(spec,tstep,**kwargs):
     """
     Compute ALL indices
     """
-    listofkeys = ['nchan','t','aci','bi','ndsi','aei','adi','hs','ht']
+    listofkeys = ['nchan','t','aci','bi','ndsi','aei','adi','hs','ht','sc','env']
     ind = dict.fromkeys(listofkeys,0)
     subspec,subenv,t = subspecs(spec,tstep)
     ind['t']=t
     ind['nchan']=spec['nchan']
     pars = kwargs['Parameters']
     spec_norm = subspec/np.amax(subspec,axis=(-2,-1))[...,np.newaxis,np.newaxis]
+    ind['sc'] = np.sum(subspec*spec['f'][...,np.newaxis],axis=(-2,-1))/np.sum(subspec,axis=(-2,-1))
+    ind['env'] = np.mean(subenv,axis=-1)
     if 'ACI' in pars:
         ind['aci'] = np.sum(np.sum(np.diff(subspec),axis=-1)/np.sum(subspec[0],axis=-1),axis=-1)
     if 'BI' in pars:
