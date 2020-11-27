@@ -6,7 +6,7 @@ Filtering:
   frequency: 300
 
 Spectrogram:
-  windowSize: 1024
+  windowSize: 512
   overlap: 0
   fs: 48000
   windowType: hanning
