@@ -12,14 +12,15 @@ def load_pcm(file,nchan,nbytes=4):
     """
     Function to load a raw PCM audio file with nchan channels and nbytes little endian
     """
+    nmax = 2**(nbytes*8-1)
     data=np.memmap(file, dtype='u1', mode='r')
     nsamples=data.shape[0]//(nchan*nbytes)
     if nbytes==4:
-        realdata=np.reshape(data.view(np.int32),(nsamples,nchan))
+        realdata=np.reshape(data.view(np.int32)/nmax,(nsamples,nchan)).astype('float64')
     elif nbytes==2:
-        realdata=np.reshape(data.view(np.int16),(nsamples,nchan))
+        realdata=np.reshape(data.view(np.int16)/nmax,(nsamples,nchan)).astype('float32')
     elif nbytes==1:
-        realdata=np.reshape(data.view(np.int8),(nsamples,nchan))
+        realdata=np.reshape(data.view(np.int8)/nmax,(nsamples,nchan)).astype('float32')
     else:
         raise Exception("Only 4,2 or 1 bytes allowed")
     return realdata

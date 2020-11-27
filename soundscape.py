@@ -1,35 +1,39 @@
 import numpy as np
 from scipy import signal
 from scipy.interpolate import interp1d
+from scipy.fftpack import next_fast_len
 
 def spectrogram(data, windowSize=512, overlap=None, fs=48000, windowType='hanning', normalized=False, logf=False):
     """
-    Computa el espectrograma de la senal data
-    devuelve spec un diccionario con keys 
+    Computes the spectrogram and the analytic envelope of the signal
     """
-    #force to power of two
-    windowSize = np.power(2,int(np.around(np.log2(windowSize))))
+    #force to power of next fast FFT length
+    windowSize = next_fast_len(windowSize)
     if overlap is None:
         overlap = windowSize//8
     if data.ndim == 1:
         data = data[:,np.newaxis] # el array debe ser 2D
     nsamples, nchan = np.shape(data)
     nt = int(np.floor((nsamples-windowSize)/(windowSize-overlap)))+1
+    nenv = next_fast_len(nsamples)
     # Dict for spectrogram
-    listofkeys = ['nchan','f','t','s','nt','nf','df','window','type','overlap','log']
+    listofkeys = ['nchan','f','t','s','env','nt','nf','df','window','type','overlap','log']
     spec = dict.fromkeys(listofkeys,0 )
     spec['nchan'] = nchan
     spec['nf'] = windowSize//2+1
     spec['s'] = np.zeros((nchan,spec['nf'],nt))
+    spec['env'] = np.zeros((nchan,nenv))
     spec['window'] = windowSize
     spec['type'] = windowType
     spec['overlap'] = overlap
     spec['logf'] = logf
     spec['nt'] = nt
-    for n in np.arange(nchan):       
+    for n in np.arange(nchan):
+        env = np.abs(signal.hilbert(data[:,n],nenv))  
         f,t,spectro = signal.spectrogram(data[:,n], fs, window=windowType, nperseg=windowSize, noverlap=overlap)
         spec['t'] = t
         spec['df'] = f[1]
+        spec['env'][n] = env
         print(spectro.shape)
         if logf:
             lf = np.power(2,np.linspace(np.log2(f[1]),np.log2(f[-1]),spec['nf']))
@@ -39,19 +43,21 @@ def spectrogram(data, windowSize=512, overlap=None, fs=48000, windowType='hannin
         else:
             spec['f'] = f
             spec['s'][n] = spectro
-    if normalized:
-        spec['s'] = spec['s']/np.max(spec['s'])    
+        if normalized:
+            spec['s'][n] = spec['s']/np.max(spec['s'][n])
+            spec['env'][n] = spec['env']/np.max(spec['env'][n])    
     return spec        
 
 def subspecs(spec,tstep,overlap=0.5):
     """
-    Creates subspectrograms from spec of window size tstep/(1-overlap) with time step tstep
+    Creates subspectrograms and subenvelopes from spec of window size tstep/(1-overlap) with time step tstep
     """
     twin = int(np.around(tstep/(1-overlap)))
     ts = np.arange(0,spec['nt']-twin,tstep)
     subs = np.array([spec['s'][:,:,t0:t0+twin] for t0 in ts])
+    subenv = np.array([spec['env'][:,t0:t0+twin] for t0 in ts])
     ts += twin//2    
-    return subs.swapaxes(0,1),spec['t'][ts]
+    return subs.swapaxes(0,1),subenv.swapaxes(0,1),spec['t'][ts]
 
     
 def gini(values,ax=0):
@@ -65,30 +71,13 @@ def gini(values,ax=0):
     G = 2*G/np.sum(values,axis=ax) - (n+1)
     return G/n
 
-def acoustic_diversity_even(spec, tstep, max_freq=10000, db_threshold = -50, freq_step=1000):
-    """
-    Compute the Acoustic Evenness Index AEI and Acoustic Diversity Index ADI
-    """
-    subspec,t = subspecs(spec,tstep)
-    bands_Hz = range(0, max_freq, freq_step)
-    bands_bin = [int(np.around(f / spec['df'])) for f in bands_Hz]
-    spec_AEI = 20*np.log10(subspec/np.amax(subspec,axis=(-2,-1))[...,np.newaxis,np.newaxis])
-    spec_AEI_bands = np.array([spec_AEI[:,:,bb:bb+bands_bin[1],:] for bb in bands_bin])
-    val = np.average(spec_AEI_bands>db_threshold,axis=(-2,-1)).swapaxes(0,1)
-    AEI = gini(val,ax=1)
-    tol = 1e-8
-    val[val<tol]=tol
-    ADI = np.sum(-val/np.sum(val,axis=(0,1))*np.log(val/np.sum(val,axis=(0,1))),axis=1)
-    return t, AEI, ADI       
-
-
 def indices(spec,tstep,**kwargs):
     """
     Compute ALL indices
     """
-    listofkeys = ['nchan','t','aci','bi','ndsi','aei','adi','hs','ht','h']
+    listofkeys = ['nchan','t','aci','bi','ndsi','aei','adi','hs','ht']
     ind = dict.fromkeys(listofkeys,0)
-    subspec,t = subspecs(spec,tstep)
+    subspec,subenv,t = subspecs(spec,tstep)
     ind['t']=t
     ind['nchan']=spec['nchan']
     pars = kwargs['Parameters']
@@ -110,7 +99,9 @@ def indices(spec,tstep,**kwargs):
     if 'HS' in pars:
         spec_av =  np.sum(subspec,axis=-1)
         spec_av /= np.sum(spec_av,axis=-1)[...,np.newaxis]
-        ind['hs'] = -np.sum(spec_av*np.log2(spec_av),axis=-1)/np.log2(spec['nf'])    
+        ind['hs'] = -np.sum(spec_av*np.log2(spec_av),axis=-1)/np.log2(spec['nf']) 
+    if 'HT' in pars:
+        ind['ht'] = np.sum(subenv*np.log2(subenv),axis=-1)/np.log2(subenv.shape[-1])
     if 'AEI' in pars or 'ADI' in pars:
         bands_Hz = range(0, kwargs['max_freq'], kwargs['freq_step'])
         bands_bin = [int(np.around(f / spec['df'])) for f in bands_Hz]
