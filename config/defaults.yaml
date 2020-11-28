@@ -1,12 +1,17 @@
 
 ---
-Filtering:
-  sr: &fs 48000
+# global
+sr: &fs 48000
+windowSize: &wsize 480
+hipass: False
+
+Filtering: 
+  sr: *fs
   order: 8
   lowcut: 300
 
 Spectrogram:
-  windowSize: &wsize 480
+  windowSize: *wsize
   overlap: 0
   sr: *fs
   windowType: hanning
