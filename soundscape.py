@@ -3,38 +3,41 @@ from scipy import signal
 from scipy.interpolate import interp1d
 from scipy.fftpack import next_fast_len
 
-def spectrogram(data, windowSize=512, overlap=None, fs=48000, windowType='hanning', normalized=False, logf=False):
+def hipass_filter(data, **kwargs):
+    nyq = 0.5 * kwargs['sr']
+    low = kwargs['lowcut'] / nyq
+    sos = signal.butter(kwargs['order'], low, btype='highpass', output='sos')
+    return signal.sosfiltfilt(sos, data, axis=0)
+
+def spectrogram(data, **kwargs):
     """
     Computes the spectrogram and the analytic envelope of the signal
     """
     #force to power of next fast FFT length
-    windowSize = next_fast_len(windowSize)
-    if overlap is None:
-        overlap = windowSize//8
+    windowSize = next_fast_len(kwargs['windowSize'])
+    overlap = kwargs['overlap']
     if data.ndim == 1:
         data = data[:,np.newaxis] # el array debe ser 2D
     nsamples, nchan = np.shape(data)
     nt = int(np.floor((nsamples-windowSize)/(windowSize-overlap)))+1
     nenv = next_fast_len(nsamples)
     # Dict for spectrogram
-    listofkeys = ['nchan','f','t','s','env','nt','nf','df','window','type','overlap','log']
+    listofkeys = ['nchan','f','t','s','env','nt','nf','df','window','overlap']
     spec = dict.fromkeys(listofkeys,0 )
     spec['nchan'] = nchan
     spec['nf'] = windowSize//2+1
     spec['s'] = np.zeros((nchan,spec['nf'],nt))
     spec['env'] = np.zeros((nchan,nenv))
     spec['window'] = windowSize
-    spec['type'] = windowType
     spec['overlap'] = overlap
-    spec['logf'] = logf
     spec['nt'] = nt
     for n in np.arange(nchan):
         env = np.abs(signal.hilbert(data[:,n],nenv))  
-        f,t,spectro = signal.spectrogram(data[:,n], fs, window=windowType, nperseg=windowSize, noverlap=overlap)
+        f,t,spectro = signal.spectrogram(data[:,n], kwargs['sr'], window=kwargs['windowType'], nperseg=windowSize, noverlap=overlap)
         spec['t'] = t
         spec['df'] = f[1]
         spec['env'][n] = env
-        if logf:
+        if kwargs['logf']:
             lf = np.power(2,np.linspace(np.log2(f[1]),np.log2(f[-1]),spec['nf']))
             fint = interp1d(f,spectro.T,fill_value="extrapolate")
             spec['f'] = lf
@@ -42,7 +45,7 @@ def spectrogram(data, windowSize=512, overlap=None, fs=48000, windowType='hannin
         else:
             spec['f'] = f
             spec['s'][n] = spectro
-        if normalized:
+        if kwargs['normalized']:
             spec['s'][n] = spec['s']/np.max(spec['s'][n])
             spec['env'][n] = spec['env']/np.max(spec['env'][n])    
     return spec        

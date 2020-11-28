@@ -1,14 +1,14 @@
 
 ---
 Filtering:
-  type: butterworth
+  sr: &fs 48000
   order: 8
-  frequency: 300
+  lowcut: 300
 
 Spectrogram:
   windowSize: &wsize 480
   overlap: 0
-  fs: 48000
+  sr: *fs
   windowType: hanning
   normalized: False
   logf: False
