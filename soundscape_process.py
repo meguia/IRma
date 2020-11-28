@@ -32,12 +32,13 @@ else:
 with open('acoustic_field/config/defaults.yaml') as file:
     par = yaml.load(file, Loader=yaml.FullLoader)
 
-wsize = par['Spectrogram']['windowSize']
-fs = par['Spectrogram']['fs']
-tstep = int(np.around(args.twin*fs/wsize))
+#tstep = int(np.around(args.twin*par['sr']/par['windowSize']))
+
+if par['hipass']:
+	data[:,0] = soundscape.hipass_filter(data[:,0],**par['Filtering'])
 
 spec = sc.spectrogram(data[:,0],**par['Spectrogram'])
-ind = sc.indices(spec,tstep,**par['Indices'])
+ind = sc.indices(spec,**par['Indices'])
 for n,t in enumerate(ind['t']):
     line = 'time={0:.2f}'.format(t)
     for k in pkeys:
