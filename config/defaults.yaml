@@ -37,6 +37,6 @@ Indices:
   db_threshold: -50
   tol: 1.e-12
   windowSize: *wsize
-  half_window: 500
+  half_window: 500 
   number_of_windows: 11
 ...

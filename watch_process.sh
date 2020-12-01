@@ -5,7 +5,7 @@ inotifywait -m -e close_write \
   --format '%w %f %e %T' \
   /home/pi/Recordings \
 | while read dir filename event datetime; do
-  echo "Procesando: $dir$filename $datetime"	
-  ffmpeg -y -loglevel 0 -f s24le -ar 48k -ac 2 -i $dir$filename -f s16le - |  /home/pi/soundscape_process.py   
+  ffmpeg -y -loglevel 0 -f s24le -ar 48k -ac 2 -i $dir$filename -f s16le - |  /home/pi/soundscape_process.py 
+  mv -n $dir$filename "$dir$(date -d "$(stat -c '%x' $dir$filename)" +"%Y_%m_%d_%H_%M_%S").pcm"
 done
 

@@ -2,9 +2,13 @@
 
 import sys
 import yaml
+import requests
 import argparse
 import numpy as np
 import acoustic_field.soundscape as sc
+from datetime import datetime, timedelta
+
+now = datetime.now()
 
 parser = argparse.ArgumentParser()
 
@@ -14,7 +18,7 @@ parser.add_argument('-twin', type=int, default=5, help="Window Duration in secon
 
 
 args = parser.parse_args()
-
+request_url = 'https://script.google.com/macros/s/AKfycbxz79-99xkm4EpF0bRFuTgjjD0Dvzf3mgsnWZKwratUTklIQxKe/exec'
 pkeys=['aci','bi','ndsi','aei','adi','hs','ht','sc','db']
 nmax = 2**(args.nbytes*8-1)
 
@@ -32,15 +36,23 @@ else:
 with open('acoustic_field/config/defaults.yaml') as file:
     par = yaml.load(file, Loader=yaml.FullLoader)
 
-#tstep = int(np.around(args.twin*par['sr']/par['windowSize']))
 
 if par['hipass']:
 	data[:,0] = soundscape.hipass_filter(data[:,0],**par['Filtering'])
 
 spec = sc.spectrogram(data[:,0],**par['Spectrogram'])
 ind = sc.indices(spec,**par['Indices'])
-for n,t in enumerate(ind['t']):
-    line = 'time={0:.2f}'.format(t)
-    for k in pkeys:
-        line += ' {0}={1:.2f}'.format(k.upper(),ind[k][0,n])
-    print(line)
+dur = ind['nsamples']/par['sr']
+indt = dur - ind['t']
+tlist = [now - timedelta(seconds=t.item()) for t in indt]
+
+par_str = 'time=' + ",".join([t.strftime("%Y-%m-%dT%H:%M:%SZ") for t in tlist])
+for k in pkeys:
+	par_str += '&' + k.upper() + '=' + ",".join([str(s) for s in ind[k][0,:]]) 
+print(par_str)
+req = requests.get(request_url + '?' + par_str)
+print(req)
+
+
+
+
