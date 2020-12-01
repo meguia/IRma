@@ -22,7 +22,7 @@ def spectrogram(data, **kwargs):
     nt = int(np.floor((nsamples-windowSize)/(windowSize-overlap)))+1
     nenv = next_fast_len(nsamples)
     # Dict for spectrogram
-    listofkeys = ['nchan','f','t','s','env','nt','nf','df','window','overlap']
+    listofkeys = ['nchan','nsamples','f','t','s','env','nt','nf','df','window','overlap']
     spec = dict.fromkeys(listofkeys,0 )
     spec['nchan'] = nchan
     spec['nf'] = windowSize//2+1
@@ -31,6 +31,7 @@ def spectrogram(data, **kwargs):
     spec['window'] = windowSize
     spec['overlap'] = overlap
     spec['nt'] = nt
+    spec['nsamples']=nsamples
     for n in np.arange(nchan):
         env = np.abs(signal.hilbert(data[:,n],nenv))  
         f,t,spectro = signal.spectrogram(data[:,n], kwargs['sr'], window=kwargs['windowType'], nperseg=windowSize, noverlap=overlap)
@@ -79,10 +80,11 @@ def indices(spec,**kwargs):
     """
     Compute ALL indices
     """
-    listofkeys = ['nchan','t','aci','bi','ndsi','aei','adi','hs','ht','sc','db']
+    listofkeys = ['nchan','nsamples','t','aci','bi','ndsi','aei','adi','hs','ht','sc','db']
     ind = dict.fromkeys(listofkeys,0)
     subspec,subenv,t = subspecs(spec,**kwargs)
     ind['t']=t
+    ind['nsamples'] = spec['nsamples']
     ind['nchan']=spec['nchan']
     pars = kwargs['Parameters']
     spec_norm = subspec/np.amax(subspec,axis=(-2,-1))[...,np.newaxis,np.newaxis]
