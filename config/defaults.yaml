@@ -2,8 +2,9 @@
 ---
 # global
 sr: &fs 48000
-windowSize: &wsize 480
+windowSize: &wsize 480 # for spectrogram
 hipass: False
+
 
 Filtering: 
   sr: *fs
@@ -21,7 +22,7 @@ Spectrogram:
 Indices:
   Parameters:
     - ACI
-    - ADI
+    - ADI50
     - AEI
     - BI
     - NDSI
@@ -37,6 +38,11 @@ Indices:
   db_threshold: -50
   tol: 1.e-12
   windowSize: *wsize
-  half_window: 500 
+  window: 10 # window for analysis in seconds (int)
+  # nsamples is not known this is a guess
+  # half_window = window*sr/(2*windowSize)
+  # number of windows full = NOWF= nsamples / windowSize
+  # number_of_windows = (NOWF-half_window)/half_window
+  half_window: 500
   number_of_windows: 11
 ...
