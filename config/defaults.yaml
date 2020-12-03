@@ -22,7 +22,7 @@ Spectrogram:
 Indices:
   Parameters:
     - ACI
-    - ADI50
+    - ADI
     - AEI
     - BI
     - NDSI
