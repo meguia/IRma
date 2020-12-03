@@ -91,7 +91,7 @@ def indices(spec,**kwargs):
     ind['sc'] = np.sum(subspec*spec['f'][...,np.newaxis],axis=(-2,-1))/np.sum(subspec,axis=(-2,-1))
     ind['db'] = 20*np.log10(np.mean(subenv,axis=-1))
     if 'ACI' in pars:
-        ind['aci'] = np.sum(np.sum(np.diff(subspec),axis=-1)/np.sum(subspec[0],axis=-1),axis=-1)
+        ind['aci'] = np.sum(np.sum(np.abs(np.diff(subspec)),axis=-1)/np.sum(subspec[0],axis=-1),axis=-1)
     if 'BI' in pars:
         f_bin = [int(np.around(a/spec['df'])) for a in kwargs['freq_BI']]
         spec_mean = 10*np.log10(np.mean(np.square(spec_norm), axis=-1))
