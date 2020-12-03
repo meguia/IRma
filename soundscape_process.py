@@ -14,8 +14,6 @@ parser = argparse.ArgumentParser()
 
 parser.add_argument('-nchan', type=int, default=2, help="Number of Channels")
 parser.add_argument('-nbytes', type=int, default=2, help="Number of Bytes")
-parser.add_argument('-twin', type=int, default=5, help="Window Duration in seconds")
-
 
 args = parser.parse_args()
 request_url = 'https://script.google.com/macros/s/AKfycbxz79-99xkm4EpF0bRFuTgjjD0Dvzf3mgsnWZKwratUTklIQxKe/exec'
@@ -41,6 +39,12 @@ if par['hipass']:
 	data[:,0] = soundscape.hipass_filter(data[:,0],**par['Filtering'])
 
 spec = sc.spectrogram(data[:,0],**par['Spectrogram'])
+# recalculate values of windows based on the number of samples 
+HW = int(np.floor(par['Indices']['window']*par['sr']/(2*par['windowSize'])))
+par['Indices']['half_window'] = HW
+NOWF = int(np.floor(spec['nsamples'] / par['windowSize']))
+par['Indices']['number_of_windows'] = int(np.floor((NOWF-HW)/HW))
+
 ind = sc.indices(spec,**par['Indices'])
 dur = ind['nsamples']/par['sr']
 indt = dur - ind['t']
@@ -48,7 +52,7 @@ tlist = [now - timedelta(seconds=t.item()) for t in indt]
 
 par_str = 'time=' + ",".join([t.strftime("%Y-%m-%dT%H:%M:%SZ") for t in tlist])
 for k in pkeys:
-	par_str += '&' + k.upper() + '=' + ",".join([str(s) for s in ind[k][0,:]]) 
+	par_str += '&' + k.upper() + '=' + ",".join([str(np.around(s,decimals=3)) for s in ind[k][0,:]]) 
 print(par_str)
 req = requests.get(request_url + '?' + par_str)
 print(req)
