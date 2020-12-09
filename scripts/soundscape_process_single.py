@@ -8,10 +8,9 @@ import numpy as np
 import acoustic_field.soundscape as sc
 from datetime import datetime, timedelta
 
-now = datetime.now()
-
 parser = argparse.ArgumentParser()
 
+parser.add_argument('-d', type=str, default=None, help="Date and Time")
 parser.add_argument('-nchan', type=int, default=2, help="Number of Channels")
 parser.add_argument('-nbytes', type=int, default=2, help="Number of Bytes")
 
@@ -34,7 +33,6 @@ else:
 with open('acoustic_field/config/defaults.yaml') as file:
     par = yaml.load(file, Loader=yaml.FullLoader)
 
-
 if par['hipass']:
 	data[:,0] = soundscape.hipass_filter(data[:,0],**par['Filtering'])
 
@@ -48,6 +46,8 @@ par['Indices']['number_of_windows'] = int(np.floor((NOWF-HW)/HW))
 ind = sc.indices(spec,**par['Indices'])
 dur = ind['nsamples']/par['sr']
 indt = dur - ind['t']
+datestr = args.d.split('/')[-1].split('.')[0]
+now = datetime.strptime(datestr,'%Y_%m_%d_%H_%M_%S')
 tlist = [now - timedelta(seconds=t.item()) for t in indt]
 
 par_str = 'time=' + ",".join([t.strftime("%Y-%m-%dT%H:%M:%SZ") for t in tlist])
