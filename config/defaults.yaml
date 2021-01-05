@@ -5,7 +5,6 @@ sr: &fs 48000
 windowSize: &wsize 480 # for spectrogram
 hipass: False
 
-
 Filtering: 
   sr: *fs
   order: 8
