@@ -2,9 +2,8 @@
 ---
 # global
 logfile : '/home/pi/logfile2.csv'
-#request_url : 'https://script.google.com/macros/s/AKfycbxz79-99xkm4EpF0bRFuTgjjD0Dvzf3mgsnWZKwratUTklIQxKe/exec'
 apn :  '"wap.gprs.unifon.com.ar"'
-request_url : 'https://script.google.com/macros/s/AKfycbyQX_xnblS1c3M712v-OItr6Se6FcfE19WsiIfW/exec'
+url : 'https://script.google.com/macros/s/AKfycbyQX_xnblS1c3M712v-OItr6Se6FcfE19WsiIfW/exec'
 pkeys : ['aci','bi','ndsi','aei','adi','hs','ht','sc','db']
 nchan : 2
 nbytes : 2
