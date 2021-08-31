@@ -10,7 +10,6 @@ __pycache__/
 .Python
 build/
 develop-eggs/
-dist/
 downloads/
 eggs/
 .eggs/
@@ -128,10 +127,9 @@ dmypy.json
 # Pyre type checker
 .pyre/
 *.pyc
-*.ipynb
 .vscode/settings.json
-*.ipynb
-*.ipynb
-*.ipynb
 *.pcm
+*.wav
+*.npy
+*.npz
 test.csv
