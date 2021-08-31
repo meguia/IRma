@@ -1,11 +1,9 @@
 import numpy as np
-import sounddevice as sd
 import pandas as pd
 from scipy import signal
 from scipy.io import wavfile
 from scipy.stats import linregress
-from matplotlib import pyplot as plt
-from IPython.display import display, HTML
+
 
 def sweep(T, f1=30, f2=22000,filename=None,fs=48000,fade=0.02,order=2):
     '''

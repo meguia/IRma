@@ -1,10 +1,9 @@
 import numpy as np
-import sounddevice as sd
-import pandas as pd
 from scipy import signal
 from scipy.io import wavfile
 from scipy.stats import linregress
-from matplotlib import pyplot as plt
+from process import make_filterbank
+from process import A_weighting
 
 def revtime(ir_input, method='rt20', fs=48000, tmax=3.0):
     '''
@@ -120,7 +119,7 @@ def time_based(ir, method='rt20', bankname=None, tmax=3.0):
     try:     
         fbank = np.load(bankname + '.npz')
     except:
-        make_filterbank(bankname=fbank)
+        make_filterbank(bankname='fbank')
         fbank = np.load(bankname + '.npz')
     if type(ir) is str:
         fs, data = wavfile.read(ir + '.wav')
@@ -170,13 +169,13 @@ def time_based(ir, method='rt20', bankname=None, tmax=3.0):
     rev['c80'][11], rev['c50'][11], rev['ts'][11] = clarity(data,fs,tmax)
     return rev
 
-def find_modes # encuentra modos hasta una frecuencia
+#def find_modes # encuentra modos hasta una frecuencia
 
-def binaural # aca va ITD ILD e intensidad binaural IACC
+#def binaural # aca va ITD ILD e intensidad binaural IACC
 
-def sti # inteligilibilidad del habla
+#def sti # inteligilibilidad del habla
 
-def spatial # fraccion de energia lateral
+#def spatial # fraccion de energia lateral
 
 
 

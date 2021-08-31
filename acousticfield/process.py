@@ -1,12 +1,9 @@
 import numpy as np
 import sounddevice as sd
-import pandas as pd
 from scipy import signal
 from scipy.io import wavfile
 from scipy.stats import linregress
 from scipy.interpolate import interp1d
-from matplotlib import pyplot as plt
-from IPython.display import display, HTML
 
 def load_pcm(file,nchan,nbytes=4):
     """
@@ -152,13 +149,13 @@ def make_filterbank(fmin=62.5,noct=8,bwoct=1,fs=48000,order=5,N=10000,bankname='
     sos = np.zeros((nfilt,order,6),dtype=np.float64)
     for n, f0 in enumerate(lf):
         sos[n], w, h = butter_bandpass(f0,f0*2**(1/bwoct),fs,order,N)
-        if show:
-            plt.semilogx((fs * 0.5 / np.pi) * w, abs(h))
+        #if show:
+        #    plt.semilogx((fs * 0.5 / np.pi) * w, abs(h))
     np.savez_compressed(bankname,sos=sos,fc=fc,fs=fs,order=order)
     print('Banco de filtros generado: ' + str(noct) + ' octavas,' + str(bwoct) + ' bandas/octava,' +
           'desde ' + str(fmin) + ' Hz,' + 'Almacenada en archivo ' + bankname)
-    if show:
-        plt.show()
+    #if show:
+    #    plt.show()
     return
     
 def A_weighting(fs=48000):
