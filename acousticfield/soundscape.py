@@ -62,6 +62,9 @@ def subspecs(spec,**kwargs):
     te = np.linspace(envwin,spec['env'].shape[1]-envwin,nwin,dtype='int')
     subs = np.array([spec['s'][:,:,t0-halfwin:t0+halfwin] for t0 in ts])
     subenv = np.array([spec['env'][:,t0-envwin:t0+envwin] for t0 in te])
+    print(subs.shape)
+    print(subenv.shape)
+    print(spec['t'].shape)
     return subs.swapaxes(0,1),subenv.swapaxes(0,1),spec['t'][ts]
 
     

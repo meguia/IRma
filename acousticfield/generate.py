@@ -63,7 +63,7 @@ def sweep(T, f1=30, f2=22000,filename=None,fs=48000,fade=0.02,order=2):
     wavfile.write(filename + '.wav',fs,sweep) # guarda el sweep en wav con formato float 32 bits
     return sweep
 
-def noise(T, color='white', filename=None, fin=50, fout=50, fs=48000):
+#def noise(T, color='white', filename=None, fin=50, fout=50, fs=48000):
 
 def pinknoise(nrows, ncols=16):
     """
@@ -86,6 +86,6 @@ def pinknoise(nrows, ncols=16):
     total = df.sum(axis=1)
     return total.values    
 
-def mls(T, filename=None, fs=48000):
+
     
     
