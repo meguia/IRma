@@ -55,12 +55,12 @@ def irsweep(sweep,invsweepfft):
     ir = np.real(np.fft.ifft(invsweepfft*sweepfft))
     return ir
 
-# funcion para hacer time stretch y compensar variaciones de temperatura
+# funcion para hacer time stretch y compensar variaciones de temperatura o corregir drift en el clock
 #def ir_stretch(ir,threshold):
 
 # funcion para detectar outliers en un conjunto de IR
 #def ir_average(ir,reject_outliers=True,threshold): # con opcion de eliminar outliers
-# fade
+# fadeinout
 
 def fadeinout(data, fadein=0.05, fadeout=None, fs=48000):
     if fadein is not None:
@@ -79,8 +79,8 @@ def fadeinout(data, fadein=0.05, fadeout=None, fs=48000):
                 data[-nout:,n]  *= a
         else:
             data[-nout:] *= a        
-    return data
-
+    return
+    
 #filtros
 
 def butter_bandpass(lowcut, highcut, fs, order=5, N=10000):
