@@ -60,29 +60,64 @@ def sweep(T, f1=30, f2=22000,filename=None,fs=48000,fade=0.02,order=2):
     np.save(filename + '_inv',invsweepfft) # guarda el filtro inverso en formato npy
     wavfile.write(filename + '.wav',fs,sweep) # guarda el sweep en wav con formato float 32 bits
     return sweep
+# MLS Sequence
 
-#def noise(T, color='white', filename=None, fin=50, fout=50, fs=48000):
+def puretone(T,f,fs=48000):
+    return np.sin(2.0*np.pi*f*np.arange(0,T,1/fs))
 
-def pinknoise(nrows, ncols=16):
+def sigmoid(x,x0=0,a=1):
+    x1 = 2*(x-x0)/a
+    sig = np.where(x1 < 0, np.exp(x1)/(1 + np.exp(x1)), 1/(1 + np.exp(-x1)))
+    return sig
+
+def whitenoise(T, flow=None, fhigh=None, fslow=None, fshigh=None, nchannels=1, fs=48000):
     """
-    Genera ruido rosa usando el algoritmpo de Voss-McCartney, tomado de
-    https://github.com/AllenDowney/ThinkDSP/blob/master/code/voss.ipynb
-    nrows: numero de samples a generar
-    rcols: nomero de fuente indeptes
+    Genera ruido blanco de duracion T limitado en banda entre flow y fhigh (fslow y fshigh dan las pendientes de
+    la sigmoidea del limite de banda) puede generar nchannels canales
     """
-    array = np.empty((nrows, ncols))
-    array.fill(np.nan)
+    nsamples = int(fs*T)
+    freqs = np.fft.rfftfreq(nsamples, 1/fs)
+    freqs[0] = 1/nsamples
+    fmax = freqs[-1]
+    if flow is not None:
+        if fslow is None:
+            fslow=flow
+        s1 = sigmoid(freqs/fmax,flow/fmax,fslow/fmax)
+    else:
+        s1 = 1
+    if fhigh is not None:
+        if fshigh is None:
+            fshigh=fshigh/4.0
+        s2 = sigmoid(freqs/fmax,fhigh/fmax,-fshigh/fmax)
+    else:
+        s2 = 1
+    real = s1*s2*np.random.randn(nchannels, freqs.shape[0])
+    imag = s1*s2*np.random.randn(nchannels, freqs.shape[0])
+    if not nsamples & 1:
+        imag[-1] = 0.
+    wnoise = np.array(np.fft.irfft(real + 1j*imag),ndmin=2, dtype='float32').T
+    wnoise /= np.abs(wnoise).max(axis=0)
+    return wnoise
+
+def pinknoise(T, ncols=16, fs=48000):
+    """
+    Genera ruido rosa de duracion T usando el algoritmo de Voss-McCartney
+    ncols: numero de fuente indeptes
+    """
+    nsamples = int(T*fs)
+    array = np.full((nsamples, ncols), np.nan)
     array[0, :] = np.random.random(ncols)
-    array[:, 0] = np.random.random(nrows)
-    n = nrows
-    cols = np.random.geometric(0.5, n)
+    array[:, 0] = np.random.random(nsamples)
+    cols = np.random.geometric(0.5, nsamples)
     cols[cols >= ncols] = 0
-    rows = np.random.randint(nrows, size=n)
-    array[rows, cols] = np.random.random(n)
+    rows = np.random.randint(nsamples, size=nsamples)
+    array[rows, cols] = np.random.random(nsamples)
     df = pd.DataFrame(array)
     df.fillna(method='ffill', axis=0, inplace=True)
-    total = df.sum(axis=1)
-    return total.values    
+    pnoise = df.sum(axis=1).values
+    pnoise -= np.mean(pnoise)
+    pnoise /= np.abs(pnoise).max(axis=0)
+    return pnoise
 
 
     

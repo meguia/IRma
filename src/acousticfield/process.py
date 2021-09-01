@@ -1,76 +1,10 @@
 import numpy as np
-import sounddevice as sd
 from scipy import signal
 from scipy.io import wavfile
 from scipy.stats import linregress
 from scipy.interpolate import interp1d
+from scipy.fftpack import next_fast_len
 
-def load_pcm(file,nchan,nbytes=4):
-    """
-    Function to load a raw PCM audio file with nchan channels and nbytes little endian
-    """
-    nmax = 2**(nbytes*8-1)
-    data=np.memmap(file, dtype='u1', mode='r')
-    nsamples=data.shape[0]//(nchan*nbytes)
-    if nbytes==4:
-        realdata=np.reshape(data.view(np.int32)/nmax,(nsamples,nchan)).astype('float64')
-    elif nbytes==2:
-        realdata=np.reshape(data.view(np.int16)/nmax,(nsamples,nchan)).astype('float32')
-    elif nbytes==1:
-        realdata=np.reshape(data.view(np.int8)/nmax,(nsamples,nchan)).astype('float32')
-    else:
-        raise Exception("Only 4,2 or 1 bytes allowed")
-    return realdata
-
-
-
-
-def time_rec(filerec,duration,delay=0,chanin=[0],fs=48000,sdevice=None,write_wav=True):
-    '''
-    funcion grabar durante dur segundos en una cantidad arbitraria de canales de entrada dada por chanin (lista)
-    en archivo filerec. 
-    '''
-    #agregar una alerta de clipeo y la opcion de correr dummy
-    if sdevice is not None:
-        sd.default.device = sdevice
-    sd.default.samplerate = fs
-    nchanin = chanin[-1]+1
-    # loop sobre repeat
-    rec = sd.rec(int(duration*fs),samplerate=fs,channels=nchanin,dtype='float64') # graba con 64 bits para proceso
-    sd.wait() # espera que termine la grabacion
-    print('listo')
-    rec = rec[:,chanin]
-    if write_wav:
-        wavfile.write(filerec + '.wav',fs,rec) # guarda el array grabado en wav con 32 bits
-    # fin loop   
-    return rec
-
-def play_rec(fileplay,filerec,delay=0,repeat=1,chanout=[0],chanin=[0],revtime=2.0,sdevice=None,write_wav=True):
-    '''
-    funcion para reproducir el archivo mono wav fileplay a traves de los canales de salida chanout (lista)
-    y grabarlo simultaneamente en una cantidad arbitraria de canales de entrada dada por chanin (lista)
-    en archivo filerec. Puede cambiarse la cantidad de segundos que graba luego de que se extinguio 
-    la senal revtime y cambiar el device si no se usa el default 
-    '''
-    #agregar una alerta de clipeo y la opcion de correr dummy
-    if sdevice is not None:
-        sd.default.device = sdevice
-    fs, data = wavfile.read(fileplay + '.wav')    
-    sd.default.samplerate = fs
-    nchanin = chanin[-1]+1
-    nchanout = chanout[-1]+1
-    data = np.append(data,np.zeros(int(revtime*fs))) # extiende data para agregar la reverberacion
-    data = np.repeat(data[:,np.newaxis],nchanout,1) # repite el array 
-    # wait delay e imprimir algun algun mensaje
-    # loop sobre repeat
-    rec = sd.playrec(data, channels=nchanin,dtype='float64') # graba con 64 bits para proceso
-    sd.wait() # espera que termine la grabacion
-    print('listo')
-    rec = rec[:,chanin]
-    if write_wav:
-        wavfile.write(filerec + '.wav',fs,rec) # guarda el array grabado en wav con 32 bits
-    # fin loop   
-    return rec
 
 def ir_extract(rec,fileinv,fileout='ir_out',loopback=None,dur=None,fs=48000):
     '''
@@ -126,7 +60,11 @@ def irsweep(sweep,invsweepfft):
 
 # funcion para detectar outliers en un conjunto de IR
 #def ir_average(ir,reject_outliers=True,threshold): # con opcion de eliminar outliers
+# fade
 
+def sigmoid(x,a=1):
+    sig = np.where(x < 0, np.exp(a*x)/(1 + np.exp(a*x)), 1/(1 + np.exp(-a*x)))
+    return sig
 
 #filtros
 
@@ -201,40 +139,37 @@ def apply_bands(data, bankname='fbank_10_1', fs=48000, norma=True):
         data_filt[:,n] = temp
     # agregar fadeinfadeout    
     return data_filt    
-# Spectrogram
 
-def spectrogram(data, windowSize=512, overlap=None, fs=48000, windowType='hanning', normalized=False, logf=False):
+def spectrogram(data, **kwargs):
     """
-    Computa el espetrograma de la senal data
-    devuelve spec un diccionario con keys 
+    Computes the spectrogram and the analytic envelope of the signal
     """
-    #force to power of two
-    windowSize = np.power(2,int(np.around(np.log2(windowSize))))
-    if overlap is None:
-        overlap = windowSize//8
-    if type(data) is str:
-        fs, data = wavfile.read(data + '.wav')
+    #force to power of next fast FFT length
+    windowSize = next_fast_len(kwargs['windowSize'])
+    overlap = kwargs['overlap']
     if data.ndim == 1:
         data = data[:,np.newaxis] # el array debe ser 2D
     nsamples, nchan = np.shape(data)
-    nt = int(np.ceil((nsamples-windowSize)/(windowSize-overlap)))
+    nt = int(np.floor((nsamples-windowSize)/(windowSize-overlap)))+1
+    nenv = next_fast_len(nsamples)
     # Dict for spectrogram
-    listofkeys = ['nchan','f','t','s','nt','nf','df','window','type','overlap','log']
+    listofkeys = ['nchan','nsamples','f','t','s','env','nt','nf','df','window','overlap']
     spec = dict.fromkeys(listofkeys,0 )
     spec['nchan'] = nchan
     spec['nf'] = windowSize//2+1
     spec['s'] = np.zeros((nchan,spec['nf'],nt))
+    spec['env'] = np.zeros((nchan,nenv))
     spec['window'] = windowSize
-    spec['type'] = windowType
     spec['overlap'] = overlap
-    spec['logf'] = logf
     spec['nt'] = nt
-    for n in np.arange(nchan):       
-        f,t,spectro = signal.spectrogram(data[:,n], fs, window=windowType, nperseg=windowSize, noverlap=overlap)
+    spec['nsamples']=nsamples
+    for n in np.arange(nchan):
+        env = np.abs(signal.hilbert(data[:,n],nenv))  
+        f,t,spectro = signal.spectrogram(data[:,n], kwargs['sr'], window=kwargs['windowType'], nperseg=windowSize, noverlap=overlap)
         spec['t'] = t
         spec['df'] = f[1]
-        print(spectro.shape)
-        if logf:
+        spec['env'][n] = env
+        if kwargs['logf']:
             lf = np.power(2,np.linspace(np.log2(f[1]),np.log2(f[-1]),spec['nf']))
             fint = interp1d(f,spectro.T,fill_value="extrapolate")
             spec['f'] = lf
@@ -242,9 +177,63 @@ def spectrogram(data, windowSize=512, overlap=None, fs=48000, windowType='hannin
         else:
             spec['f'] = f
             spec['s'][n] = spectro
-    if normalized:
-        spec['s'] = spec['s']/np.max(spec['s'])    
-    return spec    
+        if kwargs['normalized']:
+            spec['s'][n] = spec['s']/np.max(spec['s'][n])
+            spec['env'][n] = spec['env']/np.max(spec['env'][n])    
+    return spec        
+
+def hipass_filter(data, **kwargs):
+    nyq = 0.5 * kwargs['sr']
+    low = kwargs['lowcut'] / nyq
+    sos = signal.butter(kwargs['order'], low, btype='highpass', output='sos')
+    return signal.sosfiltfilt(sos, data, axis=0)
+
+
+
+# OLD Spectrogram
+
+# def spectrogram(data, windowSize=512, overlap=None, fs=48000, windowType='hanning', normalized=False, logf=False):
+#     """
+#     Computa el espetrograma de la senal data
+#     devuelve spec un diccionario con keys 
+#     """
+#     #force to power of two
+#     windowSize = np.power(2,int(np.around(np.log2(windowSize))))
+#     if overlap is None:
+#         overlap = windowSize//8
+#     if type(data) is str:
+#         fs, data = wavfile.read(data + '.wav')
+#     if data.ndim == 1:
+#         data = data[:,np.newaxis] # el array debe ser 2D
+#     nsamples, nchan = np.shape(data)
+#     nt = int(np.ceil((nsamples-windowSize)/(windowSize-overlap)))
+#     # Dict for spectrogram
+#     listofkeys = ['nchan','f','t','s','nt','nf','df','window','type','overlap','log']
+#     spec = dict.fromkeys(listofkeys,0 )
+#     spec['nchan'] = nchan
+#     spec['nf'] = windowSize//2+1
+#     spec['s'] = np.zeros((nchan,spec['nf'],nt))
+#     spec['window'] = windowSize
+#     spec['type'] = windowType
+#     spec['overlap'] = overlap
+#     spec['logf'] = logf
+#     spec['nt'] = nt
+#     for n in np.arange(nchan):       
+#         f,t,spectro = signal.spectrogram(data[:,n], fs, window=windowType, nperseg=windowSize, noverlap=overlap)
+#         spec['t'] = t
+#         spec['df'] = f[1]
+#         print(spectro.shape)
+#         if logf:
+#             lf = np.power(2,np.linspace(np.log2(f[1]),np.log2(f[-1]),spec['nf']))
+#             fint = interp1d(f,spectro.T,fill_value="extrapolate")
+#             spec['f'] = lf
+#             spec['s'][n] = fint(lf).T
+#         else:
+#             spec['f'] = f
+#             spec['s'][n] = spectro
+#     if normalized:
+#         spec['s'] = spec['s']/np.max(spec['s'])    
+#     return spec    
         
 
 
