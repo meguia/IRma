@@ -1,7 +1,7 @@
 # acousticfield
 Tools for soundscape / acoustic field / recording, processing and analysis
 
-## Instalation with Anaconda (september 2020)
+## Instalation with Anaconda (sept 2021)
 base:
 - python = 3.8.8
 - numpy = 1.20.1
