@@ -130,10 +130,10 @@ def time_based(ir, method='rt20', bankname=None, tmax=3.0):
         fs = fbank['fs']
     if data.ndim == 1:
         data = data[:,np.newaxis] # el array debe ser 2D
-    nbands, order, dd = fbank['sos'].shape
+    nbands, _, _ = fbank['sos'].shape
     nsamples, nchan = np.shape(data)
     nmax = int(min(tmax*fs,nsamples))
-    listofkeys = ['nchan','nbands','fc',method,'edt','tfit','lfit','schr','rvalue','snr','c80','c50','ts']
+    listofkeys = ['nchan','nbands','fc',method,'edt','tfit','lfit','schr','rvalue','snr','c80','c50','ts','dr']
     rev = dict.fromkeys(listofkeys,0 )
     rev['nchan'] = nchan
     rev['nbands'] = nbands+2
@@ -152,22 +152,40 @@ def time_based(ir, method='rt20', bankname=None, tmax=3.0):
     for n in range(nbands):
         rev['fc'][n] = str(int(fbank['fc'][n]))
         data_filt = signal.sosfiltfilt(fbank['sos'][n], data/np.amax(np.abs(data)), axis=0)
-        rev['edt'][n], *nada = revtime(data_filt,'edt',fs,tmax)
+        rev['edt'][n], _ = revtime(data_filt,'edt',fs,tmax)
         rev[method][n], rev['tfit'][n], rev['lfit'][n], rev['schr'][n], rev['snr'][n], rev['rvalue'][n] = revtime(data_filt,method,fs,tmax)
         rev['c80'][n], rev['c50'][n], rev['ts'][n] = clarity(data_filt,fs,tmax)
     # Aplicando el filtro tipo A
     sos_a = A_weighting(fs)
     data_filt = signal.sosfiltfilt(sos_a, data/np.amax(np.abs(data)), axis=0)
     rev['fc'][10] = 'A'
-    rev['edt'][10], *nada = revtime(data_filt,'edt',fs,tmax)
+    rev['edt'][10], _ = revtime(data_filt,'edt',fs,tmax)
     rev[method][10], rev['tfit'][10], rev['lfit'][10], rev['schr'][10], rev['snr'][10], rev['rvalue'][10] = revtime(data_filt,method,fs,tmax)
     rev['c80'][10], rev['c50'][10], rev['ts'][10] = clarity(data_filt,fs,tmax)
     # Sin modificar (Flat)
     rev['fc'][11] = 'Flat'
-    rev['edt'][11], *nada = revtime(data,'edt',fs,tmax)
+    rev['edt'][11], _ = revtime(data,'edt',fs,tmax)
     rev[method][11], rev['tfit'][11], rev['lfit'][11], rev['schr'][11], rev['snr'][11], rev['rvalue'][11] = revtime(data,method,fs,tmax)
     rev['c80'][11], rev['c50'][11], rev['ts'][11] = clarity(data,fs,tmax)
+    rev['dr'][11] = direct_to_reverb(data,fs)
     return rev
+
+def direct_to_reverb(data, fs=48000):
+    ndir = find_dir(data, pw=0.5,fs=fs)
+    EDIR = np.sum(np.square(data[ndir[0]:ndir[1]]))
+    EREV = np.sum(np.square(data[ndir[1]+1:]))
+    return 10.0*np.log10(EDIR/EREV)
+
+def find_dir(data, pw=1.0, fs=48000):
+    nw = int(np.floor(pw*fs/1000))
+    pmax = np.max(np.abs(data))
+    n0 = np.argmax(np.abs(data)>pmax/np.sqrt(10))
+    n0=max(n0,nw+1) 
+    npk = np.argmax(np.abs(data[n0-nw:n0+nw]))
+    nc = n0+npk-nw-2
+    n1 = np.maximum(1,int(nc-1.0*nw))
+    n2 = int(nc+1.5*nw)
+    return [n1,n2]
 
 #def find_modes # encuentra modos hasta una frecuencia
 
