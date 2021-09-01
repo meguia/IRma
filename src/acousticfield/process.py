@@ -62,9 +62,24 @@ def irsweep(sweep,invsweepfft):
 #def ir_average(ir,reject_outliers=True,threshold): # con opcion de eliminar outliers
 # fade
 
-def sigmoid(x,a=1):
-    sig = np.where(x < 0, np.exp(a*x)/(1 + np.exp(a*x)), 1/(1 + np.exp(-a*x)))
-    return sig
+def fadeinout(data, fadein=0.05, fadeout=None, fs=48000):
+    if fadein is not None:
+        nin = int(2.0*fadein*fs)
+        a = (1.0-np.cos(np.linspace(0,np.pi,nin)))/2.0 
+        if data.ndim == 2:
+            for n in range(data.shape[1]):
+                data[:nin,n]  *= a
+        else:
+            data[:nin] *= a
+    if fadeout is not None:
+        nout = int(2.0*fadeout*fs)
+        a = (1.0+np.cos(np.linspace(0,np.pi,nout)))/2.0 
+        if data.ndim == 2:
+            for n in range(data.shape[1]):
+                data[-nout:,n]  *= a
+        else:
+            data[-nout:] *= a        
+    return data
 
 #filtros
 
