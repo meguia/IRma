@@ -155,6 +155,7 @@ def time_based(ir, method='rt20', bankname=None, tmax=3.0):
         rev['edt'][n], _ = revtime(data_filt,'edt',fs,tmax)
         rev[method][n], rev['tfit'][n], rev['lfit'][n], rev['schr'][n], rev['snr'][n], rev['rvalue'][n] = revtime(data_filt,method,fs,tmax)
         rev['c80'][n], rev['c50'][n], rev['ts'][n] = clarity(data_filt,fs,tmax)
+        rev['dr'][n] = direct_to_reverb(data_filt,fs)
     # Aplicando el filtro tipo A
     sos_a = A_weighting(fs)
     data_filt = signal.sosfiltfilt(sos_a, data/np.amax(np.abs(data)), axis=0)
@@ -162,6 +163,7 @@ def time_based(ir, method='rt20', bankname=None, tmax=3.0):
     rev['edt'][10], _ = revtime(data_filt,'edt',fs,tmax)
     rev[method][10], rev['tfit'][10], rev['lfit'][10], rev['schr'][10], rev['snr'][10], rev['rvalue'][10] = revtime(data_filt,method,fs,tmax)
     rev['c80'][10], rev['c50'][10], rev['ts'][10] = clarity(data_filt,fs,tmax)
+    rev['dr'][10] = direct_to_reverb(data_filt,fs)
     # Sin modificar (Flat)
     rev['fc'][11] = 'Flat'
     rev['edt'][11], _ = revtime(data,'edt',fs,tmax)
@@ -186,6 +188,19 @@ def find_dir(data, pw=1.0, fs=48000):
     n1 = np.maximum(1,int(nc-1.0*nw))
     n2 = int(nc+1.5*nw)
     return [n1,n2]
+
+def find_echoes(data, nechoes=10, pw=1.0, fs=48000):
+    nw = int(np.floor(0.5*pw*fs/1000))
+    echoes = np.empty((nechoes,2))
+    data_copy = np.copy(data)
+    for n in range(nechoes):
+        n0 = np.argmax(np.abs(data_copy))
+        echoes[n,0] = n0/fs
+        echoes[n,1] = np.sum(np.square(data[n0-nw:n0+nw]))
+        data_copy[n0-nw:n0+nw] *= 0.05
+    return echoes  
+
+#echo sorting and echo density
 
 #def find_modes # encuentra modos hasta una frecuencia
 
