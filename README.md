@@ -29,5 +29,5 @@ https://www.lfd.uci.edu/~gohlke/pythonlibs/#sounddevice
 
 Download the latest dist or install via pip with
 
-`pip install acousticfield`
+`pip install -i https://test.pypi.org/simple/ acousticfield --no-deps`
 
