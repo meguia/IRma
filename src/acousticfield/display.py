@@ -7,12 +7,17 @@ from scipy.stats import linregress
 from matplotlib import pyplot as plt
 from IPython.display import display, HTML
    
-def printable(param, keys, cols):
+def printable(pars, keys=None, cols=None):
     '''
     Imprime una tabla en formati HTML a partir del diccionario param con las keys en filas
     y usa como headers de las columnas cols (normalmente se usa 'fc' para esto)
     '''
-    tabla = np.vstack(list(param[key][:,0] for key in keys))
+    if keys is None:
+        rtype = list(filter(lambda x: 'rt' in x, pars.keys()))[0]
+        keys = ['snr',rtype,'edt','c50','c80','ts','dr']
+    if cols is None:
+        cols = pars['fc']    
+    tabla = np.vstack(list(pars[key][:,0] for key in keys))
     display_table(tabla,cols,keys)    
     
 def display_table(data,headers,rownames):
@@ -34,7 +39,31 @@ def display_table(data,headers,rownames):
     html += "</table>"
     display(HTML(html)) 
 
-    # funciones para graficar de formas diversas y bonitas
+def parsplot(pars, keys):
+    # busca la ocurrencia de 'rt' 'edt' 'snr' 'c80' 'c50' 'ts' 'dr' en keys
+    rtype = list(filter(lambda x: 'rt' in x, pars.keys()))
+    pgraph = [['snr'],[rtype[0],'edt'],['c50','c80'],['ts'],['dr']]
+    isplot = []
+    for pl in pgraph:
+        isplot.append(np.any([p in keys for p in pl]))
+    nplot = np.sum(isplot)    
+    fig, axs = plt.subplots(nplot,1,figsize=(18,5*nplot))
+    iplot = 0
+    nb = len(pars['fc'])
+    for n in range(5):
+        if isplot[n]:
+            nbars = len(pgraph[n])
+            for m,pkey in enumerate(pgraph[n]):
+                axs[iplot].bar(np.arange(nb)+0.4/nbars*(2*m-nbars+1),pars[pkey][:,0],width=0.8/nbars)
+            axs[iplot].set_xticks(np.arange(nb))
+            axs[iplot].set_xticklabels(tuple(pars['fc']))
+            axs[iplot].legend(pgraph[n])
+            #axs[iplot].ylabel('Tiempo de Reverberacion(s)')
+            axs[iplot].set_xlabel('Frecuencia (Hz)')
+            axs[iplot].grid(axis='y')
+            #axs[iplot].title('Respuesta Impulso')
+            iplot +=1
+    return        
     
     # espectrograma
     

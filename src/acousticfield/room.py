@@ -2,8 +2,8 @@ import numpy as np
 from scipy import signal
 from scipy.io import wavfile
 from scipy.stats import linregress
-from process import make_filterbank
-from process import A_weighting
+from .process import make_filterbank
+from .process import A_weighting
 
 def revtime(ir_input, method='rt20', fs=48000, tmax=3.0):
     '''
@@ -102,12 +102,13 @@ def clarity(ir_input, fs=48000, tmax = 3.0):
     return c80, c50, ts    
         
 
-def time_based(ir, method='rt20', bankname=None, tmax=3.0):
+def paracoustic(ir, method='rt20', bankname='fbank', tmax=3.0):
     '''
     Calcula los siguientes parametros acusticos POR BANDAS con los nombres de las keys correspondientes
     Reververacion: 'rt30' (o el metodo que se pida), 'edt'
     Claridad: 'c80', 'c50', 'ts', 
     Relacion senal ruido 'snr'
+    Directo reverberante 'dr'
     a partir de la respuesta impulso almacenada en ir (array numpy o nombre de archivo wav) 
     Lo hace para cada canal del archivo fileir y para el banco de filtros almacenado en bankname (extension npz)
     devueve un diccionario rev que tiene las siguientes keys: nchan (num canales), nbands (num bandas), fc (frecuencias)
@@ -119,7 +120,12 @@ def time_based(ir, method='rt20', bankname=None, tmax=3.0):
     try:     
         fbank = np.load(bankname + '.npz')
     except:
-        make_filterbank(bankname='fbank')
+        print('Generando nuevo banco ')
+        if (len(bankname.split('_')) > 1):
+            (noct,bwoct) = [int(ss) for ss in bankname.split('_')[-2:]]
+            make_filterbank(noct=noct,bwoct=bwoct,bankname=bankname)
+        else:
+            make_filterbank(bankname='fbank')    
         fbank = np.load(bankname + '.npz')
     if type(ir) is str:
         fs, data = wavfile.read(ir + '.wav')
@@ -134,43 +140,39 @@ def time_based(ir, method='rt20', bankname=None, tmax=3.0):
     nsamples, nchan = np.shape(data)
     nmax = int(min(tmax*fs,nsamples))
     listofkeys = ['nchan','nbands','fc',method,'edt','tfit','lfit','schr','rvalue','snr','c80','c50','ts','dr']
-    rev = dict.fromkeys(listofkeys,0 )
-    rev['nchan'] = nchan
-    rev['nbands'] = nbands+2
-    rev['fc'] = [None]*rev['nbands']
-    rev[method] = np.zeros((rev['nbands'],rev['nchan']))
-    rev['edt'] = np.zeros((rev['nbands'],rev['nchan']))
-    rev['tfit'] = np.zeros((rev['nbands'],rev['nchan'],2))
-    rev['lfit'] = np.zeros((rev['nbands'],rev['nchan'],2))
-    rev['schr'] = np.zeros((rev['nbands'],rev['nchan'],nmax))
-    rev['rvalue'] = np.zeros((rev['nbands'],rev['nchan']))
-    rev['snr'] = np.zeros((rev['nbands'],rev['nchan']))
-    rev['c80'] = np.zeros((rev['nbands'],rev['nchan']))
-    rev['c50'] = np.zeros((rev['nbands'],rev['nchan']))
-    rev['ts'] = np.zeros((rev['nbands'],rev['nchan']))
+    pars = dict.fromkeys(listofkeys,0 )
+    pars['nchan'] = nchan
+    pars['nbands'] = nbands+2
+    pars['fc'] = [None]*pars['nbands']
+    pars[method] = np.zeros((pars['nbands'],pars['nchan']))
+    pars['edt'] = np.zeros((pars['nbands'],pars['nchan']))
+    pars['tfit'] = np.zeros((pars['nbands'],pars['nchan'],2))
+    pars['lfit'] = np.zeros((pars['nbands'],pars['nchan'],2))
+    pars['schr'] = np.zeros((pars['nbands'],pars['nchan'],nmax))
+    pars['rvalue'] = np.zeros((pars['nbands'],pars['nchan']))
+    pars['snr'] = np.zeros((pars['nbands'],pars['nchan']))
+    pars['c80'] = np.zeros((pars['nbands'],pars['nchan']))
+    pars['c50'] = np.zeros((pars['nbands'],pars['nchan']))
+    pars['ts'] = np.zeros((pars['nbands'],pars['nchan']))
+    pars['dr'] = np.zeros((pars['nbands'],pars['nchan']))
     # Por Bandas de frecuencia primero
-    for n in range(nbands):
-        rev['fc'][n] = str(int(fbank['fc'][n]))
-        data_filt = signal.sosfiltfilt(fbank['sos'][n], data/np.amax(np.abs(data)), axis=0)
-        rev['edt'][n], _ = revtime(data_filt,'edt',fs,tmax)
-        rev[method][n], rev['tfit'][n], rev['lfit'][n], rev['schr'][n], rev['snr'][n], rev['rvalue'][n] = revtime(data_filt,method,fs,tmax)
-        rev['c80'][n], rev['c50'][n], rev['ts'][n] = clarity(data_filt,fs,tmax)
-        rev['dr'][n] = direct_to_reverb(data_filt,fs)
-    # Aplicando el filtro tipo A
     sos_a = A_weighting(fs)
-    data_filt = signal.sosfiltfilt(sos_a, data/np.amax(np.abs(data)), axis=0)
-    rev['fc'][10] = 'A'
-    rev['edt'][10], _ = revtime(data_filt,'edt',fs,tmax)
-    rev[method][10], rev['tfit'][10], rev['lfit'][10], rev['schr'][10], rev['snr'][10], rev['rvalue'][10] = revtime(data_filt,method,fs,tmax)
-    rev['c80'][10], rev['c50'][10], rev['ts'][10] = clarity(data_filt,fs,tmax)
-    rev['dr'][10] = direct_to_reverb(data_filt,fs)
-    # Sin modificar (Flat)
-    rev['fc'][11] = 'Flat'
-    rev['edt'][11], _ = revtime(data,'edt',fs,tmax)
-    rev[method][11], rev['tfit'][11], rev['lfit'][11], rev['schr'][11], rev['snr'][11], rev['rvalue'][11] = revtime(data,method,fs,tmax)
-    rev['c80'][11], rev['c50'][11], rev['ts'][11] = clarity(data,fs,tmax)
-    rev['dr'][11] = direct_to_reverb(data,fs)
-    return rev
+    for n in range(nbands+2):
+        if n==nbands:
+            pars['fc'][n] = 'A'
+            data_filt = signal.sosfiltfilt(sos_a, data/np.amax(np.abs(data)), axis=0)
+        elif n>nbands:
+            pars['fc'][n] = 'Flat'
+            data_filt = data            
+        else:    
+            pars['fc'][n] = str(int(fbank['fc'][n]))
+            data_filt = signal.sosfiltfilt(fbank['sos'][n], data/np.amax(np.abs(data)), axis=0)
+        pars['edt'][n], *_ = revtime(data_filt,'edt',fs,tmax)
+        pars[method][n], pars['tfit'][n], pars['lfit'][n], pars['schr'][n], pars['snr'][n], pars['rvalue'][n] = revtime(data_filt,method,fs,tmax)
+        pars['c80'][n], pars['c50'][n], pars['ts'][n] = clarity(data_filt,fs,tmax)
+        pars['dr'][n] = direct_to_reverb(data_filt,fs)
+
+    return pars
 
 def direct_to_reverb(data, fs=48000):
     ndir = find_dir(data, pw=0.5,fs=fs)
@@ -189,15 +191,17 @@ def find_dir(data, pw=1.0, fs=48000):
     n2 = int(nc+1.5*nw)
     return [n1,n2]
 
+# modificar para que sea multicanal, por ahora hay que pasar data[:,0]
 def find_echoes(data, nechoes=10, pw=1.0, fs=48000):
     nw = int(np.floor(0.5*pw*fs/1000))
+    amp = 1-np.exp(-np.square(np.linspace(-3.0,3.0,6*nw)))
     echoes = np.empty((nechoes,2))
     data_copy = np.copy(data)
     for n in range(nechoes):
         n0 = np.argmax(np.abs(data_copy))
         echoes[n,0] = n0/fs
         echoes[n,1] = np.sum(np.square(data[n0-nw:n0+nw]))
-        data_copy[n0-nw:n0+nw] *= 0.05
+        data_copy[n0-3*nw:n0+3*nw] *= amp
     return echoes  
 
 #echo sorting and echo density
