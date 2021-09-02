@@ -155,10 +155,16 @@ def apply_bands(data, bankname='fbank_10_1', fs=48000, norma=True):
     # agregar fadeinfadeout    
     return data_filt    
 
-def transferfunc(data, fs=48000, fmax=22000):
+def transferfunc(ir_input, fs=48000, fmax=22000):
     """
     Computes the transfer function (in dB) from the impulse response 
     """
+    if type(ir_input) is str:
+        fs, data = wavfile.read(ir_input + '.wav')
+    elif type(ir_input) is np.ndarray:
+        data = ir_input
+    else:
+        raise TypeError('Primer argumento debe ser el array devuelto por extractir o un nombre de archivo')
     if data.ndim == 1:
         data = data[:,np.newaxis] # el array debe ser 2D
     nsamples, nchan = np.shape(data)

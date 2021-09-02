@@ -3,17 +3,17 @@ from matplotlib import pyplot as plt
 from IPython.display import display, HTML
 from .room import find_echoes, find_dir
    
-def parsprint(pars, keys=None, cols=None):
+def parsprint(pars, keys=None, cols=None, chan=0):
     '''
     Imprime una tabla en formati HTML a partir del diccionario param con las keys en filas
     y usa como headers de las columnas cols (normalmente se usa 'fc' para esto)
     '''
     if keys is None:
         rtype = list(filter(lambda x: 'rt' in x, pars.keys()))[0]
-        keys = ['snr',rtype,'edt','c50','c80','ts','dr']
+        keys = ['snr',rtype,'rvalue','edt','c50','c80','ts','dr']
     if cols is None:
         cols = pars['fc']    
-    tabla = np.vstack(list(pars[key][:,0] for key in keys))
+    tabla = np.vstack(list(pars[key][:,chan] for key in keys))
     display_table(tabla,cols,keys)    
 
 def echodisplay(data, nechoes, pw=0.7, scale=0.1, wplot=True, fs=48000):
@@ -66,15 +66,21 @@ def display_table(data,headers,rownames):
     display(HTML(html)) 
 
 def irplot(data, fs=48000):
-    t = np.arange(len(data))/fs
-    ndir = find_dir(data,pw=0.5,fs=fs)
+    """ data (nsamples,nchannel) must be a 2D array
+    """
+    if data.ndim == 1:
+        data = data[:,np.newaxis] # el array debe ser 2D
+    nsamples, nchan = np.shape(data)
+    t = np.arange(nsamples)/fs
     _, ax = plt.subplots(figsize=(18,5))
-    ax.plot(t,data)
-    ax.plot(t[ndir[0]:ndir[1]],data[ndir[0]:ndir[1]],'r')
+    for n in range(nchan):
+        ndir = find_dir(data[:,n],pw=0.5,fs=fs)
+        ax.plot(t,data)
+        ax.plot(t[ndir[0]:ndir[1]],data[ndir[0]:ndir[1],n],'r')
     ax.set_xlabel('Time (s)')
     ax.set_title('IMPULSE RESPONSE')
 
-def parsplot(pars, keys):
+def parsplot(pars, keys, chan=0):
     # busca la ocurrencia de 'rt' 'edt' 'snr' 'c80' 'c50' 'ts' 'dr' en keys
     rtype = list(filter(lambda x: 'rt' in x, pars.keys()))
     pgraph = [['snr'],[rtype[0],'edt'],['c50','c80'],['ts'],['dr']]
@@ -89,7 +95,7 @@ def parsplot(pars, keys):
         if isplot[n]:
             nbars = len(pgraph[n])
             for m,pkey in enumerate(pgraph[n]):
-                axs[iplot].bar(np.arange(nb)+0.4/nbars*(2*m-nbars+1),pars[pkey][:,0],width=0.8/nbars)
+                axs[iplot].bar(np.arange(nb)+0.4/nbars*(2*m-nbars+1),pars[pkey][:,chan],width=0.8/nbars)
             axs[iplot].set_xticks(np.arange(nb))
             axs[iplot].set_xticklabels(tuple(pars['fc']))
             axs[iplot].legend(pgraph[n])
@@ -99,12 +105,25 @@ def parsplot(pars, keys):
             #axs[iplot].title('Respuesta Impulso')
             iplot +=1
     return        
+
+def parsdecayplot(pars, chan=0, fs=48000):    
+    nb = pars['nbands']
+    chan = 0
+    nsamples = pars['schr'].shape[2]
+    t = np.arange(nsamples)/fs
+    ncols = int(np.floor(np.sqrt(nb)))
+    nrows = int(np.ceil(nb/ncols))
+    fig, axs = plt.subplots(nrows,ncols,figsize=(20,5*nrows))
+    for row in range(nrows):
+        for col in range(ncols):
+            band = row*ncols+col
+            if (band<nb):
+                axs[row,col].plot(t,pars['schr'][band,chan])
+                axs[row,col].plot(pars['tfit'][band,chan],pars['lfit'][band,chan],'r')
+                axs[row,col].set_title(pars['fc'][band])
+    return            
+
     
-    # espectrograma
-    
-    # graficar decaimientos de schroeder
-    
-    # graficar claridad y rever como barras o lineas
       
     # grafica los modos recibe la salidad de find_modes
     
