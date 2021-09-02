@@ -64,7 +64,7 @@ def irsweep(sweep,invsweepfft):
 
 def fadeinout(data, fadein=0.05, fadeout=None, fs=48000):
     if fadein is not None:
-        nin = int(2.0*fadein*fs)
+        nin = int(fadein*fs)
         a = (1.0-np.cos(np.linspace(0,np.pi,nin)))/2.0 
         if data.ndim == 2:
             for n in range(data.shape[1]):
@@ -72,7 +72,7 @@ def fadeinout(data, fadein=0.05, fadeout=None, fs=48000):
         else:
             data[:nin] *= a
     if fadeout is not None:
-        nout = int(2.0*fadeout*fs)
+        nout = int(fadeout*fs)
         a = (1.0+np.cos(np.linspace(0,np.pi,nout)))/2.0 
         if data.ndim == 2:
             for n in range(data.shape[1]):
@@ -81,6 +81,26 @@ def fadeinout(data, fadein=0.05, fadeout=None, fs=48000):
             data[-nout:] *= a        
     return
     
+def burst(data, nburst=3, dur=0.05, gap=0.02, fadein=0.01, fadeout=None, fs=48000):
+    a = np.zeros((len(data),))
+    dn = int(np.floor(dur*fs))
+    for n in range(nburst):
+        n1 = int(np.floor(n*(dur+gap)*fs))
+        n2 = n1 + dn
+        a[n1:n2] = 1.0
+        if fadein is not None:
+            nin = int(fadein*fs)
+            a[n1:n1+nin] = (1.0-np.cos(np.linspace(0,np.pi,nin)))/2.0 
+        if fadeout is not None:
+            nout = int(fadeout*fs)
+            a[n2-nout:n2] = (1.0+np.cos(np.linspace(0,np.pi,nout)))/2.0 
+    if data.ndim == 2:
+        for n in range(data.shape[1]):
+            data[:,n]  *= a
+    else:
+        data *= a        
+    return
+
 #filtros
 
 def butter_bandpass(lowcut, highcut, fs, order=5, N=10000):
@@ -231,50 +251,6 @@ def hipass_filter(data, **kwargs):
 
 
 
-# OLD Spectrogram
-
-# def spectrogram(data, windowSize=512, overlap=None, fs=48000, windowType='hanning', normalized=False, logf=False):
-#     """
-#     Computa el espetrograma de la senal data
-#     devuelve spec un diccionario con keys 
-#     """
-#     #force to power of two
-#     windowSize = np.power(2,int(np.around(np.log2(windowSize))))
-#     if overlap is None:
-#         overlap = windowSize//8
-#     if type(data) is str:
-#         fs, data = wavfile.read(data + '.wav')
-#     if data.ndim == 1:
-#         data = data[:,np.newaxis] # el array debe ser 2D
-#     nsamples, nchan = np.shape(data)
-#     nt = int(np.ceil((nsamples-windowSize)/(windowSize-overlap)))
-#     # Dict for spectrogram
-#     listofkeys = ['nchan','f','t','s','nt','nf','df','window','type','overlap','log']
-#     spec = dict.fromkeys(listofkeys,0 )
-#     spec['nchan'] = nchan
-#     spec['nf'] = windowSize//2+1
-#     spec['s'] = np.zeros((nchan,spec['nf'],nt))
-#     spec['window'] = windowSize
-#     spec['type'] = windowType
-#     spec['overlap'] = overlap
-#     spec['logf'] = logf
-#     spec['nt'] = nt
-#     for n in np.arange(nchan):       
-#         f,t,spectro = signal.spectrogram(data[:,n], fs, window=windowType, nperseg=windowSize, noverlap=overlap)
-#         spec['t'] = t
-#         spec['df'] = f[1]
-#         print(spectro.shape)
-#         if logf:
-#             lf = np.power(2,np.linspace(np.log2(f[1]),np.log2(f[-1]),spec['nf']))
-#             fint = interp1d(f,spectro.T,fill_value="extrapolate")
-#             spec['f'] = lf
-#             spec['s'][n] = fint(lf).T
-#         else:
-#             spec['f'] = f
-#             spec['s'][n] = spectro
-#     if normalized:
-#         spec['s'] = spec['s']/np.max(spec['s'])    
-#     return spec    
         
 
 

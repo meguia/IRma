@@ -87,7 +87,7 @@ def whitenoise(T, flow=None, fhigh=None, fslow=None, fshigh=None, nchannels=1, f
         s1 = 1
     if fhigh is not None:
         if fshigh is None:
-            fshigh=fshigh/4.0
+            fshigh=fhigh/4.0
         s2 = sigmoid(freqs/fmax,fhigh/fmax,-fshigh/fmax)
     else:
         s2 = 1
@@ -95,7 +95,7 @@ def whitenoise(T, flow=None, fhigh=None, fslow=None, fshigh=None, nchannels=1, f
     imag = s1*s2*np.random.randn(nchannels, freqs.shape[0])
     if not nsamples & 1:
         imag[-1] = 0.
-    wnoise = np.array(np.fft.irfft(real + 1j*imag),ndmin=2, dtype='float32').T
+    wnoise = np.array(np.fft.irfft(real + 1j*imag),ndmin=2, dtype='float64').T
     wnoise /= np.abs(wnoise).max(axis=0)
     return wnoise
 
