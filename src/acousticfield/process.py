@@ -1,9 +1,9 @@
 import numpy as np
 from scipy import signal
 from scipy.io import wavfile
-from scipy.stats import linregress
 from scipy.interpolate import interp1d
-from scipy.fftpack import next_fast_len
+from scipy.fft import next_fast_len, rfft
+from numpy.fft.helper import fftfreq
 
 
 def ir_extract(rec,fileinv,fileout='ir_out',loopback=None,dur=None,fs=48000):
@@ -154,6 +154,26 @@ def apply_bands(data, bankname='fbank_10_1', fs=48000, norma=True):
         data_filt[:,n] = temp
     # agregar fadeinfadeout    
     return data_filt    
+
+def transferfunc(data, fs=48000, fmax=22000):
+    """
+    Computes the transfer function (in dB) from the impulse response 
+    """
+    if data.ndim == 1:
+        data = data[:,np.newaxis] # el array debe ser 2D
+    nsamples, nchan = np.shape(data)
+    freq = fftfreq(nsamples, d=1/fs)
+    nmax = np.argmax(freq>fmax)
+    listofkeys = ['nchan','nsamples','f','TF']
+    tfunc = dict.fromkeys(listofkeys,0 )
+    tfunc['nchan'] = nchan
+    tfunc['f'] = freq[:nmax]
+    tfunc['TF'] = np.zeros((nchan,nmax))
+    for n in np.arange(nchan):
+        temp = np.abs(rfft(data[:,n]))
+        tfunc['TF'][n] = 20*np.log10(temp[:nmax])
+    return(tfunc)
+
 
 def spectrogram(data, **kwargs):
     """

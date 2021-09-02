@@ -1,13 +1,9 @@
 import numpy as np
-import sounddevice as sd
-import pandas as pd
-from scipy import signal
-from scipy.io import wavfile
-from scipy.stats import linregress
 from matplotlib import pyplot as plt
 from IPython.display import display, HTML
+from .room import find_echoes, find_dir
    
-def printable(pars, keys=None, cols=None):
+def parsprint(pars, keys=None, cols=None):
     '''
     Imprime una tabla en formati HTML a partir del diccionario param con las keys en filas
     y usa como headers de las columnas cols (normalmente se usa 'fc' para esto)
@@ -19,7 +15,37 @@ def printable(pars, keys=None, cols=None):
         cols = pars['fc']    
     tabla = np.vstack(list(pars[key][:,0] for key in keys))
     display_table(tabla,cols,keys)    
-    
+
+def echodisplay(data, nechoes, pw=0.7, scale=0.1, wplot=True, fs=48000):
+    '''
+    Imprime una tabla en formati HTML con los echoes y el directo ordenados
+    y si wplot es True grafica espigas en los echoes junto a la RI
+    '''
+    echoes = find_echoes(data,nechoes,pw,fs=fs)
+    keys = [str(n) for n in np.arange(nechoes)]
+    cols = ['time (ms)', 'level (dB)', 'distance (m)', 'DIRECT']    
+    echoes[:,0] *= 1000
+    echoes[:,1] = 10*np.log10(echoes[:,1]/echoes[0,1])
+    dist = 0.343*echoes[:,:1]
+    direct = np.zeros_like(dist)
+    direct[0] = 1
+    echoes = np.hstack([echoes, dist, direct])
+    echoes = echoes[np.argsort(-echoes[:, 1])]
+    display_table(echoes,cols,keys) 
+    if (wplot):
+        t = 1000*np.arange(len(data))/fs
+        fig, ax = plt.subplots(figsize=(18,5))
+        ax.plot(t,data,label='RI')
+        for n in range(nechoes):
+            amp = scale*(echoes[n,1]+20)*np.max(data)
+            ax.plot([echoes[n,0],echoes[n,0]],[0,amp],label=str(n))
+        ax.legend()
+        ax.set_xlabel('Tiempo (ms)')
+        ax.set_title('ECHOGRAM')
+        ax.set_xlim([0, np.max(echoes[:,0])*1.1])
+    return    
+
+
 def display_table(data,headers,rownames):
     html = "<table class='table table-stripped'>"
     html += "<tr>"
@@ -38,6 +64,15 @@ def display_table(data,headers,rownames):
         html += "</tr>"
     html += "</table>"
     display(HTML(html)) 
+
+def irplot(data, fs=48000):
+    t = np.arange(len(data))/fs
+    ndir = find_dir(data,pw=0.5,fs=fs)
+    _, ax = plt.subplots(figsize=(18,5))
+    ax.plot(t,data)
+    ax.plot(t[ndir[0]:ndir[1]],data[ndir[0]:ndir[1]],'r')
+    ax.set_xlabel('Time (s)')
+    ax.set_title('IMPULSE RESPONSE')
 
 def parsplot(pars, keys):
     # busca la ocurrencia de 'rt' 'edt' 'snr' 'c80' 'c50' 'ts' 'dr' en keys
@@ -59,7 +94,7 @@ def parsplot(pars, keys):
             axs[iplot].set_xticklabels(tuple(pars['fc']))
             axs[iplot].legend(pgraph[n])
             #axs[iplot].ylabel('Tiempo de Reverberacion(s)')
-            axs[iplot].set_xlabel('Frecuencia (Hz)')
+            axs[iplot].set_xlabel('Frequency (Hz)')
             axs[iplot].grid(axis='y')
             #axs[iplot].title('Respuesta Impulso')
             iplot +=1

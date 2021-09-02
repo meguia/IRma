@@ -120,20 +120,25 @@ def paracoustic(ir, method='rt20', bankname='fbank', tmax=3.0):
     try:     
         fbank = np.load(bankname + '.npz')
     except:
-        print('Generando nuevo banco ')
+        print('Generating new filter bank ')
+        try: 
+            fs, _ = wavfile.read(ir + '.wav')
+        except:
+            print('Cannot infer sample rate. PLease provide wav file or filter bank with specified sample rate')    
         if (len(bankname.split('_')) > 1):
             (noct,bwoct) = [int(ss) for ss in bankname.split('_')[-2:]]
-            make_filterbank(noct=noct,bwoct=bwoct,bankname=bankname)
+            make_filterbank(noct=noct,bwoct=bwoct,bankname=bankname,fs=fs)
         else:
-            make_filterbank(bankname='fbank')    
+            make_filterbank(bankname='fbank',fs=fs)    
         fbank = np.load(bankname + '.npz')
     if type(ir) is str:
         fs, data = wavfile.read(ir + '.wav')
         if fs != fbank['fs']:
-            raise Exception('frecuencia de sampleo inconsistente')
+            raise Exception('Inconsistent sample rate between audio file and filter bank')
     elif type(ir) is np.ndarray:
         data = ir
         fs = fbank['fs']
+        print('Using sample rate from filter bank:' + str(fs))
     if data.ndim == 1:
         data = data[:,np.newaxis] # el array debe ser 2D
     nbands, _, _ = fbank['sos'].shape
@@ -200,7 +205,7 @@ def find_echoes(data, nechoes=10, pw=1.0, fs=48000):
     for n in range(nechoes):
         n0 = np.argmax(np.abs(data_copy))
         echoes[n,0] = n0/fs
-        echoes[n,1] = np.sum(np.square(data[n0-nw:n0+nw]))
+        echoes[n,1] = np.mean(np.square(data[n0-nw:n0+nw]))
         data_copy[n0-3*nw:n0+3*nw] *= amp
     return echoes  
 
