@@ -1,7 +1,7 @@
 import numpy as np
 from scipy import signal
 from scipy.io import wavfile
-from scipy.stats import linregress
+from scipy.stats import linregress, kurtosis
 from .process import make_filterbank
 from .process import A_weighting
 
@@ -62,13 +62,13 @@ def revtime(ir_input, method='rt20', fs=48000, tmax=3.0):
             pt2 = np.argmax(xv<-10.5)
         else:
             break
-        slope, intercept, r_value, p_value, std_err = linregress(tv[pt1:pt2], xv[pt1:pt2])
+        slope, intercept, r_value, _, _ = linregress(tv[pt1:pt2], xv[pt1:pt2])
         rt[n] = -(intercept + 60)/slope
         t12[n] = tv[[pt1,pt2]]
         l12[n] = intercept+slope*tv[[pt1,pt2]]
         schr[n][:nmax] = xv
         rvalue[n] = r_value    
-    return rt, t12, l12, schr, snr, rvalue  
+    return rt, t12, l12, schr, snr, rvalue 
 
 
 def clarity(ir_input, fs=48000, tmax = 3.0):
@@ -139,6 +139,8 @@ def paracoustic(ir, method='rt20', bankname='fbank', tmax=3.0):
         data = ir
         fs = fbank['fs']
         print('Using sample rate from filter bank:' + str(fs))
+    else:
+        print('Input must be ndarray or filename')    
     if data.ndim == 1:
         data = data[:,np.newaxis] # el array debe ser 2D
     nbands, _, _ = fbank['sos'].shape
@@ -175,42 +177,95 @@ def paracoustic(ir, method='rt20', bankname='fbank', tmax=3.0):
         pars['edt'][n], *_ = revtime(data_filt,'edt',fs,tmax)
         pars[method][n], pars['tfit'][n], pars['lfit'][n], pars['schr'][n], pars['snr'][n], pars['rvalue'][n] = revtime(data_filt,method,fs,tmax)
         pars['c80'][n], pars['c50'][n], pars['ts'][n] = clarity(data_filt,fs,tmax)
-        pars['dr'][n] = direct_to_reverb(data_filt,fs)
-
+        pars['dr'][n] = direct_to_reverb(data_filt,int(np.max(pars[method][n])*fs),fs)
     return pars
 
-def direct_to_reverb(data, fs=48000):
+def direct_to_reverb(data, nmax, fs=48000):
+    nsamples,nchan = data.shape
+    nmax = np.minimum(nmax,nsamples)
     ndir = find_dir(data, pw=0.5,fs=fs)
-    EDIR = np.sum(np.square(data[ndir[0]:ndir[1]]))
-    EREV = np.sum(np.square(data[ndir[1]+1:]))
-    return 10.0*np.log10(EDIR/EREV)
+    dirs = [data[ndir[0,n]:ndir[1,0],n] for n in range(nchan)]
+    revs = [data[ndir[1,n]:nmax,n] for n in range(nchan)]
+    EDIR = np.sum(np.square(dirs),axis=1)
+    EREV = np.sum(np.square(revs),axis=1)
+    return  10.0*np.log10(EDIR/EREV)
 
 def find_dir(data, pw=1.0, fs=48000):
+    """ Multichannel
+    """
     nw = int(np.floor(pw*fs/1000))
-    pmax = np.max(np.abs(data))
-    n0 = np.argmax(np.abs(data)>pmax/np.sqrt(10))
-    n0=max(n0,nw+1) 
-    npk = np.argmax(np.abs(data[n0-nw:n0+nw]))
-    nc = n0+npk-nw-2
-    n1 = np.maximum(1,int(nc-1.0*nw))
-    n2 = int(nc+1.5*nw)
-    return [n1,n2]
+    if data.ndim == 1:
+        data = data[:,np.newaxis] # el array debe ser 2D
+    _, nchan = np.shape(data)
+    ndir = np.zeros((2,nchan),dtype=int)
+    for n in range(nchan):
+        pmax = np.max(np.abs(data[:,n]))
+        n0 = np.argmax(np.abs(data[:,n])>pmax/np.sqrt(10))
+        n0=max(n0,nw+1) 
+        npk = np.argmax(np.abs(data[n0-nw:n0+nw,n]))
+        nc = n0+npk-nw-2
+        ndir[0,n] = np.maximum(1,int(nc-1.0*nw))
+        ndir[1,n] = int(nc+1.5*nw)
+    return ndir
 
-# modificar para que sea multicanal, por ahora hay que pasar data[:,0]
 def find_echoes(data, nechoes=10, pw=1.0, fs=48000):
     nw = int(np.floor(0.5*pw*fs/1000))
+    if data.ndim == 1:
+        data = data[:,np.newaxis] # el array debe ser 2D
+    _, nchan = np.shape(data)
+    echoes = np.zeros((nechoes,2,nchan))
     amp = 1-np.exp(-np.square(np.linspace(-3.0,3.0,6*nw)))
-    echoes = np.empty((nechoes,2))
     data_copy = np.copy(data)
-    for n in range(nechoes):
-        n0 = np.argmax(np.abs(data_copy))
-        echoes[n,0] = n0/fs
-        echoes[n,1] = np.mean(np.square(data[n0-nw:n0+nw]))
-        data_copy[n0-3*nw:n0+3*nw] *= amp
-    return echoes  
+    for n in range(nchan):
+        for m in range(nechoes):
+            n0 = np.argmax(np.abs(data_copy[:,n]))
+            echoes[m,0,n] = n0/fs
+            echoes[m,1,n] = np.mean(np.square(data[n0-nw:n0+nw,n]))
+            data_copy[n0-3*nw:n0+3*nw,n] *= amp
+    return echoes
 
-#echo sorting and echo density
+def irstats(ir, window=0.01, overlap=0.005, fs=48000):
+    if type(ir) is str:
+        fs, data = wavfile.read(ir + '.wav')
+    elif type(ir) is np.ndarray:
+        data = ir
+    else:
+        print('Input must be ndarray or filename')    
+    if data.ndim == 1:
+        data = data[:,np.newaxis] # el array debe ser 2D
+    kurt_confidence = 0.5
+    excess_confidence = 0.9
+    ndir = find_dir(data, fs=fs)
+    nsamples, nchan = np.shape(data)
+    listofkeys = ['chan','tframe','std','kurtosis','stdexcess']
+    pars = dict.fromkeys(listofkeys,0 )
+    pars['nchan'] = nchan
+    nwindow = int(window*fs)
+    noverlap = int(overlap*fs)
+    nframes = int(np.floor((nsamples-noverlap)/(nwindow-noverlap)))
+    frames = [[(nwindow-noverlap)*n,(nwindow-noverlap)*n+nwindow] for n in range(nframes)]
+    pars['tframe'] = np.zeros((nframes,1))
+    pars['std'] = np.zeros((nframes,nchan))
+    pars['kurtosis'] = np.zeros((nframes,nchan))
+    pars['stdexcess'] = np.zeros((nframes,nchan))
+    pars['mixing'] = np.zeros((2,nchan))
+    for m in range(nframes):
+        fr = data[frames[m][0]:frames[m][1],:]
+        pars['tframe'][m] = np.mean(frames[m])/fs
+        av = np.mean(fr,axis=0)
+        isdir = np.full((nchan,),np.nan)
+        isdir[frames[m][1] > ndir[0,:]] = 1
+        pars['std'][m] = np.std(fr,axis=0) * isdir
+        pars['kurtosis'][m] = kurtosis(fr,axis=0) * isdir
+        pars['stdexcess'][m] = np.mean(np.abs(fr-av)>pars['std'][m],axis=0)*3.0*isdir
+    nmix = np.argmax(pars['kurtosis']<kurt_confidence,axis=0)    
+    pars['mixing'][0,:] = pars['tframe'][nmix][:,0]
+    nmix = np.argmax(pars['stdexcess']>excess_confidence,axis=0)
+    pars['mixing'][1,:] = pars['tframe'][nmix][:,0]
+    return pars    
 
+# echo density 
+#     
 #def find_modes # encuentra modos hasta una frecuencia
 
 #def binaural # aca va ITD ILD e intensidad binaural IACC

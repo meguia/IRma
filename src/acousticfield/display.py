@@ -21,28 +21,37 @@ def echodisplay(data, nechoes, pw=0.7, scale=0.1, wplot=True, fs=48000):
     Imprime una tabla en formati HTML con los echoes y el directo ordenados
     y si wplot es True grafica espigas en los echoes junto a la RI
     '''
-    echoes = find_echoes(data,nechoes,pw,fs=fs)
     keys = [str(n) for n in np.arange(nechoes)]
     cols = ['time (ms)', 'level (dB)', 'distance (m)', 'DIRECT']    
-    echoes[:,0] *= 1000
-    echoes[:,1] = 10*np.log10(echoes[:,1]/echoes[0,1])
-    dist = 0.343*echoes[:,:1]
-    direct = np.zeros_like(dist)
-    direct[0] = 1
-    echoes = np.hstack([echoes, dist, direct])
-    echoes = echoes[np.argsort(-echoes[:, 1])]
-    display_table(echoes,cols,keys) 
+    echoes_multi = find_echoes(data,nechoes,pw,fs=fs)
+    if data.ndim == 1:
+        data = data[:,np.newaxis] # el array debe ser 2D
+    nchan = echoes_multi.shape[2]
+    for n in range(nchan):
+        echoes = echoes_multi[:,:,n]
+        echoes[:,0] *= 1000
+        echoes[:,1] = 10*np.log10(echoes[:,1]/echoes[0,1])
+        dist = 0.343*echoes[:,:1]
+        direct = np.zeros_like(dist)
+        direct[0] = 1
+        echoes = np.hstack([echoes, dist, direct])
+        echoes = echoes[np.argsort(-echoes[:, 1])]
+        display_table(echoes,cols,keys) 
     if (wplot):
         t = 1000*np.arange(len(data))/fs
-        fig, ax = plt.subplots(figsize=(18,5))
-        ax.plot(t,data,label='RI')
-        for n in range(nechoes):
-            amp = scale*(echoes[n,1]+20)*np.max(data)
-            ax.plot([echoes[n,0],echoes[n,0]],[0,amp],label=str(n))
-        ax.legend()
-        ax.set_xlabel('Tiempo (ms)')
-        ax.set_title('ECHOGRAM')
-        ax.set_xlim([0, np.max(echoes[:,0])*1.1])
+        _, axs = plt.subplots(nchan,1,figsize=(18,5*nchan))
+        if nchan ==1:
+            axs = [axs]
+        for n in range(nchan):
+            echoes = echoes_multi[:,:,n]
+            axs[n].plot(t,data[:,n],label='RI')
+            for m in range(nechoes):
+                amp = scale*(echoes[m,1]+20)*np.max(data)
+                axs[n].plot([echoes[m,0],echoes[m,0]],[0,amp],label=str(m))
+            axs[n].legend()
+            axs[n].set_xlabel('Tiempo (ms)')
+            axs[n].set_title('ECHOGRAM Channel ' + str(n))
+            axs[n].set_xlim([0, np.max(echoes[:,0])*1.1])
     return    
 
 
@@ -65,20 +74,48 @@ def display_table(data,headers,rownames):
     html += "</table>"
     display(HTML(html)) 
 
-def irplot(data, fs=48000):
+def irplot(data, fs=48000, tmax=3.0):
     """ data (nsamples,nchannel) must be a 2D array
     """
     if data.ndim == 1:
         data = data[:,np.newaxis] # el array debe ser 2D
     nsamples, nchan = np.shape(data)
     t = np.arange(nsamples)/fs
-    _, ax = plt.subplots(figsize=(18,5))
+    _, axs = plt.subplots(figsize=(18,5*nchan))
+    ndir = find_dir(data,pw=0.5,fs=fs)
+    if nchan==1:
+        axs = [axs]
     for n in range(nchan):
-        ndir = find_dir(data[:,n],pw=0.5,fs=fs)
-        ax.plot(t,data)
-        ax.plot(t[ndir[0]:ndir[1]],data[ndir[0]:ndir[1],n],'r')
-    ax.set_xlabel('Time (s)')
-    ax.set_title('IMPULSE RESPONSE')
+        axs[n].plot(t,data[:,n])
+        axs[n].plot(t[ndir[0,n]:ndir[1,n]],data[ndir[0,n]:ndir[1,n],n],'r')
+        axs[n].set_xlim([0,tmax])
+        if n==0:
+            axs[n].set_title('IMPULSE RESPONSE')
+    axs[n].set_xlabel('Time (s)')        
+
+def irstatplot(data, pstat, fs=48000, tmax=2.0):
+    if data.ndim == 1:
+        data = data[:,np.newaxis] # el array debe ser 2D
+    nsamples, nchan = np.shape(data)
+    t = np.arange(1,nsamples+1)/fs
+    ndir = find_dir(data,pw=0.5,fs=fs)
+    _, axs = plt.subplots(nchan,1,figsize=(18,5*nchan))
+    irmax = np.max(np.abs(data))
+    kurtmax =  np.nanmax(pstat['kurtosis'])
+    if nchan==1:
+        axs = [axs]
+    for n in range(nchan):
+        axs[n].semilogx(t,data[:,n]/irmax)
+        axs[n].semilogx(t[ndir[0,n]:ndir[1,n]],data[ndir[0,n]:ndir[1,n],n]/irmax,'r',label='direct')
+        axs[n].semilogx(pstat['tframe'],pstat['kurtosis'][:,n]/kurtmax,'k',label='kurtosis')
+        axs[n].semilogx(pstat['tframe'],pstat['stdexcess'][:,n],'g',label='stdexcess')
+        axs[n].semilogx([pstat['mixing'][0,n],pstat['mixing'][0,n]],[-1,1],'k','r')
+        axs[n].semilogx([pstat['mixing'][1,n],pstat['mixing'][1,n]],[-1,1],'g','r')
+        axs[n].set_xlabel('Time (s)')
+        axs[n].set_title('IMPULSE RESPONSE')
+        axs[n].set_xlim([0.5*t[ndir[0,n]],tmax])
+        axs[n].legend()
+
 
 def parsplot(pars, keys, chan=0):
     # busca la ocurrencia de 'rt' 'edt' 'snr' 'c80' 'c50' 'ts' 'dr' en keys
