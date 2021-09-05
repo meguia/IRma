@@ -7,8 +7,7 @@ base:
 - numpy = 1.20.1
 - scipy = 1.6.2
 - matplotlib = 3.3.4
-- iython = 7.22
-- pandas = 1.2.4
+- ipython = 7.22
 
 ## python sounddevice
 For windows wo ASIO or OSX/Linux
