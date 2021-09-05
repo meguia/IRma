@@ -260,7 +260,7 @@ def hipass_filter(data, **kwargs):
     return signal.sosfiltfilt(sos, data, axis=0)
 
 
-
+# agregar una funcion para detectar clipeo
         
 
 

@@ -2,8 +2,7 @@ import numpy as np
 from scipy import signal
 from scipy.io import wavfile
 from scipy.stats import linregress, kurtosis
-from .process import make_filterbank
-from .process import A_weighting
+from .process import make_filterbank, A_weighting
 
 def revtime(ir_input, method='rt20', fs=48000, tmax=3.0):
     '''
@@ -235,9 +234,10 @@ def irstats(ir, window=0.01, overlap=0.005, fs=48000):
         data = data[:,np.newaxis] # el array debe ser 2D
     kurt_confidence = 0.5
     excess_confidence = 0.9
+    stdbup_confidence = 1.0
     ndir = find_dir(data, fs=fs)
     nsamples, nchan = np.shape(data)
-    listofkeys = ['chan','tframe','std','kurtosis','stdexcess']
+    listofkeys = ['chan','tframe','std','kurtosis','stdexcess','stdbup']
     pars = dict.fromkeys(listofkeys,0 )
     pars['nchan'] = nchan
     nwindow = int(window*fs)
@@ -248,7 +248,9 @@ def irstats(ir, window=0.01, overlap=0.005, fs=48000):
     pars['std'] = np.zeros((nframes,nchan))
     pars['kurtosis'] = np.zeros((nframes,nchan))
     pars['stdexcess'] = np.zeros((nframes,nchan))
+    pars['stdbup'] = np.zeros((nframes,nchan))
     pars['mixing'] = np.zeros((2,nchan))
+    pars['tnoise'] = np.zeros((1,nchan))
     for m in range(nframes):
         fr = data[frames[m][0]:frames[m][1],:]
         pars['tframe'][m] = np.mean(frames[m])/fs
@@ -262,6 +264,11 @@ def irstats(ir, window=0.01, overlap=0.005, fs=48000):
     pars['mixing'][0,:] = pars['tframe'][nmix][:,0]
     nmix = np.argmax(pars['stdexcess']>excess_confidence,axis=0)
     pars['mixing'][1,:] = pars['tframe'][nmix][:,0]
+    for n in range(nchan):
+        stdb = signal.savgol_filter(10*np.log10(pars['std'][:,0]),51,3,axis=0)
+        pars['stdbup'][:,n] = stdb-np.min(stdb)
+    nnoise = np.argmax(pars['stdbup']<stdbup_confidence,axis=0)    
+    pars['tnoise'][0,:] = pars['tframe'][nnoise][:,0]
     return pars    
 
 # echo density 
