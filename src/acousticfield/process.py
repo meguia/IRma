@@ -175,30 +175,40 @@ def apply_bands(data, bankname='fbank_10_1', fs=48000, norma=True):
     # agregar fadeinfadeout    
     return data_filt    
 
-def transferfunc(ir_input, fs=48000, fmax=22000):
+def spectrum(data_input, fs=48000):
     """
-    Computes the transfer function (in dB) from the impulse response 
+    Computes the spectral power density (in dB) of signal data
+    Can be usede to obtain the transfer functio from the impulse response 
+    Rturns a dictionary sp with keys
+    sp['f'] center frequencies
+    sp['s'] power spectral density in dB 
+    sp['amplitude'] amplitude of the FFT
+    sp['phase] phase of the FFT for signal reconstruction
     """
-    if type(ir_input) is str:
-        fs, data = wavfile.read(ir_input + '.wav')
-    elif type(ir_input) is np.ndarray:
-        data = ir_input
+    if type(data_input) is str:
+        fs, data = wavfile.read(data_input + '.wav')
+    elif type(data_input) is np.ndarray:
+        data = data_input
     else:
         raise TypeError('Primer argumento debe ser el array devuelto por extractir o un nombre de archivo')
     if data.ndim == 1:
         data = data[:,np.newaxis] # el array debe ser 2D
     nsamples, nchan = np.shape(data)
+    nf = int(np.ceil((nsamples+1)/2))
     freq = fftfreq(nsamples, d=1/fs)
-    nmax = np.argmax(freq>fmax)
-    listofkeys = ['nchan','nsamples','f','TF']
-    tfunc = dict.fromkeys(listofkeys,0 )
-    tfunc['nchan'] = nchan
-    tfunc['f'] = freq[:nmax]
-    tfunc['TF'] = np.zeros((nchan,nmax))
+    listofkeys = ['nchan','f','s','amplitude','phase']
+    sp = dict.fromkeys(listofkeys,0 )
+    sp['nchan'] = nchan
+    sp['f'] = np.abs(freq[:nf])
+    sp['s'] = np.zeros((nchan,nf))
+    sp['amplitude'] = np.zeros((nchan,nf))
+    sp['phase'] = np.zeros((nchan,nf))
     for n in np.arange(nchan):
-        temp = np.abs(rfft(data[:,n]))
-        tfunc['TF'][n] = 20*np.log10(temp[:nmax])
-    return(tfunc)
+        s = rfft(data[:,n])
+        sp['amplitude'][n] = np.abs(s)
+        sp['phase'][n] = np.angle(s)
+        sp['s'][n] = 20*np.log10(sp['amplitude'][n])
+    return sp
 
 
 def spectrogram(data, **kwargs):
@@ -226,7 +236,7 @@ def spectrogram(data, **kwargs):
     spec['nsamples']=nsamples
     for n in np.arange(nchan):
         env = np.abs(signal.hilbert(data[:,n],nenv))  
-        f,t,spectro = signal.spectrogram(data[:,n], kwargs['sr'], window=kwargs['windowType'], nperseg=windowSize, noverlap=overlap)
+        f,t,spectro = signal.spectrogram(data[:,n], kwargs['fs'], window=kwargs['windowType'], nperseg=windowSize, noverlap=overlap)
         spec['t'] = t
         spec['df'] = f[1]
         spec['env'][n] = env
@@ -239,12 +249,12 @@ def spectrogram(data, **kwargs):
             spec['f'] = f
             spec['s'][n] = spectro
         if kwargs['normalized']:
-            spec['s'][n] = spec['s']/np.max(spec['s'][n])
-            spec['env'][n] = spec['env']/np.max(spec['env'][n])    
+            spec['s'][n] = spec['s'][n]/np.max(spec['s'][n])
+            spec['env'][n] = spec['env'][n]/np.max(spec['env'][n])    
     return spec        
 
 def hipass_filter(data, **kwargs):
-    nyq = 0.5 * kwargs['sr']
+    nyq = 0.5 * kwargs['fs']
     low = kwargs['lowcut'] / nyq
     sos = signal.butter(kwargs['order'], low, btype='highpass', output='sos')
     return signal.sosfiltfilt(sos, data, axis=0)

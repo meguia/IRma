@@ -2,8 +2,10 @@ import numpy as np
 from matplotlib import pyplot as plt
 from IPython.display import display, HTML
 from .room import find_echoes, find_dir
+from .process import spectrum, spectrogram
+plt.style.use('dark_background')
    
-def parsprint(pars, keys=None, cols=None, chan=0):
+def pars_print(pars, keys=None, cols=None, chan=0):
     '''
     Imprime una tabla en formati HTML a partir del diccionario param con las keys en filas
     y usa como headers de las columnas cols (normalmente se usa 'fc' para esto)
@@ -16,7 +18,7 @@ def parsprint(pars, keys=None, cols=None, chan=0):
     tabla = np.vstack(list(pars[key][:,chan] for key in keys))
     display_table(tabla,cols,keys)    
 
-def echodisplay(data, nechoes, pw=0.7, scale=0.1, wplot=True, fs=48000):
+def echo_display(data, nechoes, pw=0.7, scale=0.1, wplot=True, fs=48000):
     '''
     Imprime una tabla en formati HTML con los echoes y el directo ordenados
     y si wplot es True grafica espigas en los echoes junto a la RI
@@ -51,12 +53,12 @@ def echodisplay(data, nechoes, pw=0.7, scale=0.1, wplot=True, fs=48000):
             axs[n].legend()
             axs[n].set_xlabel('Tiempo (ms)')
             axs[n].set_title('ECHOGRAM Channel ' + str(n))
-            axs[n].set_xlim([0, np.max(echoes[:,0])*1.1])
+            axs[n].set_xlim([0.7*echoes[0,0], np.max(echoes[:,0])*1.1])
     return    
 
 
 def display_table(data,headers,rownames):
-    html = "<table class='table table-stripped'>"
+    html = "<table class='table table-condensed'>"
     html += "<tr>"
     html += "<td><h4></h4><td>"
     for header in headers:
@@ -74,14 +76,14 @@ def display_table(data,headers,rownames):
     html += "</table>"
     display(HTML(html)) 
 
-def irplot(data, fs=48000, tmax=3.0):
+def ir_plot(data, fs=48000, tmax=3.0):
     """ data (nsamples,nchannel) must be a 2D array
     """
     if data.ndim == 1:
         data = data[:,np.newaxis] # el array debe ser 2D
     nsamples, nchan = np.shape(data)
     t = np.arange(nsamples)/fs
-    _, axs = plt.subplots(figsize=(18,5*nchan))
+    _, axs = plt.subplots(nchan,1,figsize=(18,5*nchan))
     ndir = find_dir(data,pw=0.5,fs=fs)
     if nchan==1:
         axs = [axs]
@@ -93,7 +95,7 @@ def irplot(data, fs=48000, tmax=3.0):
             axs[n].set_title('IMPULSE RESPONSE')
     axs[n].set_xlabel('Time (s)')        
 
-def irstatplot(data, pstat, fs=48000, tmax=2.0):
+def irstat_plot(data, pstat, fs=48000, tmax=2.0):
     if data.ndim == 1:
         data = data[:,np.newaxis] # el array debe ser 2D
     nsamples, nchan = np.shape(data)
@@ -107,17 +109,56 @@ def irstatplot(data, pstat, fs=48000, tmax=2.0):
     for n in range(nchan):
         axs[n].semilogx(t,data[:,n]/irmax)
         axs[n].semilogx(t[ndir[0,n]:ndir[1,n]],data[ndir[0,n]:ndir[1,n],n]/irmax,'r',label='direct')
-        axs[n].semilogx(pstat['tframe'],pstat['kurtosis'][:,n]/kurtmax,'k',label='kurtosis')
-        axs[n].semilogx(pstat['tframe'],pstat['stdexcess'][:,n],'g',label='stdexcess')
-        axs[n].semilogx([pstat['mixing'][0,n],pstat['mixing'][0,n]],[-1,1],'k','r')
-        axs[n].semilogx([pstat['mixing'][1,n],pstat['mixing'][1,n]],[-1,1],'g','r')
+        axs[n].semilogx(pstat['tframe'],pstat['kurtosis'][:,n]/kurtmax,'w',label='kurtosis')
+        axs[n].semilogx(pstat['tframe'],pstat['stdexcess'][:,n],'y',label='stdexcess')
+        axs[n].semilogx([pstat['mixing'][0,n],pstat['mixing'][0,n]],[-1,1],'w')
+        axs[n].semilogx([pstat['mixing'][1,n],pstat['mixing'][1,n]],[-1,1],'y')
         axs[n].set_xlabel('Time (s)')
-        axs[n].set_title('IMPULSE RESPONSE')
         axs[n].set_xlim([0.5*t[ndir[0,n]],tmax])
         axs[n].legend()
+        if n==0:
+            axs[n].set_title('IMPULSE RESPONSE (Mixing Time)')
+    axs[n].set_xlabel('Time (s)')
 
+def spectrum_plot(data, logscale=False, fmax=12000, fs=48000, lrange=60):
+    if data.ndim == 1:
+        data = data[:,np.newaxis] # el array debe ser 2D
+    _, nchan = data.shape
+    sp = spectrum(data, fs=fs)
+    _, axs = plt.subplots(nchan,1,figsize=(18,5*nchan))
+    nmax = np.argmax(sp['f']>fmax)
+    smax = np.max(sp['s'][:,:nmax])
+    smin = smax-lrange
+    if nchan==1:
+        axs = [axs]
+    for n in range(nchan):
+        if logscale:
+            axs[n].semilogx(sp['f'],sp['s'][n])
+            axs[n].set_xlim([10,fmax])
+        else:
+            axs[n].plot(sp['f'],sp['s'][n])
+            axs[n].set_xlim([0,fmax])
+        axs[n].set_ylim([smin,smax])    
+        if n==0:
+            axs[n].set_title('POWER SPECTRAL DENSITY')
+    axs[n].set_xlabel('Frequency (Hz)')
 
-def parsplot(pars, keys, chan=0):
+def spectrogram_plot(data,window,overlap,fs,chan=0,fmax=22000,tmax=2.0,normalized=False,logf=False,lrange=60):
+    kwargs = {'windowSize': window,'overlap': overlap,'fs': fs, 'windowType': 'hanning',
+          'normalized': normalized, 'logf': logf}
+    spec = spectrogram(data[:,chan], **kwargs )
+    maxlevel = 10*np.log10(np.max(spec['s']))
+    levels = np.linspace(maxlevel-lrange,maxlevel,50)
+    fig, ax = plt.subplots(figsize=(20,12))
+    ctr = ax.contourf(spec['t'],spec['f'],10*np.log10(spec['s'][0,:,:]),levels)
+    ax.set_xlim([spec['t'][0],tmax])
+    ax.set_ylim([0,fmax])
+    ax.set_xlabel('Time (s)')
+    ax.set_ylabel('Frequency (Hz)')
+    fig.colorbar(ctr)
+    return
+
+def pars_plot(pars, keys, chan=0):
     # busca la ocurrencia de 'rt' 'edt' 'snr' 'c80' 'c50' 'ts' 'dr' en keys
     rtype = list(filter(lambda x: 'rt' in x, pars.keys()))
     pgraph = [['snr'],[rtype[0],'edt'],['c50','c80'],['ts'],['dr']]
@@ -143,7 +184,7 @@ def parsplot(pars, keys, chan=0):
             iplot +=1
     return        
 
-def parsdecayplot(pars, chan=0, fs=48000):    
+def parsdecay_plot(pars, chan=0, fs=48000):    
     nb = pars['nbands']
     chan = 0
     nsamples = pars['schr'].shape[2]

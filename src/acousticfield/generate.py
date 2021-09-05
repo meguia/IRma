@@ -1,8 +1,7 @@
 import numpy as np
-import pandas as pd
 from scipy import signal
 from scipy.io import wavfile
-from scipy.stats import linregress
+from .process import fadeinout, burst
 
 
 def sweep(T, f1=30, f2=22000,filename=None,fs=48000,fade=0.02,order=2):
@@ -60,17 +59,22 @@ def sweep(T, f1=30, f2=22000,filename=None,fs=48000,fade=0.02,order=2):
     np.save(filename + '_inv',invsweepfft) # guarda el filtro inverso en formato npy
     wavfile.write(filename + '.wav',fs,sweep) # guarda el sweep en wav con formato float 32 bits
     return sweep
+
 # MLS Sequence
 
-def puretone(T,f,fs=48000):
-    return np.sin(2.0*np.pi*f*np.arange(0,T,1/fs))
+#Golay complementary sequences
 
 def sigmoid(x,x0=0,a=1):
     x1 = 2*(x-x0)/a
     sig = np.where(x1 < 0, np.exp(x1)/(1 + np.exp(x1)), 1/(1 + np.exp(-x1)))
     return sig
 
-def whitenoise(T, flow=None, fhigh=None, fslow=None, fshigh=None, nchannels=1, fs=48000):
+def puretone(T,f,fadein=None,fadeout=None,fs=48000):
+    data = np.sin(2.0*np.pi*f*np.arange(0,T,1/fs))
+    fadeinout(data, fadein=fadein, fadeout=fadeout, fs=fs)
+    return data
+
+def whitenoise(T, flow=None, fhigh=None, fslow=None, fshigh=None, nchannels=1, fadein=None, fadeout=None, fs=48000):
     """
     Genera ruido blanco de duracion T limitado en banda entre flow y fhigh (fslow y fshigh dan las pendientes de
     la sigmoidea del limite de banda) puede generar nchannels canales
@@ -97,9 +101,10 @@ def whitenoise(T, flow=None, fhigh=None, fslow=None, fshigh=None, nchannels=1, f
         imag[-1] = 0.
     wnoise = np.array(np.fft.irfft(real + 1j*imag),ndmin=2, dtype='float64').T
     wnoise /= np.abs(wnoise).max(axis=0)
+    fadeinout(wnoise, fadein=fadein, fadeout=fadeout, fs=fs)
     return wnoise
 
-def pinknoise(T, ncols=16, fs=48000):
+def pinknoise(T, ncols=16, fadein=None, fadeout=None, fs=48000):
     """
     Genera ruido rosa de duracion T usando el algoritmo de Voss-McCartney
     ncols: numero de fuente indeptes
@@ -112,13 +117,23 @@ def pinknoise(T, ncols=16, fs=48000):
     cols[cols >= ncols] = 0
     rows = np.random.randint(nsamples, size=nsamples)
     array[rows, cols] = np.random.random(nsamples)
-    df = pd.DataFrame(array)
-    df.fillna(method='ffill', axis=0, inplace=True)
-    pnoise = df.sum(axis=1).values
+    mask = np.isnan(array)
+    idx = np.where(~mask,np.arange(mask.shape[0])[:,None],0)
+    array = np.take_along_axis(array,np.maximum.accumulate(idx,axis=0),axis=0)
+    pnoise = np.sum(array,axis=1)
     pnoise -= np.mean(pnoise)
-    pnoise /= np.abs(pnoise).max(axis=0)
+    pnoise /= np.abs(pnoise).max(axis=0) 
+    fadeinout(pnoise, fadein=fadein, fadeout=fadeout, fs=fs)  
     return pnoise
 
-
-    
+def burst_noise(nburst, dur, gap, type='white', flow=None, fhigh=None, fslow=None, fshigh=None, nchannels=1, fadein=None, fadeout=None, fs=48000):
+    T = nburst*(dur+gap)
+    if type == 'white':
+        data = whitenoise(T, flow=flow, fhigh=fhigh, fslow=fslow, fshigh=fshigh, nchannels=nchannels, fs=fs)
+    elif type == 'pink':
+        data = pinknoise(T)
+    else:
+        raise Exception("Invalid noise type")
+    burst(data, nburst=nburst, dur=dur, gap=gap, fadein=fadein, fadeout=fadeout, fs=fs)
+    return data
     

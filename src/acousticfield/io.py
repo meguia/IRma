@@ -15,7 +15,7 @@ def time_rec(filerec,duration,delay=0,chanin=[0],fs=48000,sdevice=None,write_wav
     # loop sobre repeat
     rec = sd.rec(int(duration*fs),samplerate=fs,channels=nchanin,dtype='float64') # graba con 64 bits para proceso
     sd.wait() # espera que termine la grabacion
-    print('listo')
+    print('finished')
     rec = rec[:,chanin]
     if write_wav:
         wavfile.write(filerec + '.wav',fs,rec) # guarda el array grabado en wav con 32 bits
@@ -40,7 +40,7 @@ def play_rec(fplay,filerec,delay=0,repeat=1,chanout=[0],chanin=[0],revtime=2.0,s
         else:    
             data = fplay    
     else:
-        print('Input must be ndarray or filename')     
+        raise TypeError('Input must be ndarray or filename')     
     sd.default.samplerate = fs
     nchanin = chanin[-1]+1
     nchanout = chanout[-1]+1
@@ -50,14 +50,14 @@ def play_rec(fplay,filerec,delay=0,repeat=1,chanout=[0],chanin=[0],revtime=2.0,s
     # loop sobre repeat
     rec = sd.playrec(data, channels=nchanin,dtype='float64') # graba con 64 bits para proceso
     sd.wait() # espera que termine la grabacion
-    print('listo')
+    print('finished')
     rec = rec[:,chanin]
     if write_wav:
         wavfile.write(filerec + '.wav',fs,rec) # guarda el array grabado en wav con 32 bits
     # fin loop   
     return rec
 
-def play(fplay,chanout=[0],sdevice=None,fs=48000,block=False):
+def play(fplay,chanout=[0],sdevice=None,normalized=False,fs=48000,block=False):
     '''
     funcion para reproducir el array fplay (solo el primer canal) o archivo mono fplay.wav a traves de los canales de salida chanout (lista)
     Puede cambiar el device si no se usa el default. Block True bloquea hasta el fin de la reprocduccion
@@ -72,14 +72,15 @@ def play(fplay,chanout=[0],sdevice=None,fs=48000,block=False):
         else:    
             data = fplay     
     else:
-        print('Input must be ndarray or filename') 
+        raise TypeError('Input must be ndarray or filename') 
     sd.default.samplerate = fs
     # nchanout = chanout[-1]+1
     mapping = [c+1 for c in chanout]
     # data = np.repeat(data[:,np.newaxis],nchanout,1) # repite el array 
-    # wait delay e imprimir algun algun mensaje
-    # loop sobre repeat
-    sd.play(data, mapping=mapping,blocking=block) # graba con 64 bits para proceso
+    if normalized:
+        sd.play(data/np.max(np.abs(data)), mapping=mapping,blocking=block) 
+    else:
+        sd.play(data, mapping=mapping,blocking=block)     
     return
 
 def load_pcm(file,nchan,nbytes=4):

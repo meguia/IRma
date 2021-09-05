@@ -124,7 +124,7 @@ def paracoustic(ir, method='rt20', bankname='fbank', tmax=3.0):
         try: 
             fs, _ = wavfile.read(ir + '.wav')
         except:
-            print('Cannot infer sample rate. PLease provide wav file or filter bank with specified sample rate')    
+            raise Exception('Cannot infer sample rate. Please provide wav file or filter bank with specified sample rate')    
         if (len(bankname.split('_')) > 1):
             (noct,bwoct) = [int(ss) for ss in bankname.split('_')[-2:]]
             make_filterbank(noct=noct,bwoct=bwoct,bankname=bankname,fs=fs)
@@ -140,7 +140,7 @@ def paracoustic(ir, method='rt20', bankname='fbank', tmax=3.0):
         fs = fbank['fs']
         print('Using sample rate from filter bank:' + str(fs))
     else:
-        print('Input must be ndarray or filename')    
+        raise TypeError('Input must be ndarray or filename')    
     if data.ndim == 1:
         data = data[:,np.newaxis] # el array debe ser 2D
     nbands, _, _ = fbank['sos'].shape
@@ -230,7 +230,7 @@ def irstats(ir, window=0.01, overlap=0.005, fs=48000):
     elif type(ir) is np.ndarray:
         data = ir
     else:
-        print('Input must be ndarray or filename')    
+        raise TypeError('Input must be ndarray or filename')    
     if data.ndim == 1:
         data = data[:,np.newaxis] # el array debe ser 2D
     kurt_confidence = 0.5

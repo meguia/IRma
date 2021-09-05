@@ -1,8 +1,4 @@
 import numpy as np
-from scipy import signal
-from scipy.interpolate import interp1d
-
-
 
 def subspecs(spec,**kwargs):
     """
