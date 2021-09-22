@@ -2,7 +2,7 @@ import numpy as np
 from scipy import signal
 from scipy.io import wavfile
 from scipy.interpolate import interp1d
-from scipy.fft import next_fast_len, rfft
+from scipy.fft import next_fast_len, rfft, fft, ifft
 from numpy.fft.helper import fftfreq
 
 
@@ -22,38 +22,51 @@ def ir_extract(rec,fileinv,fileout='ir_out',loopback=None,dur=None,fs=48000):
         fs, sweep = wavfile.read(rec + '.wav')
         if sweep.ndim == 1:
             sweep = sweep[:,np.newaxis] # el array debe ser 2D
+        fileout = 'IR_' + rec
     elif type(rec) is np.ndarray:
         sweep = rec
     else:
         raise TypeError('Primer argumento debe ser el array devuelto por play_rec o un nombre de archivo')
     invsweepfft = np.load(fileinv + '_inv.npy')
-    nchan = sweep.shape[1]
-    nsamp = invsweepfft.shape[0]
-    ir = np.zeros((nsamp,nchan))
-    for n,chan in enumerate(sweep.T):
-        ir[:,n] = irsweep(chan,invsweepfft)
+    # Samples must be along the -1 axis for multichannel fft
+    ir = inverse_filter(sweep.T,invsweepfft)
     if loopback is not None:
         # usar el loopback para alinear todos los otros canales
         n0 = np.argmax(ir[:,loopback])
         ir = ir[n0:]
         ir = np.delete(ir ,loopback ,1)
-    if type(rec) is str:    
-        # aca hacer que renombre siguiendo el nombre del archivo de entrada
-        wavfile.write(fileout + '.wav',fs,ir)
-        if dur is not None:
-            ndur = int(np.round(dur*fs))
-            ir = ir[:ndur,:]
+    if dur is not None:
+        ndur = int(np.round(dur*fs))
+        ir = ir[:ndur,:]    
+    wavfile.write(fileout + '.wav',fs,ir)
     return ir
 
-# renombrar o llamar a scipy.signal.fftconvolve
-# funcion para convolucion en el dominio del tiempo y en el dominoo de frecuencia
-def irsweep(sweep,invsweepfft):
+def inverse_filter(data,invfilt):
     '''
-    Aplica el filtro inverso invsweepfft al array sweep de una dimension
+    data can be multichannel, invfilt is in the complex domain (inverse filter)
     '''
-    sweepfft=np.fft.fft(sweep,len(invsweepfft))
-    ir = np.real(np.fft.ifft(invsweepfft*sweepfft))
-    return ir
+    #the samples must be along axis -1
+    if np.argmin(data.shape)>0:
+        raise ValueError("Samples must be along axis -1")
+    nout = len(data)+len(invfilt)-1
+    data_fft=fft(data,nout)
+    invfilt_fft=np.pad(invfilt,(0,len(data)-1))
+    ir =  np.real(ifft(data_fft*invfilt_fft))
+    # samples along the 0 axis (signal standard)
+    return ir.T
+
+def fconvolve(in1,in2):
+    '''
+    in1 can be multichannel, in2 single channel
+    '''
+    #the samples must be along axis -1
+    if np.argmin(in1.shape)>0:
+        raise ValueError("Samples must be along axis -1")   
+    nout = len(in1)+len(in2)-1
+    in1_fft=fft(in1,nout)
+    in2_fft=fft(in2,nout)
+    return np.real(ifft(in1_fft*in2_fft))
+
 
 # funcion para hacer time stretch y compensar variaciones de temperatura o corregir drift en el clock
 #def ir_stretch(ir,threshold):
