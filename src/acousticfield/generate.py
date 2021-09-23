@@ -1,10 +1,11 @@
 import numpy as np
 from scipy import signal
+from scipy.fft import next_fast_len
 from scipy.io import wavfile
 from .process import fadeinout, burst
 
 
-def sweep(T, f1=30, f2=22000,filename=None,fs=48000,fade=0.02,order=2):
+def sweep(T, f1=30, f2=22000,filename=None,fs=48000,fade=0.02,order=2,post=None):
     '''
     Genera un sweep exponencial de duracion T con frecuencia de sampleo fs desde la frecuencia f1
     hasta f2, lo almacena en filename.wav y guarda el filtro inverso en filename_inv.npy
@@ -41,7 +42,15 @@ def sweep(T, f1=30, f2=22000,filename=None,fs=48000,fade=0.02,order=2):
     cplx = mag*np.exp(1.0j*ph) # arma el espectro del sweep a partir de la magnitud y la fase
     cplx = np.append(cplx,np.conj(cplx[-2:0:-1])) # completa el espectro con f negativas para sweep real
     sweep = np.real(np.fft.ifft(cplx)) # Y aca esta el sweep finalmente
-    sweep = sweep[:N] # recorta a la cantidad de samples original
+    if post is not None: # zeropadding form better accuracy
+        npost = int(fs*post)
+        NL = next_fast_len(N+npost)
+    else:    
+        NL = next_fast_len(N)
+    if NL>len(sweep):
+        np.pad(sweep,(0,NL-len(sweep)))    
+    else:
+        sweep = sweep[:NL]    
     w = signal.hann(2*Gd_start) # ventana para fadein
     sweep[:Gd_start] = sweep[:Gd_start]*w[:Gd_start]
     w = signal.hann(2*postfade) # ventana para fadeout
@@ -51,12 +60,12 @@ def sweep(T, f1=30, f2=22000,filename=None,fs=48000,fade=0.02,order=2):
     sweepfft = np.fft.fft(sweep)
     invsweepfft = 1.0/sweepfft
     #  para evitar divergencias re aplicamos el pasabanda
-    W1, H1 = signal.freqz(B1,A1,N,whole=True,fs=fs)
-    W2, H2 = signal.freqz(B2,A2,N,whole=True,fs=fs)
+    W1, H1 = signal.freqz(B1,A1,NL,whole=True,fs=fs)
+    W2, H2 = signal.freqz(B2,A2,NL,whole=True,fs=fs)
     invsweepfftmag  = np.abs(invsweepfft)*np.abs(H1)*np.abs(H2)
     invsweepfftphase = np.angle(invsweepfft)
     invsweepfft = invsweepfftmag*np.exp(1.0j*invsweepfftphase) # resintesis
-    np.save(filename + '_inv',invsweepfft) # guarda el filtro inverso en formato npy
+    np.save(filename + '_inv',invsweepfft) # guarda fft del filtro inverso en formato npy
     wavfile.write(filename + '.wav',fs,sweep) # guarda el sweep en wav con formato float 32 bits
     return sweep
 

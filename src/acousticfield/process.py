@@ -48,10 +48,8 @@ def inverse_filter(data,invfilt):
     #the samples must be along axis -1
     if np.argmin(data.shape)>0:
         raise ValueError("Samples must be along axis -1")
-    nout = len(data)+len(invfilt)-1
-    data_fft=fft(data,nout)
-    invfilt_fft=np.pad(invfilt,(0,len(data)-1))
-    ir =  np.real(ifft(data_fft*invfilt_fft))
+    data_fft=fft(data,len(invfilt))
+    ir =  np.real(ifft(data_fft*invfilt))
     # samples along the 0 axis (signal standard)
     return ir.T
 
