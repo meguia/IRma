@@ -2,7 +2,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 from IPython.display import display, HTML
 from .room import find_echoes, find_dir, irstats
-from .process import spectrum, spectrogram
+from .process import spectrum, spectrogram, fconvolve
 plt.style.use('dark_background')
    
 def pars_print(pars, keys=None, cols=None, chan=0):
@@ -127,6 +127,25 @@ def irstat_plot(data, window=0.01, overlap=0.002, fs=48000, logscale=True, tmax=
             axs[n].set_title('IMPULSE RESPONSE (Mixing Time)')
     axs[n].set_xlabel('Time (s)')
     return pstat
+
+def acorr_plot(data, trange=0.2, fs=48000):
+    if data.ndim == 1:
+        data = data[:,np.newaxis] # el array debe ser 2D
+    nsamples, nchan = data.shape
+    acorr = fconvolve(data[::-1],data)
+    _, axs = plt.subplots(nchan,1,figsize=(18,5*nchan))
+    nrange = int(trange*fs)
+    t = np.linspace(-trange,trange,2*nrange+1)
+    acorr_range=acorr[nsamples-nrange:nsamples+nrange+1,:]
+    if nchan==1:
+        axs = [axs]
+    for n in range(nchan):
+        axs[n].plot(t*1000,acorr_range[:,n])
+        axs[n].set_xlim([-trange*1000,trange*1000])
+        if n==0:
+            axs[n].set_title('IR AUTOCORRELATION')
+    axs[n].set_xlabel('Time (ms)')
+    return acorr
 
 def spectrum_plot(data, logscale=False, fmax=12000, fs=48000, lrange=60):
     if data.ndim == 1:

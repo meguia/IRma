@@ -2,7 +2,7 @@ import numpy as np
 from scipy import signal
 from scipy.io import wavfile
 from scipy.interpolate import interp1d
-from scipy.fft import next_fast_len, rfft, fft, ifft
+from scipy.fft import next_fast_len, rfft, irfft, fft, ifft
 from numpy.fft.helper import fftfreq
 
 
@@ -58,12 +58,18 @@ def fconvolve(in1,in2):
     in1 can be multichannel, in2 single channel
     '''
     #the samples must be along axis -1
+    n1 = np.max(in1.shape)
+    n2 = np.max(in2.shape)
+    ntot = n1+n2-1
     if np.argmin(in1.shape)>0:
-        raise ValueError("Samples must be along axis -1")   
-    nout = len(in1)+len(in2)-1
-    in1_fft=fft(in1,nout)
-    in2_fft=fft(in2,nout)
-    return np.real(ifft(in1_fft*in2_fft))
+        in1_fft=rfft(in1.T,ntot)
+    else:
+        in1_fft=rfft(in1,ntot) 
+    if np.argmin(in2.shape)>0:
+        in2_fft=rfft(in2.T,ntot)
+    else:
+        in2_fft=rfft(in2,ntot) 
+    return irfft(in1_fft*in2_fft).T
 
 
 # funcion para hacer time stretch y compensar variaciones de temperatura o corregir drift en el clock
