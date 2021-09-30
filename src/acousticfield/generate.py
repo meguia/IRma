@@ -5,7 +5,7 @@ from scipy.io import wavfile
 from .process import fadeinout, burst
 
 
-def sweep(T, f1=30, f2=22000,filename=None,fs=48000,fade=0.02,order=2,post=None):
+def sweep(T, f1=30, f2=22000,filename=None,fs=48000,Nrep=1,order=2,post=2.0):
     '''
     Genera un sweep exponencial de duracion T con frecuencia de sampleo fs desde la frecuencia f1
     hasta f2, lo almacena en filename.wav y guarda el filtro inverso en filename_inv.npy
@@ -42,7 +42,7 @@ def sweep(T, f1=30, f2=22000,filename=None,fs=48000,fade=0.02,order=2,post=None)
     cplx = mag*np.exp(1.0j*ph) # arma el espectro del sweep a partir de la magnitud y la fase
     cplx = np.append(cplx,np.conj(cplx[-2:0:-1])) # completa el espectro con f negativas para sweep real
     sweep = np.real(np.fft.ifft(cplx)) # Y aca esta el sweep finalmente
-    if post is not None: # zeropadding form better accuracy
+    if post is not None: # zeropadding for better accuracy
         npost = int(fs*post)
         NL = next_fast_len(N+npost)
     else:    
@@ -65,13 +65,29 @@ def sweep(T, f1=30, f2=22000,filename=None,fs=48000,fade=0.02,order=2,post=None)
     invsweepfftmag  = np.abs(invsweepfft)*np.abs(H1)*np.abs(H2)
     invsweepfftphase = np.angle(invsweepfft)
     invsweepfft = invsweepfftmag*np.exp(1.0j*invsweepfftphase) # resintesis
+    print('Sweep generated with {0} samples.'.format(len(sweep)))
+    print('Total signal with {0} repetitions has a duration of {1:.2f} seconds'.format(Nrep,Nrep*len(sweep)/fs))
     np.save(filename + '_inv',invsweepfft) # guarda fft del filtro inverso en formato npy
-    wavfile.write(filename + '.wav',fs,sweep) # guarda el sweep en wav con formato float 32 bits
+    wavfile.write(filename + '.wav',fs,np.tile(sweep,Nrep)) # guarda el sweep en wav con formato float 32 bits
     return sweep
 
 # MLS Sequence
 
 #Golay complementary sequences
+def golay(N=18, filename=None,fs=48000, Nrep=1):
+    a = np.array([1,1])
+    b = np.array([1,-1])
+    for n in range(N):
+        new_a = np.hstack((a,b))
+        b = np.hstack((a,-b))
+        a = new_a
+    ab = np.tile(np.hstack((a,b)),Nrep)
+    print('Golay complementary sequence generated with {0} samples each.'.format(len(a)))
+    print('Total signal with {0} repetitions has a duration of {1:.2f} seconds'.format(Nrep,len(ab)/fs))
+    np.savez(filename + '_inv',a,b)
+    wavfile.write(filename + '.wav',fs,ab*0.999) 
+    return sweep
+
 
 def sigmoid(x,x0=0,a=1):
     x1 = 2*(x-x0)/a

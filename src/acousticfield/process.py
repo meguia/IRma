@@ -5,8 +5,7 @@ from scipy.interpolate import interp1d
 from scipy.fft import next_fast_len, rfft, irfft, fft, ifft
 from numpy.fft.helper import fftfreq
 
-
-def ir_extract(rec,fileinv,fileout='ir_out',loopback=None,dur=None,fs=48000):
+def ir_extract(rec,fileinv,inv_type='sweep',fileout='ir_out',loopback=None,Nrep=1,dur=None,fs=48000):
     '''
     extrae la respuesta impulso a partir de la grabacion del sweep (rec) y el filtro inverso 
     almacenado en fileinv (archivo npy), ambos parametros obligatorios.
@@ -15,43 +14,68 @@ def ir_extract(rec,fileinv,fileout='ir_out',loopback=None,dur=None,fs=48000):
     devuelve la ri obtenida (puede ser mas de un canal) y la almacena en fileout 
     (si la entrada fue un archivo) con una duracion dur (la ir completa por defecto)
     '''
-    #modificar para admitir rec de tres dimensiones
     # rec puede ser un nombre de un archivo o un prefijo
     
     if type(rec) is str:
-        fs, sweep = wavfile.read(rec + '.wav')
-        if sweep.ndim == 1:
-            sweep = sweep[:,np.newaxis] # el array debe ser 2D
+        fs, data = wavfile.read(rec + '.wav')
+        if data.ndim == 1:
+            data = data[:,np.newaxis] # el array debe ser 2D
         fileout = 'IR_' + rec
     elif type(rec) is np.ndarray:
-        sweep = rec
+        data = rec
     else:
-        raise TypeError('Primer argumento debe ser el array devuelto por play_rec o un nombre de archivo')
-    invsweepfft = np.load(fileinv + '_inv.npy')
-    # Samples must be along the -1 axis for multichannel fft
-    ir = inverse_filter(sweep.T,invsweepfft)
+        raise TypeError('First argument must be the array given by play_rec or a file name')
+    datainv = np.load(fileinv + '_inv.npz')
+    _, nchan = np.shape(data)
+    if inv_type == 'sweep':
+        ir_stack=ir_sweep(data,datainv,Nrep,nchan)
+    elif inv_type == 'golay':
+        ir_stack=ir_golay(data,datainv,Nrep,nchan)
+    else:
+        raise ValueError("inv_type must be 'sweep' or 'golay'") 
+    # ir dimensions: Nrep, nsamples, nchan
+    N = ir_stack.shape[1]
     if loopback is not None:
         # usar el loopback para alinear todos los otros canales
-        n0 = np.argmax(ir[:,loopback])
-        ir = ir[n0:]
-        ir = np.delete(ir ,loopback ,1)
-    if dur is not None:
+        n0 = np.argmax(ir_stack[:,:,loopback],axis=1)
+    else:
+        n0=0
+    if dur is None:
+        ndur = np.min(N-n0)
+    else:
         ndur = int(np.round(dur*fs))
-        ir = ir[:ndur,:]    
+    ir_align = np.zeros((Nrep,ndur,nchan))
+    for n in range(2):
+        ir_align[:,:,n] = ir_stack[:,n0[n]:n0[n]+ndur,n]    
+    ir = np.mean(ir_align,axis=0)
+    ir_std = np.std(ir_align,axis=0)
+    ir = np.delete(ir ,loopback ,1)  
     wavfile.write(fileout + '.wav',fs,ir)
-    return ir
+    return ir, ir_std
 
-def inverse_filter(data,invfilt):
-    '''
-    data can be multichannel, invfilt is in the complex domain (inverse filter)
-    '''
-    #the samples must be along axis -1
-    if np.argmin(data.shape)>0:
-        raise ValueError("Samples must be along axis -1")
-    data_fft=fft(data,len(invfilt))
-    ir =  np.real(ifft(data_fft*invfilt))
-    # samples along the 0 axis (signal standard)
-    return ir.T
+def ir_sweep(data,datainv,Nrep,nchan):
+    N = datainv.shape[0]
+    invfilt =  datainv[np.newaxis,:,np.newaxis]
+    data_stack = np.reshape(data[:N*Nrep,:],(Nrep,N,nchan))
+    data_fft=fft(data_stack,N,axis=1)
+    ir_stack =  np.real(ifft(data_fft*invfilt,axis=1))
+    return ir_stack
+
+def ir_golay(data,datainv,Nrep,nchan):
+    a = datainv['a']
+    b = datainv['b']
+    Ng = len(a)
+    rc_stack = np.reshape(data[:2*Ng*Nrep],(Nrep,2,Ng,nchan))
+    A = rfft(a,Ng)
+    Ap = rfft(rc_stack[:,0,:,:],Ng,axis=1)
+    B = rfft(b,Ng)
+    Bp = rfft(rc_stack[:,1,:,:],Ng,axis=1)
+    aa = irfft(Ap*np.conj(A[np.newaxis,:,np.newaxis]),axis=1)
+    bb = irfft(Bp*np.conj(B[np.newaxis,:,np.newaxis]),axis=1)
+    ir_stack = aa+bb
+    return ir_stack
+
+    
 
 def fconvolve(in1,in2):
     '''
