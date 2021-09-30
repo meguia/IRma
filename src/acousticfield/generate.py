@@ -67,14 +67,14 @@ def sweep(T, f1=30, f2=22000,filename=None,fs=48000,Nrep=1,order=2,post=2.0):
     invsweepfft = invsweepfftmag*np.exp(1.0j*invsweepfftphase) # resintesis
     print('Sweep generated with {0} samples.'.format(len(sweep)))
     print('Total signal with {0} repetitions has a duration of {1:.2f} seconds'.format(Nrep,Nrep*len(sweep)/fs))
-    np.save(filename + '_inv',invsweepfft) # guarda fft del filtro inverso en formato npy
+    np.savez(filename + '_inv',invsweepfft=invsweepfft,type='sweep',fs=fs,Nrep=Nrep) 
     wavfile.write(filename + '.wav',fs,np.tile(sweep,Nrep)) # guarda el sweep en wav con formato float 32 bits
     return sweep
 
 # MLS Sequence
 
 #Golay complementary sequences
-def golay(N=18, filename=None,fs=48000, Nrep=1):
+def golay(filename,N=18,fs=48000, Nrep=1):
     a = np.array([1,1])
     b = np.array([1,-1])
     for n in range(N):
@@ -84,9 +84,9 @@ def golay(N=18, filename=None,fs=48000, Nrep=1):
     ab = np.tile(np.hstack((a,b)),Nrep)
     print('Golay complementary sequence generated with {0} samples each.'.format(len(a)))
     print('Total signal with {0} repetitions has a duration of {1:.2f} seconds'.format(Nrep,len(ab)/fs))
-    np.savez(filename + '_inv',a,b)
+    np.savez(filename + '_inv',a=a,b=b,type='golay',fs=fs,Nrep=Nrep)
     wavfile.write(filename + '.wav',fs,ab*0.999) 
-    return sweep
+    return ab
 
 
 def sigmoid(x,x0=0,a=1):

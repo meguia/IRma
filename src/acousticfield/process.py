@@ -5,7 +5,7 @@ from scipy.interpolate import interp1d
 from scipy.fft import next_fast_len, rfft, irfft, fft, ifft
 from numpy.fft.helper import fftfreq
 
-def ir_extract(rec,fileinv,inv_type='sweep',fileout='ir_out',loopback=None,Nrep=1,dur=None,fs=48000):
+def ir_extract(rec,fileinv,fileout='ir_out',loopback=None,dur=None,fs=48000):
     '''
     extrae la respuesta impulso a partir de la grabacion del sweep (rec) y el filtro inverso 
     almacenado en fileinv (archivo npy), ambos parametros obligatorios.
@@ -27,44 +27,51 @@ def ir_extract(rec,fileinv,inv_type='sweep',fileout='ir_out',loopback=None,Nrep=
         raise TypeError('First argument must be the array given by play_rec or a file name')
     datainv = np.load(fileinv + '_inv.npz')
     _, nchan = np.shape(data)
-    if inv_type == 'sweep':
-        ir_stack=ir_sweep(data,datainv,Nrep,nchan)
-    elif inv_type == 'golay':
-        ir_stack=ir_golay(data,datainv,Nrep,nchan)
+    if fs != datainv['fs']:
+        raise ValueError('sampling rate of inverse filter does not match file sample rate')
+    if datainv['type'] == 'sweep':
+        ir_stack=ir_sweep(data,datainv,nchan)
+    elif datainv['type'] == 'golay':
+        ir_stack=ir_golay(data,datainv,nchan)
     else:
         raise ValueError("inv_type must be 'sweep' or 'golay'") 
     # ir dimensions: Nrep, nsamples, nchan
-    N = ir_stack.shape[1]
+    Nrep,N,_ = ir_stack.shape
     if loopback is not None:
         # usar el loopback para alinear todos los otros canales
         n0 = np.argmax(ir_stack[:,:,loopback],axis=1)
     else:
-        n0=0
+        n0 = np.zeros((Nrep,),dtype=int)
     if dur is None:
-        ndur = np.min(N-n0)
+        ndur = np.min(int(N/2)-n0)
     else:
         ndur = int(np.round(dur*fs))
     ir_align = np.zeros((Nrep,ndur,nchan))
-    for n in range(2):
+    for n in range(nchan):
         ir_align[:,:,n] = ir_stack[:,n0[n]:n0[n]+ndur,n]    
     ir = np.mean(ir_align,axis=0)
     ir_std = np.std(ir_align,axis=0)
-    ir = np.delete(ir ,loopback ,1)  
+    if loopback is not None:
+        ir = np.delete(ir ,loopback ,1)
+        ir_std = np.delete(ir_std ,loopback ,1)  
     wavfile.write(fileout + '.wav',fs,ir)
     return ir, ir_std
 
-def ir_sweep(data,datainv,Nrep,nchan):
-    N = datainv.shape[0]
-    invfilt =  datainv[np.newaxis,:,np.newaxis]
+def ir_sweep(data,datainv,nchan):
+    invsweepfft = datainv['invsweepfft']
+    N = invsweepfft.shape[0]
+    Nrep = datainv['Nrep']
+    invfilt =  invsweepfft[np.newaxis,:,np.newaxis]
     data_stack = np.reshape(data[:N*Nrep,:],(Nrep,N,nchan))
     data_fft=fft(data_stack,N,axis=1)
     ir_stack =  np.real(ifft(data_fft*invfilt,axis=1))
     return ir_stack
 
-def ir_golay(data,datainv,Nrep,nchan):
+def ir_golay(data,datainv,nchan):
     a = datainv['a']
     b = datainv['b']
     Ng = len(a)
+    Nrep = datainv['Nrep']
     rc_stack = np.reshape(data[:2*Ng*Nrep],(Nrep,2,Ng,nchan))
     A = rfft(a,Ng)
     Ap = rfft(rc_stack[:,0,:,:],Ng,axis=1)
