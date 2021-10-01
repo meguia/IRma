@@ -27,8 +27,8 @@ def ir_extract(rec,fileinv,fileout='ir_out',loopback=None,dur=None,fs=48000):
     datainv = np.load(fileinv + '_inv.npz')
     _, nchan = np.shape(data)
     if fs != datainv['fs']:
-        raise ValueError('sampling rate of inverse filter does not match file sample rate')
-    if datainv['type'] == 'sweep':
+        raise ValueError('sampling rate of inverse filter does not match file sample rate')    
+    if datainv['type'] == 'sweep':  
         ir_stack=ir_sweep(data,datainv,nchan)
     elif datainv['type'] == 'golay':
         ir_stack=ir_golay(data,datainv,nchan)
