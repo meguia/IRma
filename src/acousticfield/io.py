@@ -22,7 +22,7 @@ def time_rec(filerec,duration,delay=0,chanin=[0],fs=48000,sdevice=None,write_wav
     # fin loop   
     return rec
 
-def play_rec(fplay,filerec,delay=0,repeat=1,chanout=[0],chanin=[0],revtime=2.0,sdevice=None,write_wav=True):
+def play_rec(fplay,filerec,delay=0,chanout=[0],chanin=[0],revtime=2.0,sdevice=None,write_wav=True):
     '''
     funcion para reproducir el archivo mono wav fileplay a traves de los canales de salida chanout (lista)
     y grabarlo simultaneamente en una cantidad arbitraria de canales de entrada dada por chanin (lista)

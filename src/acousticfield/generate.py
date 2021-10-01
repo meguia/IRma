@@ -1,6 +1,6 @@
 import numpy as np
 from scipy import signal
-from scipy.fft import next_fast_len
+from scipy.fft import next_fast_len,fft,ifft,rfft,irfft
 from scipy.io import wavfile
 from .process import fadeinout, burst
 
@@ -41,7 +41,7 @@ def sweep(T, f1=30, f2=22000,filename=None,fs=48000,Nrep=1,order=2,post=2.0):
     ph = ph - (W1/(fs/2))*np.mod(ph[-1],2.0*np.pi) # fuerza la fase a terminar en multiplo de 2 pi
     cplx = mag*np.exp(1.0j*ph) # arma el espectro del sweep a partir de la magnitud y la fase
     cplx = np.append(cplx,np.conj(cplx[-2:0:-1])) # completa el espectro con f negativas para sweep real
-    sweep = np.real(np.fft.ifft(cplx)) # Y aca esta el sweep finalmente
+    sweep = np.real(ifft(cplx)) # Y aca esta el sweep finalmente
     if post is not None: # zeropadding for better accuracy
         npost = int(fs*post)
         NL = next_fast_len(N+npost)
@@ -56,8 +56,8 @@ def sweep(T, f1=30, f2=22000,filename=None,fs=48000,Nrep=1,order=2,post=2.0):
     w = signal.hann(2*postfade) # ventana para fadeout
     sweep[-postfade:] = sweep[-postfade:]*w[-postfade:]
     sweep = sweep/max(np.abs(sweep)) # normaliza
-    # Calculo del filtro inverso
-    sweepfft = np.fft.fft(sweep)
+    # Calculo del filtro inverso normalizado
+    sweepfft = fft(sweep)
     invsweepfft = 1.0/sweepfft
     #  para evitar divergencias re aplicamos el pasabanda
     W1, H1 = signal.freqz(B1,A1,NL,whole=True,fs=fs)
@@ -75,16 +75,21 @@ def sweep(T, f1=30, f2=22000,filename=None,fs=48000,Nrep=1,order=2,post=2.0):
 
 #Golay complementary sequences
 def golay(filename,N=18,fs=48000, Nrep=1):
-    a = np.array([1,1])
-    b = np.array([1,-1])
+    a = np.array([1.0,1.0])
+    b = np.array([1.0,-1.0])
     for n in range(N):
         new_a = np.hstack((a,b))
         b = np.hstack((a,-b))
         a = new_a
     ab = np.tile(np.hstack((a,b)),Nrep)
+    Ng = len(a)
+    A = rfft(a,Ng,norm="ortho")
+    B = rfft(b,Ng,norm="ortho")
+    normA =  np.max(np.abs(irfft(A*np.conj(A),norm="ortho")))
+    normB =  np.max(np.abs(irfft(B*np.conj(B),norm="ortho")))
     print('Golay complementary sequence generated with {0} samples each.'.format(len(a)))
     print('Total signal with {0} repetitions has a duration of {1:.2f} seconds'.format(Nrep,len(ab)/fs))
-    np.savez(filename + '_inv',a=a,b=b,type='golay',fs=fs,Nrep=Nrep)
+    np.savez(filename + '_inv',a=a/normA,b=b/normB,type='golay',fs=fs,Nrep=Nrep)
     wavfile.write(filename + '.wav',fs,ab*0.999) 
     return ab
 

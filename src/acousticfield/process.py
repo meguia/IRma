@@ -20,7 +20,6 @@ def ir_extract(rec,fileinv,fileout='ir_out',loopback=None,dur=None,fs=48000):
         fs, data = wavfile.read(rec + '.wav')
         if data.ndim == 1:
             data = data[:,np.newaxis] # el array debe ser 2D
-        fileout = 'IR_' + rec
     elif type(rec) is np.ndarray:
         data = rec
     else:
@@ -73,12 +72,12 @@ def ir_golay(data,datainv,nchan):
     Ng = len(a)
     Nrep = datainv['Nrep']
     rc_stack = np.reshape(data[:2*Ng*Nrep],(Nrep,2,Ng,nchan))
-    A = rfft(a,Ng)
-    Ap = rfft(rc_stack[:,0,:,:],Ng,axis=1)
-    B = rfft(b,Ng)
-    Bp = rfft(rc_stack[:,1,:,:],Ng,axis=1)
-    aa = irfft(Ap*np.conj(A[np.newaxis,:,np.newaxis]),axis=1)
-    bb = irfft(Bp*np.conj(B[np.newaxis,:,np.newaxis]),axis=1)
+    A = rfft(a,Ng,norm="ortho")
+    Ap = rfft(rc_stack[:,0,:,:],Ng,axis=1,norm="ortho")
+    B = rfft(b,Ng,norm="ortho")
+    Bp = rfft(rc_stack[:,1,:,:],Ng,axis=1,norm="ortho")
+    aa = irfft(Ap*np.conj(A[np.newaxis,:,np.newaxis]),axis=1,norm="ortho")
+    bb = irfft(Bp*np.conj(B[np.newaxis,:,np.newaxis]),axis=1,norm="ortho")
     ir_stack = aa+bb
     return ir_stack
 

@@ -133,3 +133,4 @@ dmypy.json
 *.npy
 *.npz
 test.csv
+*.code-workspace
