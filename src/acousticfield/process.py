@@ -18,12 +18,12 @@ def ir_extract(rec,fileinv,fileout='ir_out',loopback=None,dur=None,fs=48000):
     
     if type(rec) is str:
         fs, data = wavfile.read(rec + '.wav')
-        if data.ndim == 1:
-            data = data[:,np.newaxis] # el array debe ser 2D
     elif type(rec) is np.ndarray:
         data = rec
     else:
         raise TypeError('First argument must be the array given by play_rec or a file name')
+    if data.ndim == 1:
+        data = data[:,np.newaxis] # el array debe ser 2D    
     datainv = np.load(fileinv + '_inv.npz')
     _, nchan = np.shape(data)
     if fs != datainv['fs']:
@@ -47,14 +47,16 @@ def ir_extract(rec,fileinv,fileout='ir_out',loopback=None,dur=None,fs=48000):
         ndur = int(np.round(dur*fs))
     ir_align = np.zeros((Nrep,ndur,nchan))
     for n in range(nchan):
-        ir_align[:,:,n] = ir_stack[:,n0[n]:n0[n]+ndur,n]    
+        for m in range(Nrep):
+            ir_align[m,:,n] = ir_stack[:,n0[m]:n0[m]+ndur,n]
     ir = np.mean(ir_align,axis=0)
     ir_std = np.std(ir_align,axis=0)
     if loopback is not None:
         ir = np.delete(ir ,loopback ,1)
         ir_std = np.delete(ir_std ,loopback ,1)  
     wavfile.write(fileout + '.wav',fs,ir)
-    return ir, ir_std
+    np.savez(fileout,ir=ir,ir_std=ir_std,ir_stack=ir_stack,fs=fs,loopback=loopback)
+    return ir
 
 def ir_sweep(data,datainv,nchan):
     invsweepfft = datainv['invsweepfft']
