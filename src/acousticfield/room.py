@@ -85,19 +85,20 @@ def clarity(ir_input, fs=48000, tmax = 3.0):
         data = data[:,np.newaxis] # el array debe ser 2D
     nsamples, nchan = np.shape(data)
     nmax = int(min(tmax*fs,nsamples))
+    ndir = find_dir(data, pw=1.0,fs=fs)
     c80 = np.zeros((nchan,))
     c50 = np.zeros((nchan,))
     ts = np.zeros((nchan,))
     n80 = int(0.08*fs)
     n50 = int(0.05*fs)
     for n, ir in enumerate(data.T):
-        e50 = np.sum(np.square(ir[:n50]))
-        e80 = np.sum(np.square(ir[:n80]))
-        er = np.sum(np.square(ir[:nmax]))
-        etr = np.sum(np.multiply(np.arange(nmax)/fs,np.square(ir[:nmax])))
+        e50 = np.sum(np.square(ir[ndir[0,n]:ndir[0,n]+n50]))
+        e80 = np.sum(np.square(ir[ndir[0,n]:ndir[0,n]+n80]))
+        er = np.sum(np.square(ir[ndir[0,n]:nmax]))
+        etr = np.sum(np.multiply((np.arange(ndir[0,n],nmax)-ndir[0,n])/fs,np.square(ir[ndir[0,n]:nmax])))
         c80[n] = 10*np.log10(e80/(er-e80))
         c50[n] = 10*np.log10(e50/(er-e50))
-        ts[n] = etr/er
+        ts[n] = 1000*etr/er
     return c80, c50, ts    
         
 
@@ -183,7 +184,7 @@ def direct_to_reverb(data, nmax, fs=48000):
     nsamples,nchan = data.shape
     nmax = np.minimum(nmax,nsamples)
     ndir = find_dir(data, pw=0.5,fs=fs)
-    dirs = [data[ndir[0,n]:ndir[1,0],n] for n in range(nchan)]
+    dirs = [data[ndir[0,n]:ndir[1,n],n] for n in range(nchan)]
     revs = [data[ndir[1,n]:nmax,n] for n in range(nchan)]
     EDIR = np.sum(np.square(dirs),axis=1)
     EREV = np.sum(np.square(revs),axis=1)
@@ -197,9 +198,10 @@ def find_dir(data, pw=1.0, fs=48000):
         data = data[:,np.newaxis] # el array debe ser 2D
     _, nchan = np.shape(data)
     ndir = np.zeros((2,nchan),dtype=int)
+    # find first local maximum 20 dB below the absolute maximum value
     for n in range(nchan):
         pmax = np.max(np.abs(data[:,n]))
-        n0 = np.argmax(np.abs(data[:,n])>pmax/np.sqrt(10))
+        n0 = np.argmax(np.abs(data[:,n])>pmax/10)
         n0=max(n0,nw+1) 
         npk = np.argmax(np.abs(data[n0-nw:n0+nw,n]))
         nc = n0+npk-nw-2

@@ -60,7 +60,7 @@ def echo_display(data, nechoes, pw=0.7, scale=0.1, wplot=True, fs=48000):
 def display_table(data,headers,rownames):
     html = "<table class='table-condensed'>"
     html += "<tr>"
-    html += "<td><h4></h4><td>"
+    html += "<td><h4>Band</h4><td>"
     for header in headers:
         html += "<td><h4>%s</h4><td>"%(header)
     html += "</tr>" 
@@ -193,7 +193,8 @@ def pars_plot(pars, keys, chan=0):
     isplot = []
     for pl in pgraph:
         isplot.append(np.any([p in keys for p in pl]))
-    nplot = np.sum(isplot)    
+    nplot = np.sum(isplot)
+    ylabels = ['Signal/Noise (dB)','Reverberation Time (s)','Clarity (dB)','Center Time (ms)','Direct/Reverberant (dB)']
     fig, axs = plt.subplots(nplot,1,figsize=(18,5*nplot))
     iplot = 0
     nb = len(pars['fc'])
@@ -205,10 +206,9 @@ def pars_plot(pars, keys, chan=0):
             axs[iplot].set_xticks(np.arange(nb))
             axs[iplot].set_xticklabels(tuple(pars['fc']))
             axs[iplot].legend(pgraph[n])
-            #axs[iplot].ylabel('Tiempo de Reverberacion(s)')
             axs[iplot].set_xlabel('Frequency (Hz)')
             axs[iplot].grid(axis='y')
-            #axs[iplot].title('Respuesta Impulso')
+            axs[iplot].set_ylabel(ylabels[n])
             iplot +=1
     return        
 
