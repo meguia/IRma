@@ -43,6 +43,7 @@ def revtime(ir_input, method='rt20', fs=48000, tmax=3.0):
         xv = xv - np.amax(xv)
         tv =  np.arange(nsamples)/fs # array de tiempo
         snr[n] = -xv[-1] # full range del decaimiento SNR
+        schr[n][:nmax] = xv
         if method.lower() == 'rt30' and snr[n]>35:
             #  Calcula RT usando la definicion del RT30
             pt1 = np.argmax(xv<-5)
@@ -60,12 +61,11 @@ def revtime(ir_input, method='rt20', fs=48000, tmax=3.0):
             pt1 = np.argmax(xv<-0.5)
             pt2 = np.argmax(xv<-10.5)
         else:
-            break
+            return rt, t12, l12, schr, snr, rvalue 
         slope, intercept, r_value, _, _ = linregress(tv[pt1:pt2], xv[pt1:pt2])
         rt[n] = -(intercept + 60)/slope
         t12[n] = tv[[pt1,pt2]]
         l12[n] = intercept+slope*tv[[pt1,pt2]]
-        schr[n][:nmax] = xv
         rvalue[n] = r_value    
     return rt, t12, l12, schr, snr, rvalue 
 
@@ -144,6 +144,10 @@ def paracoustic(ir, method='rt20', bankname='fbank', tmax=3.0):
     if data.ndim == 1:
         data = data[:,np.newaxis] # el array debe ser 2D
     nbands, _, _ = fbank['sos'].shape
+    # some stats
+    pstat = irstats(data, fs=fs)
+    tmixing = np.mean(pstat['mixing'][0,:])
+    tnoise = np.mean(pstat['tnoise'][0,:])
     nsamples, nchan = np.shape(data)
     nmax = int(min(tmax*fs,nsamples))
     listofkeys = ['nchan','nbands','fc',method,'edt','tfit','lfit','schr','rvalue','snr','c80','c50','ts','dr']
@@ -177,7 +181,7 @@ def paracoustic(ir, method='rt20', bankname='fbank', tmax=3.0):
         pars['edt'][n], *_ = revtime(data_filt,'edt',fs,tmax)
         pars[method][n], pars['tfit'][n], pars['lfit'][n], pars['schr'][n], pars['snr'][n], pars['rvalue'][n] = revtime(data_filt,method,fs,tmax)
         pars['c80'][n], pars['c50'][n], pars['ts'][n] = clarity(data_filt,fs,tmax)
-        pars['dr'][n] = direct_to_reverb(data_filt,int(np.max(pars[method][n])*fs),fs)
+        pars['dr'][n] = direct_to_reverb(data_filt,int(tnoise*fs),fs)
     return pars
 
 def direct_to_reverb(data, nmax, fs=48000):

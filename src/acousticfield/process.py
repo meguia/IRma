@@ -48,7 +48,7 @@ def ir_extract(rec,fileinv,fileout='ir_out',loopback=None,dur=None,fs=48000):
     ir_align = np.zeros((Nrep,ndur,nchan))
     for n in range(nchan):
         for m in range(Nrep):
-            ir_align[m,:,n] = ir_stack[:,n0[m]:n0[m]+ndur,n]
+            ir_align[m,:,n] = ir_stack[m,n0[m]:n0[m]+ndur,n]
     ir = np.mean(ir_align,axis=0)
     ir_std = np.std(ir_align,axis=0)
     if loopback is not None:
