@@ -181,7 +181,7 @@ def paracoustic(ir, method='rt20', bankname='fbank', tmax=3.0):
         pars['edt'][n], *_ = revtime(data_filt,'edt',fs,tmax)
         pars[method][n], pars['tfit'][n], pars['lfit'][n], pars['schr'][n], pars['snr'][n], pars['rvalue'][n] = revtime(data_filt,method,fs,tmax)
         pars['c80'][n], pars['c50'][n], pars['ts'][n] = clarity(data_filt,fs,tmax)
-        pars['dr'][n] = direct_to_reverb(data_filt,int(tnoise*fs),fs)
+        #pars['dr'][n] = direct_to_reverb(data_filt,int(tnoise*fs),fs)
     return pars
 
 def direct_to_reverb(data, nmax, fs=48000):
@@ -201,7 +201,7 @@ def find_dir(data, pw=1.0, fs=48000):
     if data.ndim == 1:
         data = data[:,np.newaxis] # el array debe ser 2D
     _, nchan = np.shape(data)
-    ndir = np.zeros((2,nchan),dtype=int)
+    ndir = np.zeros((3,nchan),dtype=int)
     # find first local maximum 20 dB below the absolute maximum value
     for n in range(nchan):
         pmax = np.max(np.abs(data[:,n]))
@@ -211,6 +211,7 @@ def find_dir(data, pw=1.0, fs=48000):
         nc = n0+npk-nw-2
         ndir[0,n] = np.maximum(1,int(nc-1.0*nw))
         ndir[1,n] = int(nc+1.5*nw)
+        ndir[2,n] = nc
     return ndir
 
 def find_echoes(data, nechoes=10, pw=1.0, fs=48000):

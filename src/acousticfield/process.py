@@ -308,6 +308,12 @@ def hipass_filter(data, **kwargs):
     sos = signal.butter(kwargs['order'], low, btype='highpass', output='sos')
     return signal.sosfiltfilt(sos, data, axis=0)
 
+def lowpass_filter(data, **kwargs):
+    nyq = 0.5 * kwargs['fs']
+    hicut = kwargs['hicut'] / nyq
+    sos = signal.butter(kwargs['order'], hicut, btype='lowpass', output='sos')
+    return signal.sosfiltfilt(sos, data, axis=0)    
+
 
 # agregar una funcion para detectar clipeo
         
