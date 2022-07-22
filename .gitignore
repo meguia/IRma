@@ -134,3 +134,4 @@ dmypy.json
 *.npz
 test.csv
 *.code-workspace
+.DS_Store
