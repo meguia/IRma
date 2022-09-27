@@ -274,8 +274,8 @@ def irstats(ir, window=0.01, overlap=0.005, fs=48000):
     nmix = np.argmax(pars['stdexcess']>excess_confidence,axis=0)
     pars['mixing'][1,:] = pars['tframe'][nmix][:,0]
     for n in range(nchan):
-        stdb = signal.savgol_filter(10*np.log10(np.nan_to_num(pars['std'][:,0])),51,3,axis=0)
-        pars['stdbup'][:,n] = stdb-np.min(stdb)
+        stdb = signal.savgol_filter(10*np.log10(pars['std'][:,0]),51,3,axis=0)
+        pars['stdbup'][:,n] = stdb-np.nanmin(stdb)
     nnoise = np.argmax(pars['stdbup']<stdbup_confidence,axis=0)    
     pars['tnoise'][0,:] = pars['tframe'][nnoise][:,0]
     return pars    
