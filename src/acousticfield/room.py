@@ -166,7 +166,7 @@ def paracoustic(ir, method='rt20', bankname='fbank', tmax=3.0):
     pars['c50'] = np.zeros((pars['nbands'],pars['nchan']))
     pars['ts'] = np.zeros((pars['nbands'],pars['nchan']))
     pars['dr'] = np.zeros((pars['nbands'],pars['nchan']))
-    # Por Bandas de frecuencia primero
+    # By Frequency Bands
     sos_a = A_weighting(fs)
     for n in range(nbands+2):
         if n==nbands:
@@ -181,15 +181,17 @@ def paracoustic(ir, method='rt20', bankname='fbank', tmax=3.0):
         pars['edt'][n], *_ = revtime(data_filt,'edt',fs,tmax)
         pars[method][n], pars['tfit'][n], pars['lfit'][n], pars['schr'][n], pars['snr'][n], pars['rvalue'][n] = revtime(data_filt,method,fs,tmax)
         pars['c80'][n], pars['c50'][n], pars['ts'][n] = clarity(data_filt,fs,tmax)
-        #pars['dr'][n] = direct_to_reverb(data_filt,int(tnoise*fs),fs)
+        pars['dr'][n] = direct_to_reverb(data_filt,int(tnoise*fs),fs)
     return pars
 
 def direct_to_reverb(data, nmax, fs=48000):
     nsamples,nchan = data.shape
     nmax = np.minimum(nmax,nsamples)
     ndir = find_dir(data, pw=0.5,fs=fs)
-    dirs = [data[ndir[0,n]:ndir[1,n],n] for n in range(nchan)]
-    revs = [data[ndir[1,n]:nmax,n] for n in range(nchan)]
+    ddirmax = np.max(np.diff(ndir,axis=0))
+    drevmin = nmax-np.max(ndir[1:])
+    dirs = [data[ndir[0,n]:ndir[0,n]+ddirmax,n] for n in range(nchan)]
+    revs = [data[ndir[1,n]:ndir[1,n]+drevmin,n] for n in range(nchan)]
     EDIR = np.sum(np.square(dirs),axis=1)
     EREV = np.sum(np.square(revs),axis=1)
     return  10.0*np.log10(EDIR/EREV)
