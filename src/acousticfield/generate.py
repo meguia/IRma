@@ -5,7 +5,7 @@ from scipy.io import wavfile
 from .process import fadeinout, burst
 
 
-def sweep(T, f1=30, f2=22000,filename=None,fs=48000,Nrep=1,order=2,post=2.0,rms=0):
+def sweep(T, f1=30, f2=22000,filename=None,fs=48000,Nrep=1,order=2,post=2.0,rms=-3.2):
     '''
     Genera un sweep exponencial de duracion T con frecuencia de sampleo fs desde la frecuencia f1
     hasta f2, lo almacena en filename.wav y guarda el filtro inverso en filename_inv.npy
@@ -43,14 +43,14 @@ def sweep(T, f1=30, f2=22000,filename=None,fs=48000,Nrep=1,order=2,post=2.0,rms=
     cplx = np.append(cplx,np.conj(cplx[-2:0:-1])) # completa el espectro con f negativas para sweep real
     sweep = np.real(ifft(cplx)) # Y aca esta el sweep finalmente
     sweep = sweep/max(np.abs(sweep)) # normaliza
-    rms_sweep = 20*np.log10(np.sqrt(np.mean(np.square(sweep)))) # deberia ser ~ 0.7 o -3 dB
+    rms_sweep = 10.0*np.log10(np.mean(np.square(sweep))) # deberia ser -3 dB
     rms_diff = rms - rms_sweep
     if (rms_diff<0):
         sweep = sweep*np.power(10.0,rms_diff/20.0) # ajusta la rams
     else:
         print('Warning RMS pedido mayor al RMS de corte que es {0:.2f} dB '.format(rms_sweep))
     
-    rms_sweep = 20*np.log10(np.sqrt(np.mean(np.square(sweep)))) 
+    rms_sweep = 10*np.log10(np.mean(np.square(sweep)))
     print('Sweep RMS = {0:.2f} dB '.format(rms_sweep))
     if post is not None: # zeropadding for better accuracy
         npost = int(fs*post)
