@@ -54,14 +54,14 @@ def sweep(T, f1=30, f2=22000,filename=None,fs=48000,Nrep=1,order=2,post=2.0,rms=
         np.pad(sweep,(0,NL-len(sweep)))    
     else:
         sweep = sweep[:NL]
-    sweep_rms=sweep[-npost:]
+    sweep_rms=sweep[:NL-npost]
     rms_sweep = 10.0*np.log10(np.mean(np.square(sweep_rms))) # deberia ser -3 dB
     rms_diff = rms - rms_sweep
     if (rms_diff<0):
         sweep = sweep*np.power(10.0,rms_diff/20.0) # ajusta la rams
     else:
         print('Warning RMS pedido mayor al RMS de corte que es {0:.2f} dB '.format(rms_sweep))
-    rms_sweep = 10*np.log10(np.mean(np.square(sweep)))
+    rms_sweep = 10*np.log10(np.mean(np.square(sweep_rms)))
     print('Sweep RMS = {0:.2f} dB '.format(rms_sweep))    
     w = signal.hann(2*Gd_start) # ventana para fadein
     sweep[:Gd_start] = sweep[:Gd_start]*w[:Gd_start]
