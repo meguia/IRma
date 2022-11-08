@@ -69,6 +69,8 @@ def sweep(T, f1=30, f2=22000,filename=None,fs=48000,Nrep=1,order=2,post=2.0,rms=
     # Calculo del filtro inverso normalizado
     sweepfft = fft(sweep)
     invsweepfft = 1.0/sweepfft
+    rms_sweep = 10*np.log10(np.mean(np.square(sweep)))
+    print('Sweep RMS = {0:.2f} dB '.format(rms_sweep))
     #  para evitar divergencias re aplicamos el pasabanda
     W1, H1 = signal.freqz(B1,A1,NL,whole=True,fs=fs)
     W2, H2 = signal.freqz(B2,A2,NL,whole=True,fs=fs)
