@@ -43,6 +43,7 @@ def sweep(T, f1=30, f2=22000,filename=None,fs=48000,Nrep=1,order=2,post=2.0,rms=
     cplx = np.append(cplx,np.conj(cplx[-2:0:-1])) # completa el espectro con f negativas para sweep real
     sweep = np.real(ifft(cplx)) # Y aca esta el sweep finalmente
     sweep = sweep/max(np.abs(sweep)) # normaliza
+    print(len(sweep))
     rms_sweep = 10.0*np.log10(np.mean(np.square(sweep))) # deberia ser -3 dB
     
     rms_diff = rms - rms_sweep
@@ -59,9 +60,11 @@ def sweep(T, f1=30, f2=22000,filename=None,fs=48000,Nrep=1,order=2,post=2.0,rms=
     else:    
         NL = next_fast_len(N)
     if NL>len(sweep):
+        print("PAD")
         np.pad(sweep,(0,NL-len(sweep)))    
     else:
-        sweep = sweep[:NL]    
+        sweep = sweep[:NL]
+    print(len(sweep))    
     rms_sweep = 10*np.log10(np.mean(np.square(sweep)))
     print('Sweep RMS antes del Gd = {0:.2f} dB '.format(rms_sweep))
     w = signal.hann(2*Gd_start) # ventana para fadein
@@ -71,8 +74,6 @@ def sweep(T, f1=30, f2=22000,filename=None,fs=48000,Nrep=1,order=2,post=2.0,rms=
     # Calculo del filtro inverso normalizado
     sweepfft = fft(sweep)
     invsweepfft = 1.0/sweepfft
-    rms_sweep = 10*np.log10(np.mean(np.square(sweep)))
-    print('Sweep RMS despues del Gd = {0:.2f} dB '.format(rms_sweep))
     #  para evitar divergencias re aplicamos el pasabanda
     W1, H1 = signal.freqz(B1,A1,NL,whole=True,fs=fs)
     W2, H2 = signal.freqz(B2,A2,NL,whole=True,fs=fs)
@@ -83,8 +84,6 @@ def sweep(T, f1=30, f2=22000,filename=None,fs=48000,Nrep=1,order=2,post=2.0,rms=
     print('Total signal with {0} repetitions has a duration of {1:.2f} seconds'.format(Nrep,Nrep*len(sweep)/fs))
     np.savez(filename + '_inv',invsweepfft=invsweepfft,type='sweep',fs=fs,Nrep=Nrep) 
     wavfile.write(filename + '.wav',fs,np.tile(sweep,Nrep)) # guarda el sweep en wav con formato float 32 bits
-    rms_sweep = 10*np.log10(np.mean(np.square(sweep)))
-    print('Sweep RMS = {0:.2f} dB '.format(rms_sweep))
     return sweep
 
 # Multitone
