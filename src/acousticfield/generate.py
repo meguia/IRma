@@ -43,17 +43,7 @@ def sweep(T, f1=30, f2=22000,filename=None,fs=48000,Nrep=1,order=2,post=2.0,rms=
     cplx = np.append(cplx,np.conj(cplx[-2:0:-1])) # completa el espectro con f negativas para sweep real
     sweep = np.real(ifft(cplx)) # Y aca esta el sweep finalmente
     sweep = sweep/max(np.abs(sweep)) # normaliza
-    print(len(sweep))
-    rms_sweep = 10.0*np.log10(np.mean(np.square(sweep))) # deberia ser -3 dB
     
-    rms_diff = rms - rms_sweep
-    if (rms_diff<0):
-        sweep = sweep*np.power(10.0,rms_diff/20.0) # ajusta la rams
-    else:
-        print('Warning RMS pedido mayor al RMS de corte que es {0:.2f} dB '.format(rms_sweep))
-    
-    rms_sweep = 10*np.log10(np.mean(np.square(sweep)))
-    print('Sweep RMS = {0:.2f} dB '.format(rms_sweep))
     if post is not None: # zeropadding for better accuracy
         npost = int(fs*post)
         NL = next_fast_len(N+npost)
@@ -64,9 +54,15 @@ def sweep(T, f1=30, f2=22000,filename=None,fs=48000,Nrep=1,order=2,post=2.0,rms=
         np.pad(sweep,(0,NL-len(sweep)))    
     else:
         sweep = sweep[:NL]
-    print(len(sweep))    
+    sweep_rms=sweep[-npost:]
+    rms_sweep = 10.0*np.log10(np.mean(np.square(sweep_rms))) # deberia ser -3 dB
+    rms_diff = rms - rms_sweep
+    if (rms_diff<0):
+        sweep = sweep*np.power(10.0,rms_diff/20.0) # ajusta la rams
+    else:
+        print('Warning RMS pedido mayor al RMS de corte que es {0:.2f} dB '.format(rms_sweep))
     rms_sweep = 10*np.log10(np.mean(np.square(sweep)))
-    print('Sweep RMS antes del Gd = {0:.2f} dB '.format(rms_sweep))
+    print('Sweep RMS = {0:.2f} dB '.format(rms_sweep))    
     w = signal.hann(2*Gd_start) # ventana para fadein
     sweep[:Gd_start] = sweep[:Gd_start]*w[:Gd_start]
     w = signal.hann(2*postfade) # ventana para fadeout
