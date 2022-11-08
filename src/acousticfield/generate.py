@@ -116,7 +116,7 @@ def puretone(T,f,fadein=None,fadeout=None,fs=48000):
     fadeinout(data, fadein=fadein, fadeout=fadeout, fs=fs)
     return data
 
-def whitenoise(T, flow=None, fhigh=None, fslow=None, fshigh=None, nchannels=1, fadein=None, fadeout=None, fs=48000):
+def whitenoise(T, flow=None, fhigh=None, fslow=None, fshigh=None, nchannels=1, fadein=None, fadeout=None, fs=48000, filename="wnoise"):
     """
     Genera ruido blanco de duracion T limitado en banda entre flow y fhigh (fslow y fshigh dan las pendientes de
     la sigmoidea del limite de banda) puede generar nchannels canales
@@ -144,6 +144,7 @@ def whitenoise(T, flow=None, fhigh=None, fslow=None, fshigh=None, nchannels=1, f
     wnoise = np.array(np.fft.irfft(real + 1j*imag),ndmin=2, dtype='float64').T
     wnoise /= np.abs(wnoise).max(axis=0)
     fadeinout(wnoise, fadein=fadein, fadeout=fadeout, fs=fs)
+    wavfile.write(filename + '.wav',fs,wnoise) 
     return wnoise
 
 def pinknoise(T, ncols=16, fadein=None, fadeout=None, fs=48000):
