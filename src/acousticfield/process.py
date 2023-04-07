@@ -226,11 +226,11 @@ def apply_bands(data, bankname='fbank_10_1', fs=48000, norma=True):
 
 def spectrum(data_input, fs=48000):
     """
-    Computes the spectral power density (in dB) of signal data
-    Can be usede to obtain the transfer functio from the impulse response 
-    Rturns a dictionary sp with keys
+    Computes the power spectrum (in dB) of signal data
+    Can be used to obtain the transfer function from the impulse response 
+    Returns a dictionary sp with keys
     sp['f'] center frequencies
-    sp['s'] power spectral density in dB 
+    sp['s'] power spectrum in dB 
     sp['amplitude'] amplitude of the FFT
     sp['phase] phase of the FFT for signal reconstruction
     """
@@ -259,6 +259,43 @@ def spectrum(data_input, fs=48000):
         sp['s'][n] = 20*np.log10(sp['amplitude'][n])
     return sp
 
+def crossspectrum(data_input, ch1=0, ch2=1, fs=48000):
+    """
+    Computes the cross/auto power spectrum between two channels of signal data 
+    Data_input must be at least nsamples x 2 and chan1 , chan2 are the channels
+    for computing the cross/auto power spectrum
+    It can be used to obtain the transfer function between two signals
+    Returns a dictionary xsp with keys
+    xsp['f'] center frequencies
+    xsp['S21'] cross power spectrum sp2 sp1*
+    xsp['S11'] auto power spectrum sp1 sp1*
+    xsp['S22'] auto power spectrum sp2 sp2*
+    xsp['H'] transfer 1 -> 2 sp2/sp1 = S21/S11 
+    """
+    if type(data_input) is str:
+        fs, data = wavfile.read(data_input + '.wav')
+    elif type(data_input) is np.ndarray:
+        data = data_input
+    else:
+        raise TypeError('First argument must be an nparray or a filename')    
+    if data.ndim == 1:
+        raise TypeError('You must provide at least 2 channels')    
+    nsamples, nchan = np.shape(data)
+    nf = int(np.ceil((nsamples+1)/2))
+    freq = fftfreq(nsamples, d=1/fs)
+    listofkeys = ['chans','f','S21','S11','S22','H']
+    xsp = dict.fromkeys(listofkeys,0 )
+    xsp['chans'] = (ch1,ch2)
+    xsp['f'] = np.abs(freq[:nf])
+    sp1 = rfft(data[:,ch1])
+    sp2 = rfft(data[:,ch2])
+    xsp['S21'] = sp1*np.conjugate(sp2)
+    xsp['S11'] = sp1*np.conjugate(sp1)
+    xsp['S22'] = sp2*np.conjugate(sp2)
+    # now we take care of the possible divergences
+    eps = 1e-12
+    xsp['H'] = sp2/(sp1+eps)
+    return xsp
 
 def spectrogram(data, **kwargs):
     """

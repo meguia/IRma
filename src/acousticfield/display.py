@@ -147,28 +147,34 @@ def acorr_plot(data, trange=0.2, fs=48000):
     axs[n].set_xlabel('Time (ms)')
     return acorr
 
-def spectrum_plot(data, logscale=False, fmax=12000, fs=48000, lrange=60):
+def spectrum_plot(data, logscale=False, fmax=12000, fs=48000, lrange=60, overlay=False):
     if data.ndim == 1:
         data = data[:,np.newaxis] # el array debe ser 2D
     _, nchan = data.shape
     sp = spectrum(data, fs=fs)
-    _, axs = plt.subplots(nchan,1,figsize=(18,5*nchan))
+    if overlay:
+        _, axs = plt.subplots(1,1,figsize=(18,6))
+    else:    
+        _, axs = plt.subplots(nchan,1,figsize=(18,5*nchan))
     nmax = np.argmax(sp['f']>fmax)
     smax = np.max(sp['s'][:,:nmax])
     smin = smax-lrange
-    if nchan==1:
-        axs = [axs]
     for n in range(nchan):
+        if overlay or nchan==1:
+            ax = axs
+        else:    
+            ax = axs[n]
         if logscale:
-            axs[n].semilogx(sp['f'],sp['s'][n])
-            axs[n].set_xlim([10,fmax])
+            ax.semilogx(sp['f'],sp['s'][n],label=str(n))
+            ax.set_xlim([10,fmax])
         else:
-            axs[n].plot(sp['f'],sp['s'][n])
-            axs[n].set_xlim([0,fmax])
-        axs[n].set_ylim([smin,smax])    
+            ax.plot(sp['f'],sp['s'][n],label=str(n))
+            ax.set_xlim([0,fmax])
+        ax.set_ylim([smin,smax])    
         if n==0:
-            axs[n].set_title('POWER SPECTRAL DENSITY')
-    axs[n].set_xlabel('Frequency (Hz)')
+            ax.set_title('POWER SPECTRAL DENSITY')
+    ax.set_xlabel('Frequency (Hz)')
+    ax.legend()
     return sp
 
 def spectrogram_plot(data,window,overlap,fs,chan=0,fmax=22000,tmax=2.0,normalized=False,logf=False,lrange=60):
