@@ -1,5 +1,6 @@
 import yaml 
 import datetime
+import numpy as np
 from scipy.io import wavfile
 from acousticfield.generate import sweep
 from acousticfield.io import play_rec
@@ -34,24 +35,45 @@ class RecordingSession:
         self.rpath = recordingpath or ""
         self.recordings = []
 
-    def generate_audio_file_prefix(self, speaker, microphone, nchannels, loopback,rtype,take):
-        prefix = f"{self.session_id}_S{self.speakers[speaker-1]}_M{self.microphones[microphone-1]}_"
+    def generate_audio_file_prefix(self, speaker, microphone, direction, nchannels, loopback,rtype,take):
+        prefix = f"{self.session_id}_S{self.speakers[speaker-1]}_M{self.microphones[microphone-1]}_D{direction}_"
         prefix += f"{nchannels}ch" 
         prefix += "_loop" if loopback is not None else ""
         prefix += f"_{rtype}" if rtype is not None else ""
         prefix += f"_({take})" if take>1 else ""
+        # Check if same recording exists
+        recnames = [line[0] for line in self.recordings]
+        if prefix in recnames:
+            raise ValueError(f"Name already exists please use take a different take number")
         return prefix
 
-    def record_ir(self,speaker,microphone,take=1,comment=''):
-        nchannels = len(self.output_channels)
-        prefix = self.generate_audio_file_prefix(speaker, microphone, nchannels, self.loopback, self.rtype, take)
+    def record_ir(self,speaker,microphone,direction=1,take=1,comment=''):
+        nchannels = len(self.input_channels)
+        prefix = self.generate_audio_file_prefix(speaker, microphone, direction, nchannels, self.loopback, self.rtype, take)
         print("Recording ... "+prefix)
         rec_temp = play_rec(self.sweepfile,self.rpath+'rec_'+prefix,chanin=self.input_channels,chanout=self.output_channels) 
+        print(f"Maximum sample value = {np.max(rec_temp)}")
         print("Extracting ---> "+prefix)
         ir_temp = ir_extract(rec_temp,self.sweepfile,self.rpath+'ri_'+prefix,loopback=self.loopback,fs=self.sampling_rate)
+        print(f"IR shape = {ir_temp.shape}")
         self.recordings.append([prefix, comment])
         print("DONE")
         return ir_temp
+    
+    def playrec_file(self,filename,speaker,microphone,direction=1,take=1,channel=0,dim=1.0,comment=''):
+        nchannels = len(self.input_channels)
+        fs, fplay = wavfile.read(filename+".wav")
+        if fplay.ndim > 1:
+            data = fplay[:,channel]
+        else:    
+            data = fplay   
+        data = (dim*data)/float(np.max(np.abs(data)))    
+        prefix = self.generate_audio_file_prefix(speaker, microphone, direction, nchannels, self.loopback, self.rtype, take)
+        recfile = filename + "_" + prefix
+        print(f"Recording Audio file {filename} in {recfile}")
+        rec_temp = play_rec(data,self.rpath+recfile,chanin=self.input_channels,chanout=self.output_channels,fs=fs) 
+        print(f"Maximum sample value = {np.max(rec_temp)}")
+        self.recordings.append([recfile, comment])
 
     def list_recordings(self,comments=False):
         for n,recordings in enumerate(self.recordings):

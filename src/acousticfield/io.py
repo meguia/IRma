@@ -22,7 +22,7 @@ def time_rec(filerec,duration,delay=0,chanin=[0],fs=48000,sdevice=None,write_wav
     # fin loop   
     return rec
 
-def play_rec(fplay,filerec,delay=0,chanout=[0],chanin=[0],revtime=2.0,sdevice=None,write_wav=True):
+def play_rec(fplay,filerec,delay=0,chanout=[0],chanin=[0],revtime=2.0,sdevice=None,write_wav=True,fs=48000):
     '''
     funcion para reproducir el archivo mono wav fileplay a traves de los canales de salida chanout (lista)
     y grabarlo simultaneamente en una cantidad arbitraria de canales de entrada dada por chanin (lista)
@@ -33,15 +33,16 @@ def play_rec(fplay,filerec,delay=0,chanout=[0],chanin=[0],revtime=2.0,sdevice=No
     if sdevice is not None:
         sd.default.device = sdevice
     if type(fplay) is str:
-        fs, data = wavfile.read(fplay + '.wav')
+        fs2, data = wavfile.read(fplay + '.wav')
     elif type(fplay) is np.ndarray:
         if fplay.ndim > 1:
             data = fplay[:,0]
         else:    
-            data = fplay    
+            data = fplay
+        fs2=fs        
     else:
         raise TypeError('Input must be ndarray or filename')     
-    sd.default.samplerate = fs
+    sd.default.samplerate = fs2
     nchanin = chanin[-1]+1
     nchanout = chanout[-1]+1
     data = np.append(data,np.zeros(int(revtime*fs))) # extiende data para agregar la reverberacion
