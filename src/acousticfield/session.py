@@ -7,9 +7,9 @@ from acousticfield.process import ir_extract
 
 class RecordingSession:
     def __init__(self, session_id, speakers, microphones,speaker_pos=None,microphone_pos=None,
-                 inchan=[0,1],outchan=[0,1],loopback=None,sampling_rate=48000,date=None,hour=None,
-                 recordingpath=None,sweepfile=None,sweeprange=[30,22000],sweeprep=1,sweeppost=2.0,
-                 sweepdur=10.0):
+                 inchan=[0,1],outchan=[0,1],loopback=None,sampling_rate=48000,rtype=None,
+                 date=None,hour=None,recordingpath=None,sweepfile=None,sweeprange=[30,22000],
+                 sweeprep=1,sweeppost=2.0,sweepdur=10.0):
         self.session_id = session_id
         self.speakers = speakers
         self.microphones = microphones
@@ -19,6 +19,7 @@ class RecordingSession:
         self.output_channels = outchan
         self.loopback = loopback
         self.sampling_rate = sampling_rate
+        self.rtype = rtype 
         self.date = date or datetime.date.today().strftime("%Y-%m-%d")
         self.hour = hour or datetime.datetime.now().strftime("%H:%M:%S")
         self.comments = ""
@@ -33,21 +34,21 @@ class RecordingSession:
         self.rpath = recordingpath or ""
         self.recordings = []
 
-    def generate_audio_file_prefix(self, speaker, microphone, nchannels, loopback,type,take):
+    def generate_audio_file_prefix(self, speaker, microphone, nchannels, loopback,rtype,take):
         prefix = f"{self.session_id}_S{self.speakers[speaker-1]}_M{self.microphones[microphone-1]}_"
         prefix += f"{nchannels}ch" 
         prefix += "_loop" if loopback is not None else ""
-        prefix += f"_{type}" if type is not None else ""
+        prefix += f"_{rtype}" if rtype is not None else ""
         prefix += f"_({take})" if take>1 else ""
         return prefix
 
-    def record_ir(self,speaker,microphone,type=None,loopback=None,take=1,comment=''):
+    def record_ir(self,speaker,microphone,take=1,comment=''):
         nchannels = len(self.output_channels)
-        prefix = self.generate_audio_file_prefix(speaker, microphone, nchannels, loopback, type, take)
+        prefix = self.generate_audio_file_prefix(speaker, microphone, nchannels, self.loopback, self.rtype, take)
         print("Recording ... "+prefix)
         rec_temp = play_rec(self.sweepfile,self.rpath+'rec_'+prefix,chanin=self.input_channels,chanout=self.output_channels) 
         print("Extracting ---> "+prefix)
-        ir_temp = ir_extract(rec_temp,self.sweepfile,self.rpath+'ri_'+prefix,loopback=loopback,fs=self.sampling_rate)
+        ir_temp = ir_extract(rec_temp,self.sweepfile,self.rpath+'ri_'+prefix,loopback=self.loopback,fs=self.sampling_rate)
         self.recordings.append([prefix, comment])
         print("DONE")
         return ir_temp
@@ -91,6 +92,7 @@ class RecordingSession:
             'output_channels': self.output_channels,
             'loopback': self.loopback,
             'sampling_rate': self.sampling_rate,
+            'rtype': self.rtype,
             'date': self.date,
             'hour': self.hour,
             'comments': self.comments,
@@ -114,6 +116,7 @@ class RecordingSession:
         outchan = metadata.get('output_channels', [0, 1])
         loopback = metadata.get('loopback', None)
         sampling_rate = metadata.get('sampling_rate', 48000)
+        rtype = metadata.get('rype',None)
         date = metadata.get('date')
         hour = metadata.get('hour')
         comments = metadata.get('comments', '')
@@ -121,7 +124,7 @@ class RecordingSession:
         recordingpath = metadata.get('recording_path')
         recordings = metadata.get('recordings', [])
         session = RecordingSession(session_id, speakers, microphones, speaker_pos, microphone_pos,
-                                   inchan, outchan, loopback, sampling_rate, date, hour,
+                                   inchan, outchan, loopback, sampling_rate, rtype, date, hour,
                                    recordingpath, sweepfile)
         session.comments = comments
         session.recordings = recordings
