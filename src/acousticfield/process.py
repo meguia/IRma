@@ -109,6 +109,7 @@ def fconvolve(in1,in2):
 
 # funcion para detectar outliers en un conjunto de IR
 #def ir_average(ir,reject_outliers=True,threshold): # con opcion de eliminar outliers
+
 # fadeinout
 
 def fadeinout(data, fadein=0.05, fadeout=None, fs=48000):
@@ -353,8 +354,15 @@ def lowpass_filter(data, **kwargs):
 
 
 # agregar una funcion para detectar clipeo
-        
 
+def ambiAtoB(data,format="FUMA",filters=None):
+    """
+    Convert from Ambisonics A Format asuuming FLU , FRD , BLD , BRU
+    to B format either using filters provided as an 4 x 4 x nsamples array or 
+    by specifying format (FUMA or AMBIX)
+    """
+    (FLU,FRD,BLD,BRU) = [col for col in data.T]
+    
 
 
 

@@ -51,8 +51,9 @@ class RecordingSession:
         nchannels = len(self.input_channels)
         prefix = self.generate_audio_file_prefix(speaker, microphone, direction, nchannels, self.loopback, self.rtype, take)
         print("Recording ... "+prefix)
-        rec_temp = play_rec(self.sweepfile,self.rpath+'rec_'+prefix,chanin=self.input_channels,chanout=self.output_channels) 
-        print(f"Maximum sample value = {np.max(rec_temp)}")
+        rec_temp = play_rec(self.sweepfile,self.rpath+'rec_'+prefix,chanin=self.input_channels,chanout=self.output_channels)
+        rec_max = np.max(np.delete(rec_temp,self.loopback,axis=1)) if self.loopback is not None else np.max(rec_temp)
+        print(f"Maximum sample value = {rec_max}")
         print("Extracting ---> "+prefix)
         ir_temp = ir_extract(rec_temp,self.sweepfile,self.rpath+'ri_'+prefix,loopback=self.loopback,fs=self.sampling_rate)
         print(f"IR shape = {ir_temp.shape}")
@@ -82,12 +83,21 @@ class RecordingSession:
                 line += f" -- {recordings[1]}"
             print(line)
 
-    def load_ir(self,nrecording):
+    def load_ir(self,nrecording,ftype="wav"):
         if nrecording<len(self.recordings):
-            _, data = wavfile.read(self.rpath+'ri_'+self.recordings[nrecording][0]+'.wav')
-            return data
+            fname = self.rpath+'ri_'+self.recordings[nrecording][0]
+            if ftype == "wav":
+                _, data = wavfile.read(fname+'.wav')
+                return data
+            elif ftype == "npy":
+                return np.load(fname+".npy")
+            elif ftype == "npz":
+                data = np.load(fname+".npz")
+                return data['ir']
+            else:
+                TypeError("Type non existent, please select wav npy or npz")
         else:
-            raise ValueError("recording out of range")     
+            raise ValueError("recording out of range")
 
     def generate_backup_file_prefix(self):
         return f"{self.session_id}_backup"
