@@ -130,7 +130,6 @@ dmypy.json
 .vscode/settings.json
 *.pcm
 *.wav
-*.npy
 *.npz
 test.csv
 *.code-workspace
