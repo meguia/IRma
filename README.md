@@ -10,9 +10,13 @@ base:
 - ipython = 7.22
 
 ## python sounddevice
-For windows wo ASIO or OSX/Linux
+For linux, mac, or windows without ASIO or OSX/Linux
 
 `conda install -c conda-forge python-sounddevice`
+ 
+or, using pip:
+
+`pip install python-sounddevice`
 
 For windows with ASIO support:
 
@@ -23,7 +27,7 @@ using the most recent package from
 https://www.lfd.uci.edu/~gohlke/pythonlibs/#sounddevice
 
 for example:
-`pip install sounddevice-0.4.4-cp38-cp38-win_amd64.whl`
+`pip install sounddevice‑0.4.4‑pp38‑pypy38_pp73‑win_amd64.whl`
 
 ## acousticfield
 
