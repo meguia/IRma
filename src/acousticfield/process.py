@@ -2,6 +2,7 @@ import numpy as np
 from scipy import signal
 from scipy.io import wavfile
 from scipy.interpolate import interp1d
+from scipy.signal import convolve
 from scipy.fft import next_fast_len, rfft, irfft, fft, ifft
 from numpy.fft.helper import fftfreq
 
@@ -353,15 +354,45 @@ def lowpass_filter(data, **kwargs):
     return signal.sosfiltfilt(sos, data, axis=0)    
 
 
-# agregar una funcion para detectar clipeo
+def array_convolve2D(a1,a2,axis=0):
+  """
+  Convolves two 2D array along axis assuming same number of elements in the other axis
+  and returns a 2D array with the result
+  """
+  if a1.shape[axis-1] != a2.shape[axis-1]:
+      raise ValueError("Same number of elements required along axis")
+  na = a1.shape[axis-1]
+  if axis==0:
+    c = np.zeros((a1.shape[0]+a2.shape[0]-1,na))
+    for n in np.arange(na):
+      c[:,n] = convolve(a1[:,n],a2[:,n])
+  else:
+    c = np.zeros((na,a1.shape[0]+a2.shape[0]-1))
+    for n in np.arange(na):
+      c[n,:] = convolve(a1[n,:],a2[n,:])    
+  return c    
 
-def ambiAtoB(data,format="FUMA",filters=None):
+def ambiAtoB(data,format="FuMa",filt=None):
     """
     Convert from Ambisonics A Format asuuming FLU , FRD , BLD , BRU
     to B format either using filters provided as an 4 x 4 x nsamples array or 
     by specifying format (FUMA or AMBIX)
     """
-    (FLU,FRD,BLD,BRU) = [col for col in data.T]
+    if format == "FuMa":
+        if filt is None:
+            (FLU,FRD,BLD,BRU) = [col for col in data.T]
+            W = FLU + FRD + BLD + BRU
+            X = FLU + FRD - BLD - BRU
+            Y = FLU - FRD + BLD - BRU
+            Z = FLU - FRD - BLD + BRU
+        else:
+            W = np.sum(array_convolve2D(data,filt[:,:,0]),axis=1)
+            X = np.sum(array_convolve2D(data,filt[:,:,1]),axis=1)
+            Y = np.sum(array_convolve2D(data,filt[:,:,2]),axis=1)
+            Z = np.sum(array_convolve2D(data,filt[:,:,3]),axis=1)    
+        return np.vstack([W,X,Y,Z]).T # FuMa B Format
+    else:
+        print("Only FuMa for the moment")
     
 
 
