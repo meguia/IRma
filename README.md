@@ -16,13 +16,14 @@ For windows wo ASIO or OSX/Linux
 
 For windows with ASIO support:
 
-Install version 0.4.2
+Install latest version from
 https://readthedocs.org/projects/python-sounddevice/downloads/pdf/latest/
 
-using the packages from 
+using the most recent package from 
 https://www.lfd.uci.edu/~gohlke/pythonlibs/#sounddevice
 
-`pip install sounddevice-0.4.2-cp38-cp38-win_amd64.whl`
+for example:
+`pip install sounddevice-0.4.4-cp38-cp38-win_amd64.whl`
 
 ## acousticfield
 
