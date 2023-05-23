@@ -76,7 +76,7 @@ def display_table(data,headers,rownames):
     html += "</table>"
     display(HTML(html)) 
 
-def ir_plot(data, fs=48000, tmax=3.0):
+def ir_plot(data, fs=48000, tmax=3.0, labels=None):
     """ data (nsamples,nchannel) must be a 2D array
     """
     if data.ndim == 1:
@@ -88,11 +88,15 @@ def ir_plot(data, fs=48000, tmax=3.0):
     if nchan==1:
         axs = [axs]
     for n in range(nchan):
-        axs[n].plot(t,data[:,n])
+        if labels is not None:
+            axs[n].plot(t,data[:,n],label=labels[n])
+            axs[n].legend()
+        else:
+            axs[n].plot(t,data[:,n])
         axs[n].plot(t[ndir[0,n]:ndir[1,n]],data[ndir[0,n]:ndir[1,n],n],'r')
-        axs[n].set_xlim([0,tmax])
+        axs[n].set_xlim([0,tmax])    
         if n==0:
-            axs[n].set_title('IMPULSE RESPONSE')
+            axs[n].set_title('IMPULSE RESPONSE')  
     axs[n].set_xlabel('Time (s)')
     return    
 
@@ -200,8 +204,14 @@ def pars_plot(pars, keys, chan=0):
     for pl in pgraph:
         isplot.append(np.any([p in keys for p in pl]))
     nplot = np.sum(isplot)
-    ylabels = ['Signal/Noise (dB)','Reverberation Time (s)','Clarity (dB)','Center Time (ms)','Direct/Reverberant (dB)']
-    fig, axs = plt.subplots(nplot,1,figsize=(18,5*nplot))
+    ylabels = [
+        'Signal/Noise (dB)',
+        'Reverberation Time (s)',
+        'Clarity (dB)',
+        'Center Time (ms)',
+        'Direct/Reverberant (dB)'
+    ]
+    _, axs = plt.subplots(nplot,1,figsize=(18,5*nplot))
     iplot = 0
     nb = len(pars['fc'])
     for n in range(5):
@@ -217,6 +227,48 @@ def pars_plot(pars, keys, chan=0):
             axs[iplot].set_ylabel(ylabels[n])
             iplot +=1
     return        
+
+
+def pars_plot_compared(pars, keys, chans=[0],labels=None,title=None):
+    # busca la ocurrencia de 'rt' 'edt' 'snr' 'c80' 'c50' 'ts' 'dr' en keys
+    rtype = list(filter(lambda x: 'rt' in x, pars.keys()))
+    pgraph = ['snr',rtype[0],'edt','c50','c80','ts','dr']
+    isplot = []
+    for pl in pgraph:
+        isplot.append(pl in keys)
+    nplot = np.sum(isplot)
+    ylabels = [
+        'Signal/Noise (dB)',
+        'Reverberation Time (s)',
+        'Early Decay Time (s)',
+        'Clarity (dB)',
+        'Clarity (dB)',
+        'Center Time (ms)',
+        'Direct/Reverberant (dB)'
+    ]
+    _, axs = plt.subplots(nplot,1,figsize=(18,3*nplot))
+    iplot = 0
+    nb = len(pars['fc'])
+    if nplot==1:
+        axs = [axs]
+    for n in range(7):
+        if isplot[n]:
+            nbars = len(chans)
+            for c in chans:
+              axs[iplot].bar(np.arange(nb)+0.4/nbars*(2*c-nbars+1),pars[pgraph[n]][:,c],width=0.8/nbars)
+            axs[iplot].set_xticks(np.arange(nb))
+            axs[iplot].set_xticklabels(tuple(pars['fc']))
+            if labels is not None:
+              axs[iplot].legend(labels)
+            else:  
+              axs[iplot].legend(chans)
+            axs[iplot].set_xlabel('Frequency (Hz)')
+            axs[iplot].grid(axis='y')
+            axs[iplot].set_ylabel(ylabels[n])
+            if iplot==0 and title is not None:
+              axs[iplot].set_title(title)  
+            iplot +=1
+    return    
 
 def parsdecay_plot(pars, chan=0, fs=48000):    
     nb = pars['nbands']

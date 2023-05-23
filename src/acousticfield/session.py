@@ -49,6 +49,7 @@ class RecordingSession:
 
     def record_ir(self,speaker,microphone,direction=1,take=1,comment=''):
         nchannels = len(self.input_channels)
+        valid = True
         prefix = self.generate_audio_file_prefix(speaker, microphone, direction, nchannels, self.loopback, self.rtype, take)
         print("Recording ... "+prefix)
         rec_temp = play_rec(self.sweepfile,self.rpath+'rec_'+prefix,chanin=self.input_channels,chanout=self.output_channels)
@@ -57,10 +58,24 @@ class RecordingSession:
         print("Extracting ---> "+prefix)
         ir_temp = ir_extract(rec_temp,self.sweepfile,self.rpath+'ri_'+prefix,loopback=self.loopback,fs=self.sampling_rate)
         print(f"IR shape = {ir_temp.shape}")
-        self.recordings.append([prefix, comment])
+        rec_dic = dict(
+            spk=speaker,
+            mic=microphone,
+            dir=direction,
+            take=take,
+            valid=valid,
+            filename=prefix,
+            comment=comment
+        )
+        self.recordings.append(rec_dic)
         print("DONE")
         return ir_temp
-    
+
+    def label_invalid(self,nrecording=None):
+        if nrecording is None:
+            nrecording = len(self.recordings)
+        self.recordings['valid']=False
+
     def playrec_file(self,filename,speaker,microphone,direction=1,take=1,channel=0,dim=1.0,comment=''):
         nchannels = len(self.input_channels)
         fs, fplay = wavfile.read(filename+".wav")
@@ -78,14 +93,14 @@ class RecordingSession:
 
     def list_recordings(self,comments=False):
         for n,recordings in enumerate(self.recordings):
-            line = f"{n}:{recordings[0]}"
+            line = f"{n}:{recordings['filename']}"
             if comments:
-                line += f" -- {recordings[1]}"
+                line += f" -- {recordings['comments']}"
             print(line)
 
     def load_ir(self,nrecording,ftype="wav"):
         if nrecording<len(self.recordings):
-            fname = self.rpath+'ri_'+self.recordings[nrecording][0]
+            fname = self.rpath+'ri_'+self.recordings[nrecording]['filename']
             if ftype == "wav":
                 _, data = wavfile.read(fname+'.wav')
                 return data
@@ -109,7 +124,7 @@ class RecordingSession:
         else:    
             if nrecording<len(self.recordings):
                 new_comment = input("Enter a comment for recording "+self.recordings[nrecording][0])
-                self.recordings[nrecording][1]+= f"\n{new_comment}"
+                self.recordings[nrecording]['comment']+= f"\n{new_comment}"
             else:
                 raise ValueError("recording out of range") 
 
