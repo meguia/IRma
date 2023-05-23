@@ -8,7 +8,7 @@ from acousticfield.process import ir_extract
 
 class RecordingSession:
     def __init__(self, session_id, speakers, microphones,speaker_pos=None,microphone_pos=None,
-                 inchan=[0,1],outchan=[0,1],loopback=None,sampling_rate=48000,rtype=None,
+                 inchan=[1,2],outchan=[1,2],loopback=None,sampling_rate=48000,rtype=None,
                  date=None,hour=None,recordingpath=None,sweepfile=None,sweeprange=[30,22000],
                  sweeprep=1,sweeppost=2.0,sweepdur=10.0):
         self.session_id = session_id

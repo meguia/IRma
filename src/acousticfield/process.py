@@ -56,7 +56,10 @@ def ir_extract(rec,fileinv,fileout='ir_out',loopback=None,dur=None,fs=48000):
         ir = np.delete(ir ,loopback ,1)
         ir_std = np.delete(ir_std ,loopback ,1)  
     wavfile.write(fileout + '.wav',fs,ir)
-    np.savez(fileout,ir=ir,ir_std=ir_std,ir_stack=ir_stack,fs=fs,loopback=loopback)
+    if Nrep>1:
+        np.savez(fileout,ir=ir,ir_std=ir_std,ir_stack=ir_stack,fs=fs,loopback=loopback)
+    else:
+        np.save(fileout,ir)    
     return ir
 
 def ir_sweep(data,datainv,nchan):
@@ -391,8 +394,21 @@ def ambiAtoB(data,format="FuMa",filt=None):
             Y = np.sum(array_convolve2D(data,filt[:,:,2]),axis=1)
             Z = np.sum(array_convolve2D(data,filt[:,:,3]),axis=1)    
         return np.vstack([W,X,Y,Z]).T # FuMa B Format
+    elif format == "AmbiX":
+        if filt is None:
+            (FLU,FRD,BLD,BRU) = [col for col in data.T]
+            W = FLU + FRD + BLD + BRU
+            Y = FLU - FRD + BLD - BRU
+            Z = FLU - FRD - BLD + BRU
+            X = FLU + FRD - BLD - BRU
+        else:
+            W = np.sum(array_convolve2D(data,filt[:,:,0]),axis=1)
+            Y = np.sum(array_convolve2D(data,filt[:,:,1]),axis=1)
+            Z = np.sum(array_convolve2D(data,filt[:,:,2]),axis=1)
+            X = np.sum(array_convolve2D(data,filt[:,:,3]),axis=1)    
+        return np.vstack([W,Y,Z,X]).T # FuMa B Format
     else:
-        print("Only FuMa for the moment")
+        print("Only FuMa or AmbiX")
     
 
 
