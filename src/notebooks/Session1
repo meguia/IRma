@@ -1,0 +1,31 @@
+comments: ''
+date: '2023-05-23'
+hour: 00:31:48
+input_channels:
+- 1
+- 2
+loopback: 1
+microphone_positions:
+- 0
+- 0
+microphones:
+- pub1
+- pub2
+output_channels:
+- 1
+- 2
+recording_path: ''
+recordings:
+- - Session1_SR_Mpub1_D1_2ch_loop_Mono
+  - un comentario
+rtype: Mono
+sampling_rate: 48000
+session_id: Session1
+speaker_positions:
+- 0
+- 0
+speakers:
+- L
+- R
+- centro
+sweepfile: sweep_x1_48k_10s_30_22k

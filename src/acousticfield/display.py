@@ -5,7 +5,7 @@ from .room import find_echoes, find_dir, irstats
 from .process import spectrum, spectrogram, fconvolve
 plt.style.use('dark_background')
    
-def pars_print(pars, keys=None, cols=None, chan=0):
+def pars_print(pars, keys=None, cols=None, chan=1):
     '''
     Imprime una tabla en formati HTML a partir del diccionario param con las keys en filas
     y usa como headers de las columnas cols (normalmente se usa 'fc' para esto)
@@ -15,7 +15,7 @@ def pars_print(pars, keys=None, cols=None, chan=0):
         keys = ['snr',rtype,'rvalue','edt','c50','c80','ts','dr']
     if cols is None:
         cols = pars['fc']    
-    tabla = np.vstack(list(pars[key][:,chan] for key in keys))
+    tabla = np.vstack(list(pars[key][:,chan-1] for key in keys))
     display_table(tabla,cols,keys)    
 
 def echo_display(data, nechoes, pw=0.7, scale=0.1, wplot=True, fs=48000):
@@ -192,7 +192,7 @@ def spectrogram_plot(data,window,overlap,fs,chan=0,fmax=22000,tmax=2.0,normalize
     fig.colorbar(ctr)
     return spec
 
-def pars_plot(pars, keys, chan=0):
+def pars_plot(pars, keys, chan=1):
     # busca la ocurrencia de 'rt' 'edt' 'snr' 'c80' 'c50' 'ts' 'dr' en keys
     rtype = list(filter(lambda x: 'rt' in x, pars.keys()))
     pgraph = [['snr'],[rtype[0],'edt'],['c50','c80'],['ts'],['dr']]
@@ -208,7 +208,7 @@ def pars_plot(pars, keys, chan=0):
         if isplot[n]:
             nbars = len(pgraph[n])
             for m,pkey in enumerate(pgraph[n]):
-                axs[iplot].bar(np.arange(nb)+0.4/nbars*(2*m-nbars+1),pars[pkey][:,chan],width=0.8/nbars)
+                axs[iplot].bar(np.arange(nb)+0.4/nbars*(2*m-nbars+1),pars[pkey][:,chan-1],width=0.8/nbars)
             axs[iplot].set_xticks(np.arange(nb))
             axs[iplot].set_xticklabels(tuple(pars['fc']))
             axs[iplot].legend(pgraph[n])
@@ -218,9 +218,8 @@ def pars_plot(pars, keys, chan=0):
             iplot +=1
     return        
 
-def parsdecay_plot(pars, chan=0, fs=48000):    
+def parsdecay_plot(pars, chan=1, fs=48000):    
     nb = pars['nbands']
-    chan = 0
     nsamples = pars['schr'].shape[2]
     t = np.arange(nsamples)/fs
     ncols = int(np.floor(np.sqrt(nb)))
@@ -230,8 +229,8 @@ def parsdecay_plot(pars, chan=0, fs=48000):
         for col in range(ncols):
             band = row*ncols+col
             if (band<nb):
-                axs[row,col].plot(t,pars['schr'][band,chan])
-                axs[row,col].plot(pars['tfit'][band,chan],pars['lfit'][band,chan],'r')
+                axs[row,col].plot(t,pars['schr'][band,chan-1])
+                axs[row,col].plot(pars['tfit'][band,chan-1],pars['lfit'][band,chan-1],'r')
                 axs[row,col].set_title(pars['fc'][band])
     return            
 

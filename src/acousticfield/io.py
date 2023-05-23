@@ -11,12 +11,10 @@ def time_rec(filerec,duration,delay=0,chanin=[1],fs=48000,sdevice=None,write_wav
     if sdevice is not None:
         sd.default.device = sdevice
     sd.default.samplerate = fs
-    nchanin = chanin[-1]
     # loop sobre repeat
-    rec = sd.rec(int(duration*fs),samplerate=fs,channels=nchanin,dtype='float64') # graba con 64 bits para proceso
+    rec = sd.rec(int(duration*fs),samplerate=fs,mapping=chanin,dtype='float64') # graba con 64 bits para proceso
     sd.wait() # espera que termine la grabacion
     print('finished')
-    rec = rec[:,chanin-1]
     if write_wav:
         wavfile.write(filerec + '.wav',fs,rec) # guarda el array grabado en wav con 32 bits
     # fin loop   
@@ -43,16 +41,14 @@ def play_rec(fplay,filerec,delay=0,chanout=[1],chanin=[1],revtime=2.0,sdevice=No
     else:
         raise TypeError('Input must be ndarray or filename')     
     sd.default.samplerate = fs2
-    nchanin = chanin[-1]
-    nchanout = chanout[-1]
+    nchanout = len(chanout)
     data = np.append(data,np.zeros(int(revtime*fs))) # extiende data para agregar la reverberacion
     data = np.repeat(data[:,np.newaxis],nchanout,1) # repite el array 
     # wait delay e imprimir algun algun mensaje
     # loop sobre repeat
-    rec = sd.playrec(data, channels=nchanin,dtype='float64') # graba con 64 bits para proceso
+    rec = sd.playrec(data, input_mapping=chanin,output_mapping=chanout,dtype='float64') # graba con 64 bits para proceso
     sd.wait() # espera que termine la grabacion
     print('finished')
-    rec = rec[:,chanin-1]
     if write_wav:
         wavfile.write(filerec + '.wav',fs,rec) # guarda el array grabado en wav con 32 bits
     # fin loop   
