@@ -8,7 +8,7 @@ from acousticfield.process import ir_extract
 
 class RecordingSession:
     def __init__(self, session_id, speakers, microphones,speaker_pos=None,microphone_pos=None,
-                 inchan=[0,1],outchan=[0,1],loopback=None,sampling_rate=48000,rtype=None,
+                 inchan=[1,2],outchan=[1,2],loopback=None,sampling_rate=48000,rtype=None,
                  date=None,hour=None,recordingpath=None,sweepfile=None,sweeprange=[30,22000],
                  sweeprep=1,sweeppost=2.0,sweepdur=10.0):
         self.session_id = session_id
@@ -48,7 +48,7 @@ class RecordingSession:
         return prefix
 
     def record_ir(self,speaker,microphone,direction=1,take=1,comment=''):
-        nchannels = len(self.input_channels)
+        nchannels = self.input_channels[-1]
         prefix = self.generate_audio_file_prefix(speaker, microphone, direction, nchannels, self.loopback, self.rtype, take)
         print("Recording ... "+prefix)
         rec_temp = play_rec(self.sweepfile,self.rpath+'rec_'+prefix,chanin=self.input_channels,chanout=self.output_channels)
@@ -61,8 +61,8 @@ class RecordingSession:
         print("DONE")
         return ir_temp
     
-    def playrec_file(self,filename,speaker,microphone,direction=1,take=1,channel=0,dim=1.0,comment=''):
-        nchannels = len(self.input_channels)
+    def playrec_file(self,filename,speaker,microphone,direction=1,take=1,channel=1,dim=1.0,comment=''):
+        nchannels = self.input_channels[-1]
         fs, fplay = wavfile.read(filename+".wav")
         if fplay.ndim > 1:
             data = fplay[:,channel]
