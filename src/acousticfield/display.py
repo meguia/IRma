@@ -229,7 +229,7 @@ def pars_plot(pars, keys, chan=1):
     return        
 
 
-def pars_plot_compared(pars, keys, chans=[0],labels=None,title=None):
+def pars_plot_compared(pars, keys, chans=[1],labels=None,title=None):
     # busca la ocurrencia de 'rt' 'edt' 'snr' 'c80' 'c50' 'ts' 'dr' en keys
     rtype = list(filter(lambda x: 'rt' in x, pars.keys()))
     pgraph = ['snr',rtype[0],'edt','c50','c80','ts','dr']
@@ -255,7 +255,7 @@ def pars_plot_compared(pars, keys, chans=[0],labels=None,title=None):
         if isplot[n]:
             nbars = len(chans)
             for c in chans:
-              axs[iplot].bar(np.arange(nb)+0.4/nbars*(2*c-nbars+1),pars[pgraph[n]][:,c],width=0.8/nbars)
+              axs[iplot].bar(np.arange(nb)+0.4/nbars*(2*c-nbars+1),pars[pgraph[n]][:,c-1],width=0.8/nbars)
             axs[iplot].set_xticks(np.arange(nb))
             axs[iplot].set_xticklabels(tuple(pars['fc']))
             if labels is not None:
