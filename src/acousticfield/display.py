@@ -41,7 +41,7 @@ def echo_display(data, nechoes, pw=0.7, scale=0.1, wplot=True, fs=48000):
         display_table(echoes,cols,keys) 
     if (wplot):
         t = 1000*np.arange(len(data))/fs
-        _, axs = plt.subplots(nchan,1,figsize=(18,5*nchan))
+        _, axs = plt.subplots(nchan,1,figsize=(18,3*nchan))
         if nchan ==1:
             axs = [axs]
         for n in range(nchan):
@@ -83,7 +83,7 @@ def ir_plot(data, fs=48000, tmax=3.0, labels=None):
         data = data[:,np.newaxis] # el array debe ser 2D
     nsamples, nchan = np.shape(data)
     t = np.arange(nsamples)/fs
-    _, axs = plt.subplots(nchan,1,figsize=(18,5*nchan))
+    _, axs = plt.subplots(nchan,1,figsize=(18,3*nchan))
     ndir = find_dir(data,pw=0.5,fs=fs)
     if nchan==1:
         axs = [axs]
@@ -107,7 +107,7 @@ def irstat_plot(data, window=0.01, overlap=0.002, fs=48000, logscale=True, tmax=
     nsamples, nchan = np.shape(data)
     t = np.arange(1,nsamples+1)/fs
     ndir = find_dir(data,pw=0.5,fs=fs)
-    _, axs = plt.subplots(nchan,1,figsize=(18,5*nchan))
+    _, axs = plt.subplots(nchan,1,figsize=(18,3*nchan))
     irmax = np.max(np.abs(data))
     kurtmax =  np.nanmax(pstat['kurtosis'])
     stdbupmax =  np.nanmax(pstat['stdbup'])
@@ -137,7 +137,7 @@ def acorr_plot(data, trange=0.2, fs=48000):
         data = data[:,np.newaxis] # el array debe ser 2D
     nsamples, nchan = data.shape
     acorr = fconvolve(data[::-1],data)
-    _, axs = plt.subplots(nchan,1,figsize=(18,5*nchan))
+    _, axs = plt.subplots(nchan,1,figsize=(18,3*nchan))
     nrange = int(trange*fs)
     t = np.linspace(-trange,trange,2*nrange+1)
     acorr_range=acorr[nsamples-nrange:nsamples+nrange+1,:]
@@ -157,9 +157,9 @@ def spectrum_plot(data, logscale=False, fmax=12000, fs=48000, lrange=60, overlay
     _, nchan = data.shape
     sp = spectrum(data, fs=fs)
     if overlay:
-        _, axs = plt.subplots(1,1,figsize=(18,6))
+        _, axs = plt.subplots(1,1,figsize=(18,4))
     else:    
-        _, axs = plt.subplots(nchan,1,figsize=(18,5*nchan))
+        _, axs = plt.subplots(nchan,1,figsize=(18,3*nchan))
     nmax = np.argmax(sp['f']>fmax)
     smax = np.max(sp['s'][:,:nmax])
     smin = smax-lrange
@@ -187,7 +187,7 @@ def spectrogram_plot(data,window,overlap,fs,chan=0,fmax=22000,tmax=2.0,normalize
     spec = spectrogram(data[:,chan], **kwargs )
     maxlevel = 10*np.log10(np.max(spec['s']))
     levels = np.linspace(maxlevel-lrange,maxlevel,50)
-    fig, ax = plt.subplots(figsize=(20,12))
+    fig, ax = plt.subplots(figsize=(20,8))
     ctr = ax.contourf(spec['t'],spec['f'],10*np.log10(spec['s'][0,:,:]),levels)
     ax.set_xlim([spec['t'][0],tmax])
     ax.set_ylim([0,fmax])
@@ -211,7 +211,7 @@ def pars_plot(pars, keys, chan=1):
         'Center Time (ms)',
         'Direct/Reverberant (dB)'
     ]
-    _, axs = plt.subplots(nplot,1,figsize=(18,5*nplot))
+    _, axs = plt.subplots(nplot,1,figsize=(18,3*nplot))
     iplot = 0
     nb = len(pars['fc'])
     for n in range(5):
@@ -276,7 +276,7 @@ def parsdecay_plot(pars, chan=1, fs=48000):
     t = np.arange(nsamples)/fs
     ncols = int(np.floor(np.sqrt(nb)))
     nrows = int(np.ceil(nb/ncols))
-    fig, axs = plt.subplots(nrows,ncols,figsize=(20,5*nrows))
+    fig, axs = plt.subplots(nrows,ncols,figsize=(20,3*nrows))
     for row in range(nrows):
         for col in range(ncols):
             band = row*ncols+col
