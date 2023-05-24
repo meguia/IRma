@@ -304,27 +304,27 @@ def plot_transfer(data,f=None,logscale=False, fmax=6000, fmin=60,fs=48000, lrang
         _, axs = plt.subplots(2*nchan,1,figsize=(18,3*nchan))
     nmax = np.argmax(f>fmax)
     nmin = np.argmax(f>fmin)
-    sp = 20*np.log10(np.abs(H))
-    smax = np.max(sp[nmin:nmax,:])
+    H = H[nmin:nmax]
+    f = f[nmin:nmax]
+    HdB = 20*np.log10(np.abs(H))
+    smax = np.max(HdB)
     smin = smax-lrange
     for n in range(nchan):
         ax1 = axs[2*n]
         ax2 = axs[2*n+1]
         if logscale:
-            ax1.semilogx(f,sp[:,n],label=str(n))
-            ax2.semilogx(f,np.unwrap(np.angle(sp[:,n])),label=str(n))
+            ax1.semilogx(f,HdB[:,n],label=str(n))
+            ax2.semilogx(f,np.unwrap(np.angle(H[:,n])),label=str(n))
         else:
-            ax1.plot(f,sp[:,n],label=str(n))
-            ax2.plot(f,np.unwrap(np.angle(sp[:,n])),label=str(n))
-        ax1.set_xlim([fmin,fmax])
-        ax2.set_xlim([fmin,fmax])    
-        #ax1.set_ylim([smin,smax])
+            ax1.plot(f,HdB[:,n],label=str(n))
+            ax2.plot(f,np.unwrap(np.angle(H[:,n])),label=str(n))  
+        ax1.set_ylim([smin,smax])
         ax1.legend()
         ax2.legend() 
         if n==0:
             ax1.set_title('Transfer Power')
     ax2.set_xlabel('Frequency (Hz)')
-    return sp
+    return 
 
 
     # grafica los modos recibe la salidad de find_modes

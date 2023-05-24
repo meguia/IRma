@@ -35,7 +35,7 @@ class RecordingSession:
         self.rpath = recordingpath or ""
         self.recordings = []
 
-    def generate_audio_file_prefix(self, speaker, microphone, direction, nchannels,loopback,rtype,take):
+    def generate_audio_file_prefix(self, speaker, microphone, direction, nchannels,loopback,rtype,take,overwrite):
         prefix = f"{self.session_id}_S{self.speakers[speaker-1]}_M{self.microphones[microphone-1]}"
         prefix += f"_D{direction}" if direction is not None else ""
         prefix += f"_{nchannels}ch" 
@@ -44,14 +44,14 @@ class RecordingSession:
         prefix += f"_({take})" if take>1 else ""
         # Check if same recording exists
         recnames = [line['filename'] for line in self.recordings]
-        if prefix in recnames:
+        if prefix in recnames and not overwrite:
             raise ValueError(f"Name already exists please use take a different take number")
         return prefix
 
-    def record_ir(self,speaker,microphone,direction=None,take=1,comment=''):
+    def record_ir(self,speaker,microphone,direction=None,take=1,comment='',overwrite=False):
         nchannels = len(self.input_channels)-1 if self.loopback is not None else len(self.input_channels)
         valid = True
-        prefix = self.generate_audio_file_prefix(speaker, microphone, direction, nchannels, self.loopback, self.rtype, take)
+        prefix = self.generate_audio_file_prefix(speaker, microphone, direction, nchannels, self.loopback, self.rtype, take,overwrite)
         print("Recording ... "+prefix)
         rec_temp = play_rec(self.sweepfile,self.rpath+'rec_'+prefix,chanin=self.input_channels,chanout=self.output_channels)
         rec_max = np.max(np.delete(rec_temp,self.loopback-1,axis=1)) if self.loopback is not None else np.max(rec_temp)
@@ -75,7 +75,7 @@ class RecordingSession:
     def label_invalid(self,nrecording=None):
         if nrecording is None:
             nrecording = len(self.recordings)
-        self.recordings['valid']=False
+        self.recordings[nrecording]['valid']=False
 
     def playrec_file(self,filename,speaker,microphone,direction=1,take=1,channel=0,dim=1.0,comment=''):
         nchannels = len(self.input_channels)
