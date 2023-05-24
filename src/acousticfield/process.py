@@ -87,8 +87,6 @@ def ir_golay(data,datainv,nchan):
     ir_stack = aa+bb
     return ir_stack
 
-    
-
 def fconvolve(in1,in2):
     '''
     in1 can be multichannel, in2 single channel
@@ -106,7 +104,6 @@ def fconvolve(in1,in2):
     else:
         in2_fft=rfft(in2,ntot) 
     return irfft(in1_fft*in2_fft).T
-
 
 # funcion para hacer time stretch y compensar variaciones de temperatura o corregir drift en el clock
 #def ir_stretch(ir,threshold):
@@ -205,7 +202,6 @@ def A_weighting(fs=48000):
     z_d, p_d, k_d = signal.bilinear_zpk(z, p, k, fs)
     return signal.zpk2sos(z_d, p_d, k_d)
    
-
 
 def apply_bands(data, bankname='fbank_10_1', fs=48000, norma=True):
     """

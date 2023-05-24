@@ -101,7 +101,7 @@ class RecordingSession:
 
     def load_ir(self,nrecording,ftype="wav"):
         if nrecording<len(self.recordings):
-            fname = self.rpath+'ri_'+self.recordings[nrecording]['filename']
+            fname = self.rpath+'ir_'+self.recordings[nrecording]['filename']
             if ftype == "wav":
                 _, data = wavfile.read(fname+'.wav')
                 return data
