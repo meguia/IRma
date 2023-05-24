@@ -286,15 +286,18 @@ def crossspectrum(data_input, ch1=0, ch2=1, fs=48000):
     if data.ndim == 1:
         raise TypeError('You must provide at least 2 channels')    
     nsamples, nchan = np.shape(data)
+    if nchan == 1:
+        raise TypeError('You must provide at least 2 channels')    
     nf = int(np.ceil((nsamples+1)/2))
     freq = fftfreq(nsamples, d=1/fs)
-    listofkeys = ['chans','f','S21','S11','S22','H']
+    listofkeys = ['chans','f','S21','S12','S11','S22','H']
     xsp = dict.fromkeys(listofkeys,0 )
     xsp['chans'] = (ch1,ch2)
     xsp['f'] = np.abs(freq[:nf])
     sp1 = rfft(data[:,ch1])
     sp2 = rfft(data[:,ch2])
     xsp['S21'] = sp1*np.conjugate(sp2)
+    xsp['S12'] = sp2*np.conjugate(sp1)
     xsp['S11'] = sp1*np.conjugate(sp1)
     xsp['S22'] = sp2*np.conjugate(sp2)
     # now we take care of the possible divergences

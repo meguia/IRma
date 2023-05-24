@@ -35,28 +35,29 @@ class RecordingSession:
         self.rpath = recordingpath or ""
         self.recordings = []
 
-    def generate_audio_file_prefix(self, speaker, microphone, direction, nchannels, loopback,rtype,take):
-        prefix = f"{self.session_id}_S{self.speakers[speaker-1]}_M{self.microphones[microphone-1]}_D{direction}_"
-        prefix += f"{nchannels}ch" 
+    def generate_audio_file_prefix(self, speaker, microphone, direction, nchannels,loopback,rtype,take):
+        prefix = f"{self.session_id}_S{self.speakers[speaker-1]}_M{self.microphones[microphone-1]}"
+        prefix += f"_D{direction}" if direction is not None else ""
+        prefix += f"_{nchannels}ch" 
         prefix += "_loop" if loopback is not None else ""
         prefix += f"_{rtype}" if rtype is not None else ""
         prefix += f"_({take})" if take>1 else ""
         # Check if same recording exists
-        recnames = [line[0] for line in self.recordings]
+        recnames = [line['filename'] for line in self.recordings]
         if prefix in recnames:
             raise ValueError(f"Name already exists please use take a different take number")
         return prefix
 
-    def record_ir(self,speaker,microphone,direction=1,take=1,comment=''):
-        nchannels = len(self.input_channels)
+    def record_ir(self,speaker,microphone,direction=None,take=1,comment=''):
+        nchannels = len(self.input_channels)-1 if self.loopback is not None else len(self.input_channels)
         valid = True
         prefix = self.generate_audio_file_prefix(speaker, microphone, direction, nchannels, self.loopback, self.rtype, take)
         print("Recording ... "+prefix)
         rec_temp = play_rec(self.sweepfile,self.rpath+'rec_'+prefix,chanin=self.input_channels,chanout=self.output_channels)
-        rec_max = np.max(np.delete(rec_temp,self.loopback,axis=1)) if self.loopback is not None else np.max(rec_temp)
+        rec_max = np.max(np.delete(rec_temp,self.loopback-1,axis=1)) if self.loopback is not None else np.max(rec_temp)
         print(f"Maximum sample value = {rec_max}")
         print("Extracting ---> "+prefix)
-        ir_temp = ir_extract(rec_temp,self.sweepfile,self.rpath+'ri_'+prefix,loopback=self.loopback,fs=self.sampling_rate)
+        ir_temp = ir_extract(rec_temp,self.sweepfile,self.rpath+'ir_'+prefix,loopback=self.loopback,fs=self.sampling_rate)
         print(f"IR shape = {ir_temp.shape}")
         rec_dic = dict(
             spk=speaker,
@@ -95,7 +96,7 @@ class RecordingSession:
         for n,recordings in enumerate(self.recordings):
             line = f"{n}:{recordings['filename']}"
             if comments:
-                line += f" -- {recordings['comments']}"
+                line += f" -- {recordings['comment']}"
             print(line)
 
     def load_ir(self,nrecording,ftype="wav"):

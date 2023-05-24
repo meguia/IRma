@@ -287,7 +287,46 @@ def parsdecay_plot(pars, chan=1, fs=48000):
     return            
 
     
-      
+def plot_transfer(data,f=None,logscale=False, fmax=6000, fmin=60,fs=48000, lrange=60, overlay=True):
+    if type(data) == dict:
+        f = data['f']
+        H = data['H']
+    else:
+        H = data
+    if H.ndim == 1:
+        H = H[:,np.newaxis] # el array debe ser 2D
+    nsamples, nchan = H.shape
+    if f is None:
+        f = np.linspace(0,fs/2,nsamples)    
+    if overlay or nchan==1:
+        _, axs = plt.subplots(2,1,figsize=(18,6))
+    else:    
+        _, axs = plt.subplots(2*nchan,1,figsize=(18,3*nchan))
+    nmax = np.argmax(f>fmax)
+    nmin = np.argmax(f>fmin)
+    sp = 20*np.log10(np.abs(H))
+    smax = np.max(sp[nmin:nmax,:])
+    smin = smax-lrange
+    for n in range(nchan):
+        ax1 = axs[2*n]
+        ax2 = axs[2*n+1]
+        if logscale:
+            ax1.semilogx(f,sp[:,n],label=str(n))
+            ax2.semilogx(f,np.unwrap(np.angle(sp[:,n])),label=str(n))
+        else:
+            ax1.plot(f,sp[:,n],label=str(n))
+            ax2.plot(f,np.unwrap(np.angle(sp[:,n])),label=str(n))
+        ax1.set_xlim([fmin,fmax])
+        ax2.set_xlim([fmin,fmax])    
+        #ax1.set_ylim([smin,smax])
+        ax1.legend()
+        ax2.legend() 
+        if n==0:
+            ax1.set_title('Transfer Power')
+    ax2.set_xlabel('Frequency (Hz)')
+    return sp
+
+
     # grafica los modos recibe la salidad de find_modes
     
     # grafica la o las IRS junto con la transferencia como opcion
