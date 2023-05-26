@@ -2,7 +2,7 @@ import numpy as np
 from scipy import signal
 from scipy.fft import next_fast_len,fft,ifft,rfft,irfft
 from scipy.io import wavfile
-from acousticfield.process import fadeinout, burst
+from .process import fadeinout, burst
 
 
 def sweep(T, f1=30, f2=22000,filename=None,fs=48000,Nrep=1,order=2,post=2.0,rms=-3.2):

@@ -4,7 +4,8 @@ import customtkinter as ctk
 from datetime import date, datetime
 from yaml import safe_load
 import sounddevice as sd
-from session import RecordingSession
+from .session import RecordingSession
+from .utils.ctktable import CTkTable
 # las variables de la interfaz son siempre string y las de la clase RecordingSession 
 # son del tipo que corresponde, con lo cual hay que convertir una en otra al guardar o cargar
 
@@ -12,7 +13,7 @@ ctk.set_appearance_mode("Dark")
 ctk.set_default_color_theme("dark-blue")  
 fs = 48000 # default despues poner en menu
 
-class App():
+class Acousticfield_ctk():
     def __init__(self):
         self.root = ctk.CTk()
         self.save_and_close = False
@@ -67,7 +68,7 @@ class App():
         self.entry = ctk.CTkEntry(self.root, placeholder_text="CTkEntry")
         self.entry.grid(row=1, column=1, padx=(20, 10), pady=(10, 10), sticky="nsew")
 
-        # create main tabview
+        # MAIN TABS
         self.tabview = ctk.CTkTabview(self.root, width=900)
         self.tabview.grid(row=0, column=1, padx=(20, 10), pady=(0, 0), sticky="nsew")
         tab1 = self.tabview.add("Session")
@@ -151,9 +152,17 @@ class App():
         self.start_recording_button = ctk.CTkButton(tab2, text="Start Recording", command=self.start_recording)
         self.start_recording_button.grid(row=0, column=4, rowspan=2, padx=20, pady=20, sticky="e")
 
-        #TAB3 - Analysis
+        #TAB3 - Data Table
+        self.data_table = CTkTable(master=tab3, row=1, column=5, checkbox=True, 
+                                   values=[["file", "speaker", "mic", "dir", "take"]], corner_radius=10)
+        self.data_table.grid(row=1,column=0, padx=20, pady=20)
+        send_button = ctk.CTkButton(master=tab3,text="Load",command=self.load_irs)
+        send_button.grid(row=0, column=0, sticky="n")
 
-        #TAB4 - Settings
+
+        #TAB4 - Analysis
+
+        #TAB5 - Settings
 
     def open_input_dialog_event(self):
         dialog = ctk.CTkInputDialog(text="Type in a number:", title="CTkInputDialog")
@@ -172,7 +181,8 @@ class App():
         self.recording_path_entry.insert(ctk.END, recording_path)    
 
     def open_sweep_file(self):
-        filetypes = (('wav files', '*.wav'),('npy files', '*.npy'))
+        #filetypes = (('wav files', '*.wav'),('npy files', '*.npy'))
+        filetypes = (('sweep files', 'sweep*.wav'),('wav files', '*.wav'),('npy files', '*.npy'))
         filename = ctk.filedialog.askopenfilename(title='Open a file',initialdir='./',filetypes=filetypes)
         self.sweep_file_entry.delete(0, ctk.END)    
         self.sweep_file_entry.insert(ctk.END, filename.split(".")[-2])
@@ -180,6 +190,7 @@ class App():
     def load_recording_session(self):
         print("sidebar_button click")
         self.browse_recording_path()
+        self.list_files()
         self.tick()
 
     def void_recording_session(self):
@@ -193,6 +204,8 @@ class App():
         self.current_direction = None
         self.current_take = None
         self.pars = {}
+        self.loaded_files = {}
+        self.files = [] # list of files in recording_path
         #speaker_pos = self.speaker_pos_entry.get()
         #microphone_pos = self.microphone_pos_entry.get()
         self.inchan = []
@@ -226,6 +239,7 @@ class App():
             recordingpath=self.recording_path,
             sweepfile=self.sweep_file
         )
+        self.list_files()
         self.tick()
 
     def get_session_entries(self):
@@ -284,6 +298,30 @@ class App():
             self.current_direction,
             self.current_take
         )
+        self.add_file()
+
+    def list_files(self):
+        print("load files")
+        for n,rec in enumerate(self.recording_session.recordings):
+            fname = rec['filename']
+            self.data_table.add_row([[fname],rec['speaker'],rec['microphone'],rec['direction'],rec['take']])
+            self.files.append(fname)
+
+    def add_file(self):
+        print("add file")
+        fname = self.recording_session.recordings[-1]['filename']
+        self.data_table.add_row([[fname],self.current_speaker,self.current_microphone,self.current_direction,self.current_take])
+        self.files.append(fname)
+
+    def remove_file(self):
+        for n in range(len(self.files),1,-1):
+            self.data_table.delete_row(n)
+        self.files = []
+        pass
+
+    def load_irs(self):
+        selected_files = self.data_table.get_checked(self,column=0)
+        print("Selected files:", selected_files)
 
     def update_window(self):
         print("Update")
@@ -319,11 +357,4 @@ class App():
     def stops(self):
         print("Stopping")
         self.save_and_close = True    
-
-if __name__ == "__main__":
-    app = App()
-    #inicia audio
-    # Crea Ventanas
-    #app.root.mainloop()
-    while app.save_and_close == False:
-        app.root.update()
+        #self.root.destroy()

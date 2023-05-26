@@ -2,9 +2,9 @@ import yaml
 import datetime
 import numpy as np
 from scipy.io import wavfile
-from acousticfield.generate import sweep
-from acousticfield.io import play_rec
-from acousticfield.process import ir_extract
+from .generate import sweep
+from .io import play_rec
+from .process import ir_extract
 
 class RecordingSession:
     def __init__(self, session_id, speakers, microphones,speaker_pos=None,microphone_pos=None,
