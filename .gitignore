@@ -130,6 +130,8 @@ dmypy.json
 .vscode/settings.json
 *.pcm
 ir_*.*
-rec_*.wav
+*.wav
+*.npz
+*.ses
 *.code-workspace
 .DS_Store
