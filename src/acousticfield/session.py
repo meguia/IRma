@@ -36,7 +36,7 @@ class RecordingSession:
         self.recordings = []
 
     def generate_audio_file_prefix(self, speaker, microphone, direction, nchannels,loopback,rtype,take,overwrite):
-        prefix = f"{self.session_id}_S{self.speakers[speaker-1]}_M{self.microphones[microphone-1]}"
+        prefix = f"{self.session_id}_S{speaker}_M{microphone}"
         prefix += f"_D{direction}" if direction is not None else ""
         prefix += f"_{nchannels}ch" 
         prefix += "_loop" if loopback is not None else ""
@@ -51,7 +51,7 @@ class RecordingSession:
     def record_ir(self,speaker,microphone,direction=None,take=1,comment='',overwrite=False):
         nchannels = len(self.input_channels)-1 if self.loopback is not None else len(self.input_channels)
         valid = True
-        prefix = self.generate_audio_file_prefix(speaker, microphone, direction, nchannels, self.loopback, self.rtype, take,overwrite)
+        prefix = self.generate_audio_file_prefix(speaker, microphone, direction, nchannels, self.loopback, self.rtype, int(take),overwrite)
         print("Recording ... "+prefix)
         rec_temp = play_rec(self.sweepfile,self.rpath+'rec_'+prefix,chanin=self.input_channels,chanout=self.output_channels)
         rec_max = np.max(np.delete(rec_temp,self.loopback-1,axis=1)) if self.loopback is not None else np.max(rec_temp)

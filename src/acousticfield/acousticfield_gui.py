@@ -20,13 +20,13 @@ class App():
         self.root.title("ACOUSTIC FIELD")
         self.root.geometry(f"{1200}x{600}")
         self.root.minsize(600, 400)
-        #self.iconbitmap("src/acousticfield/icon.ico")
-        #self.protocol("WM_DELETE_WINDOW", self.close_event)
+        #self.root.iconbitmap("src/acousticfield/icon.ico")
+        #self.root.protocol("WM_DELETE_WINDOW", self.root.close_event)
+        self.root.protocol("WM_DELETE_WINDOW", self.root.quit)
     
         # initialization
         self.void_recording_session()
         self.audio_init(fs=fs)
-        self.recording_session = None
         # configure grid layout (4x4)
         self.root.grid_columnconfigure(1, weight=1)
         self.root.grid_rowconfigure(0, weight=1)
@@ -109,13 +109,47 @@ class App():
         self.loopback_entry = ctk.CTkEntry(tab1, placeholder_text=self.loopback)
         self.loopback_entry.grid(row=5, column=1, padx=20, pady=(20, 10))
 
+        self.sweep_file_label = ctk.CTkButton(tab1, text="Sweep File",command=self.open_sweep_file)
+        self.sweep_file_label.grid(row=6, column=0, padx=20, pady=(20, 10)) 
+        self.sweep_file_entry = ctk.CTkEntry(tab1, placeholder_text=self.sweep_file)
+        self.sweep_file_entry.grid(row=6, column=1, padx=20, pady=(20, 10))
+
+        self.recording_path_label = ctk.CTkButton(tab1, text="Recording Path",command=self.browse_recording_path) 
+        self.recording_path_label.grid(row=7, column=0, padx=20, pady=(20, 10))
+        self.recording_path_entry = ctk.CTkEntry(tab1, placeholder_text=self.recording_path)    
+        self.recording_path_entry.grid(row=7, column=1, padx=20, pady=(20, 10))
+
         # Plano del lugar?
         self.map = ctk.CTkFrame(tab1, width=500, corner_radius=0)
-        self.map.grid(row=0, column=2, rowspan=6, sticky="nsew")
+        self.map.grid(row=0, column=2, rowspan=8, sticky="nsew")
 
-        #TAB2 - Data
-        self.label_tab_2 = ctk.CTkLabel(tab2, text="CTkLabel on Tab 2")
-        self.label_tab_2.grid(row=0, column=0, padx=20, pady=20)
+        #TAB2 - Recording
+        self.label_speaker = ctk.CTkLabel(tab2, text="SPEAKER")
+        self.label_speaker.grid(row=0, column=0, padx=20, pady=0, sticky="w")
+
+        self.label_microphone = ctk.CTkLabel(tab2, text="MICROPHONE")
+        self.label_microphone.grid(row=0, column=1, padx=20, pady=0, sticky="w")
+
+        self.label_direction = ctk.CTkLabel(tab2, text="DIRECTION")
+        self.label_direction.grid(row=0, column=2, padx=20, pady=0, sticky="w")
+
+        self.label_take = ctk.CTkLabel(tab2, text="TAKE")
+        self.label_take.grid(row=0, column=3, padx=20, pady=0, sticky="w")
+
+        self.speaker_box = ctk.CTkComboBox(master=tab2, values=[" "], variable=self.current_speaker)
+        self.speaker_box.grid(row=1, column=0, padx=20, pady=0, sticky="w")
+
+        self.microphone_box = ctk.CTkComboBox(master=tab2, values=[" "], variable=self.current_microphone)
+        self.microphone_box.grid(row=1, column=1, padx=20, pady=0, sticky="w")
+
+        self.direction_box = ctk.CTkComboBox(master=tab2, values=["1", "2", "3", "4", "5", "6"], variable=self.current_direction)    
+        self.direction_box.grid(row=1, column=2, padx=20, pady=0, sticky="w")
+
+        self.take_box = ctk.CTkComboBox(master=tab2, values=["1", "2", "3", "4", "5", "6"], variable=self.current_take)    
+        self.take_box.grid(row=1, column=3, padx=20, pady=0, sticky="w")
+
+        self.start_recording_button = ctk.CTkButton(tab2, text="Start Recording", command=self.start_recording)
+        self.start_recording_button.grid(row=0, column=4, rowspan=2, padx=20, pady=20, sticky="e")
 
         #TAB3 - Analysis
 
@@ -137,15 +171,28 @@ class App():
         self.recording_path_entry.delete(0, ctk.END)
         self.recording_path_entry.insert(ctk.END, recording_path)    
 
+    def open_sweep_file(self):
+        filetypes = (('wav files', '*.wav'),('npy files', '*.npy'))
+        filename = ctk.filedialog.askopenfilename(title='Open a file',initialdir='./',filetypes=filetypes)
+        self.sweep_file_entry.delete(0, ctk.END)    
+        self.sweep_file_entry.insert(ctk.END, filename.split(".")[-2])
+
     def load_recording_session(self):
         print("sidebar_button click")
         self.browse_recording_path()
         self.tick()
 
     def void_recording_session(self):
+        self.recording_session = None
         self.session_id = ""
         self.speakers = []
         self.microphones = []
+        self.recording_session = None
+        self.current_speaker = None
+        self.current_microphone = None   
+        self.current_direction = None
+        self.current_take = None
+        self.pars = {}
         #speaker_pos = self.speaker_pos_entry.get()
         #microphone_pos = self.microphone_pos_entry.get()
         self.inchan = []
@@ -161,6 +208,27 @@ class App():
         self.tick()
 
     def create_recording_session(self):
+        # check if sesion already exists
+        self.get_session_entries()
+        self.entries_to_pars()
+        # Create an instance of RecordingSession
+        self.recording_session = RecordingSession(
+            session_id=self.session_id,
+            speakers=self.pars['speakers'],
+            microphones=self.pars['microphones'],
+            #speaker_pos=speaker_pos,
+            #microphone_pos=microphone_pos,
+            inchan=self.pars['inchan'],
+            outchan=self.pars['outchan'],
+            loopback=self.pars['loopback'],
+            sampling_rate=self.pars['sampling_rate'],
+            rtype=self.rtype,
+            recordingpath=self.recording_path,
+            sweepfile=self.sweep_file
+        )
+        self.tick()
+
+    def get_session_entries(self):
         self.session_id = self.session_id_entry.get()
         self.speakers = self.speakers_entry.get()
         self.microphones = self.microphones_entry.get()
@@ -171,34 +239,17 @@ class App():
         self.loopback = self.loopback_entry.get()
         #self.sampling_rate = self.sampling_rate_entry.get()
         #self.rtype = self.rtype_entry.get()
-        #self.recording_path = self.recording_path_entry.get()
-        #self.sweep_file = self.sweep_file_entry.get()
+        self.recording_path = self.recording_path_entry.get()
+        self.sweep_file = self.sweep_file_entry.get()
 
+    def entries_to_pars(self):
         # Convert some values to their appropriate types
-        speakers = self.speakers.split(',')
-        microphones = self.microphones.split(',')
-        inchan = list(map(int, self.inchan.split(',')))
-        outchan = list(map(int, self.outchan.split(',')))
-        loopback = int(self.loopback)
-        sampling_rate = int(self.sampling_rate)
-
-        # Create an instance of RecordingSession
-        self.recording_session = RecordingSession(
-            session_id=self.session_id,
-            speakers=speakers,
-            microphones=microphones,
-            #speaker_pos=speaker_pos,
-            #microphone_pos=microphone_pos,
-            inchan=inchan,
-            outchan=outchan,
-            loopback=loopback,
-            sampling_rate=sampling_rate,
-            rtype=self.rtype,
-            recordingpath=self.recording_path,
-            sweepfile=self.sweep_file
-        )
-        self.tick()
-        print(vars(self.recording_session))
+        self.pars['speakers'] = ' '.join(self.speakers.split(',')).split()
+        self.pars['microphones'] = ' '.join(self.microphones.split(',')).split()
+        self.pars['inchan'] = list(map(int, ' '.join(self.inchan.split(',')).split()))
+        self.pars['outchan'] = list(map(int, ' '.join(self.outchan.split(',')).split()))
+        self.pars['loopback'] = int(self.loopback)
+        self.pars['sampling_rate'] = int(self.sampling_rate)
 
     def audio_init(self,device=None,fs=48000):
         # Inicia el Audio, chequear la configuracion el numero de device
@@ -219,29 +270,50 @@ class App():
         self.max_chanin = devices[input_device]['max_input_channels']
         self.max_chanout = devices[output_device]['max_output_channels']
 
+    def start_recording(self):
+        print("start recording")
+        self.current_speaker = self.speaker_box.get()
+        self.current_microphone = self.microphone_box.get()
+        self.current_direction = self.direction_box.get()
+        self.current_take = self.take_box.get()
+        print(f"Parlante {self.current_speaker}, Microfono {self.current_microphone}, Direccion {self.current_direction}, Toma {self.current_take}")    
+        #self.recording_session.start_recording()
+        self.recording_session.record_ir(
+            self.current_speaker,
+            self.current_microphone,
+            self.current_direction,
+            self.current_take
+        )
+
     def update_window(self):
         print("Update")
-        self.session_id = self.session_id_entry.get()
-        self.speakers = self.speakers_entry.get()
-        self.microphones = self.microphones_entry.get()
-        #speaker_pos = self.speaker_pos_entry.get()
-        #microphone_pos = self.microphone_pos_entry.get()
-        self.inchan = self.input_channels_entry.get()
-        self.outchan = self.output_channels_entry.get()
-        self.loopback = self.loopback_entry.get()
+        self.get_session_entries()
+        print(self.session_id)
+        self.speaker_box.configure(values=self.pars['speakers'])
+        self.microphone_box.configure(values=self.pars['microphones'])
         self.sidebar_label_1.configure(text=self.session_id)
-        self.session_id_entry.configure(placeholder_text=self.session_id)
-        self.speakers_entry.configure(placeholder_text=self.speakers)
-        self.microphones_entry.configure(placeholder_text=self.microphones)
-        self.input_channels_entry.configure(placeholder_text=self.inchan)
-        self.output_channels_entry.configure(placeholder_text=self.outchan)
-        self.loopback_entry.configure(placeholder_text=self.loopback)
-        self.newdata = False
+        self.session_id_entry.delete(0, ctk.END)
+        self.session_id_entry.insert(ctk.END,self.session_id)
+        self.speakers_entry.delete(0, ctk.END)
+        self.speakers_entry.insert(ctk.END,self.speakers)
+        self.microphones_entry.delete(0, ctk.END)   
+        self.microphones_entry.insert(ctk.END,self.microphones)
+        # self.speaker_pos_entry.delete(0, ctk.END)
+        # self.speaker_pos_entry.insert(ctk.END,speaker_pos)
+        # self.microphone_pos_entry.delete(0, ctk.END)
+        # self.microphone_pos_entry.insert(ctk.END,microphone_pos)  
+        self.input_channels_entry.delete(0, ctk.END)
+        self.input_channels_entry.insert(ctk.END,self.inchan)
+        self.output_channels_entry.delete(0, ctk.END)
+        self.output_channels_entry.insert(ctk.END,self.outchan)
+        self.loopback_entry.delete(0, ctk.END)
+        self.loopback_entry.insert(ctk.END,self.loopback) 
+        
 
     def tick(self):
-        self.update_window()
         self.root.update()
         self.root.update_idletasks()
+        self.update_window()
 
 
     def stops(self):

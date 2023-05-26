@@ -129,8 +129,7 @@ dmypy.json
 *.pyc
 .vscode/settings.json
 *.pcm
-*.wav
-*.npz
-test.csv
+ir_*.*
+rec_*.wav
 *.code-workspace
 .DS_Store
