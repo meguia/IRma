@@ -1,8 +1,29 @@
+# CTK Utils
 # CTkTable with checkboxes based in the Widget by Akascape
 # License: MIT
 # Author: LAPSo, Akash Bora
 
 import customtkinter as ctk
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+
+class PlotFrame(ctk.CTkFrame):
+    """ Matplotlib PlotFrame Widget"""
+    def __init__(self, parent, axes=None, figure=None, **kwargs):
+        ctk.CTkFrame.__init__(self, parent, **kwargs)
+        print(axes)
+        self.figure = figure if figure else Figure()
+        self.canvas = FigureCanvasTkAgg(self.figure, master=self)
+        self.canvas.get_tk_widget().pack(fill=ctk.BOTH, expand=True)
+        self.canvas.draw()
+        
+    def update_figure(self, axes=None, figure=None):
+        if figure:
+            self.figure = figure
+            print(axes)
+        self.canvas.figure = self.figure
+        self.canvas.draw()
+
 
 class CTkTable(ctk.CTkFrame):
     """ CTkTable Widget """

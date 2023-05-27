@@ -83,7 +83,7 @@ def ir_plot(data, fs=48000, tmax=3.0, labels=None):
         data = data[:,np.newaxis] # el array debe ser 2D
     nsamples, nchan = np.shape(data)
     t = np.arange(nsamples)/fs
-    _, axs = plt.subplots(nchan,1,figsize=(18,3*nchan))
+    fig, axs = plt.subplots(nchan,1,figsize=(18,3*nchan))
     ndir = find_dir(data,pw=0.5,fs=fs)
     if nchan==1:
         axs = [axs]
@@ -98,7 +98,7 @@ def ir_plot(data, fs=48000, tmax=3.0, labels=None):
         if n==0:
             axs[n].set_title('IMPULSE RESPONSE')  
     axs[n].set_xlabel('Time (s)')
-    return    
+    return axs, fig
 
 def irstat_plot(data, window=0.01, overlap=0.002, fs=48000, logscale=True, tmax=2.0):
     if data.ndim == 1:
@@ -107,7 +107,7 @@ def irstat_plot(data, window=0.01, overlap=0.002, fs=48000, logscale=True, tmax=
     nsamples, nchan = np.shape(data)
     t = np.arange(1,nsamples+1)/fs
     ndir = find_dir(data,pw=0.5,fs=fs)
-    _, axs = plt.subplots(nchan,1,figsize=(18,3*nchan))
+    fig, axs = plt.subplots(nchan,1,figsize=(18,3*nchan))
     irmax = np.max(np.abs(data))
     kurtmax =  np.nanmax(pstat['kurtosis'])
     stdbupmax =  np.nanmax(pstat['stdbup'])
@@ -130,14 +130,14 @@ def irstat_plot(data, window=0.01, overlap=0.002, fs=48000, logscale=True, tmax=
         if n==0:
             axs[n].set_title('IMPULSE RESPONSE (Mixing Time)')
     axs[n].set_xlabel('Time (s)')
-    return pstat
+    return axs, fig 
 
 def acorr_plot(data, trange=0.2, fs=48000):
     if data.ndim == 1:
         data = data[:,np.newaxis] # el array debe ser 2D
     nsamples, nchan = data.shape
     acorr = fconvolve(data[::-1],data)
-    _, axs = plt.subplots(nchan,1,figsize=(18,3*nchan))
+    fig, axs = plt.subplots(nchan,1,figsize=(18,3*nchan))
     nrange = int(trange*fs)
     t = np.linspace(-trange,trange,2*nrange+1)
     acorr_range=acorr[nsamples-nrange:nsamples+nrange+1,:]
@@ -149,7 +149,7 @@ def acorr_plot(data, trange=0.2, fs=48000):
         if n==0:
             axs[n].set_title('IR AUTOCORRELATION')
     axs[n].set_xlabel('Time (ms)')
-    return acorr
+    return axs, fig
 
 def spectrum_plot(data, logscale=False, fmax=12000, fs=48000, lrange=60, overlay=False):
     if data.ndim == 1:
@@ -157,9 +157,9 @@ def spectrum_plot(data, logscale=False, fmax=12000, fs=48000, lrange=60, overlay
     _, nchan = data.shape
     sp = spectrum(data, fs=fs)
     if overlay:
-        _, axs = plt.subplots(1,1,figsize=(18,4))
+        fig, axs = plt.subplots(1,1,figsize=(18,4))
     else:    
-        _, axs = plt.subplots(nchan,1,figsize=(18,3*nchan))
+        fig, axs = plt.subplots(nchan,1,figsize=(18,3*nchan))
     nmax = np.argmax(sp['f']>fmax)
     smax = np.max(sp['s'][:,:nmax])
     smin = smax-lrange
@@ -179,7 +179,7 @@ def spectrum_plot(data, logscale=False, fmax=12000, fs=48000, lrange=60, overlay
             ax.set_title('POWER SPECTRAL DENSITY')
     ax.set_xlabel('Frequency (Hz)')
     ax.legend()
-    return sp
+    return axs, fig
 
 def spectrogram_plot(data,window,overlap,fs,chan=0,fmax=22000,tmax=2.0,normalized=False,logf=False,lrange=60):
     kwargs = {'windowSize': window,'overlap': overlap,'fs': fs, 'windowType': 'hanning',
@@ -194,7 +194,7 @@ def spectrogram_plot(data,window,overlap,fs,chan=0,fmax=22000,tmax=2.0,normalize
     ax.set_xlabel('Time (s)')
     ax.set_ylabel('Frequency (Hz)')
     fig.colorbar(ctr)
-    return spec
+    return ax, fig
 
 def pars_plot(pars, keys, chan=1):
     # busca la ocurrencia de 'rt' 'edt' 'snr' 'c80' 'c50' 'ts' 'dr' en keys
@@ -211,7 +211,7 @@ def pars_plot(pars, keys, chan=1):
         'Center Time (ms)',
         'Direct/Reverberant (dB)'
     ]
-    _, axs = plt.subplots(nplot,1,figsize=(18,3*nplot))
+    fig, axs = plt.subplots(nplot,1,figsize=(18,3*nplot))
     iplot = 0
     nb = len(pars['fc'])
     for n in range(5):
@@ -226,7 +226,7 @@ def pars_plot(pars, keys, chan=1):
             axs[iplot].grid(axis='y')
             axs[iplot].set_ylabel(ylabels[n])
             iplot +=1
-    return        
+    return axs, fig
 
 
 def pars_plot_compared(pars, keys, chans=[1],labels=None,title=None):
@@ -246,7 +246,7 @@ def pars_plot_compared(pars, keys, chans=[1],labels=None,title=None):
         'Center Time (ms)',
         'Direct/Reverberant (dB)'
     ]
-    _, axs = plt.subplots(nplot,1,figsize=(18,3*nplot))
+    fig, axs = plt.subplots(nplot,1,figsize=(18,3*nplot))
     iplot = 0
     nb = len(pars['fc'])
     if nplot==1:
@@ -268,7 +268,7 @@ def pars_plot_compared(pars, keys, chans=[1],labels=None,title=None):
             if iplot==0 and title is not None:
               axs[iplot].set_title(title)  
             iplot +=1
-    return    
+    return axs, fig 
 
 def parsdecay_plot(pars, chan=1, fs=48000):    
     nb = pars['nbands']
@@ -284,7 +284,7 @@ def parsdecay_plot(pars, chan=1, fs=48000):
                 axs[row,col].plot(t,pars['schr'][band,chan-1])
                 axs[row,col].plot(pars['tfit'][band,chan-1],pars['lfit'][band,chan-1],'r')
                 axs[row,col].set_title(pars['fc'][band])
-    return            
+    return axs, fig            
 
     
 def plot_transfer(data,f=None,logscale=False, fmax=6000, fmin=60,fs=48000, lrange=60, overlay=True):
@@ -299,9 +299,9 @@ def plot_transfer(data,f=None,logscale=False, fmax=6000, fmin=60,fs=48000, lrang
     if f is None:
         f = np.linspace(0,fs/2,nsamples)    
     if overlay or nchan==1:
-        _, axs = plt.subplots(2,1,figsize=(18,6))
+        fig, axs = plt.subplots(2,1,figsize=(18,6))
     else:    
-        _, axs = plt.subplots(2*nchan,1,figsize=(18,3*nchan))
+        fig, axs = plt.subplots(2*nchan,1,figsize=(18,3*nchan))
     nmax = np.argmax(f>fmax)
     nmin = np.argmax(f>fmin)
     H = H[nmin:nmax]
@@ -324,7 +324,7 @@ def plot_transfer(data,f=None,logscale=False, fmax=6000, fmin=60,fs=48000, lrang
         if n==0:
             ax1.set_title('Transfer Power')
     ax2.set_xlabel('Frequency (Hz)')
-    return 
+    return axs, fig
 
 
     # grafica los modos recibe la salidad de find_modes

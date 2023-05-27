@@ -132,6 +132,6 @@ dmypy.json
 ir_*.*
 *.wav
 *.npz
-*.ses
+*.yaml
 *.code-workspace
 .DS_Store
