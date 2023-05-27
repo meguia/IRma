@@ -169,8 +169,8 @@ class CTkTable(ctk.CTkFrame):
     def get(self):
         return self.values
     
-    def get_checked(self,column=0):
-        return [self.frame[i,column].get("text") for i, x in enumerate(self.checked)if x.get()]
+    def get_checked(self):
+        return [self.frame[n,0].cget("text") for n in range(1, self.rows) if self.frame[n,0].get()==1]
     
     def get_value(self, row, column):
         return self.frame[row,column].cget("text")

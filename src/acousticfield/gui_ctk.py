@@ -1,9 +1,7 @@
-import tkinter
-import tkinter.messagebox
 import customtkinter as ctk
-from datetime import date, datetime
 from yaml import safe_load
 import sounddevice as sd
+from .generate import sweep
 from .session import RecordingSession
 from .utils.ctktable import CTkTable
 # las variables de la interfaz son siempre string y las de la clase RecordingSession 
@@ -12,6 +10,56 @@ from .utils.ctktable import CTkTable
 ctk.set_appearance_mode("Dark")  
 ctk.set_default_color_theme("dark-blue")  
 fs = 48000 # default despues poner en menu
+
+class GenerateWindow(ctk.CTkToplevel):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.geometry("400x800")
+        self.label = ctk.CTkLabel(self, text="Generate Log Sweep")
+        self.label.grid(row=0,column=0,padx=20, pady=20)
+        
+        self.label_fmin = ctk.CTkLabel(self, text="fmin")
+        self.label_fmin.grid(row=1,column=0,padx=20, pady=20)
+        self.sweep_fmin_entry = ctk.CTkEntry(self, textvariable=ctk.StringVar(value=20))
+        self.sweep_fmin_entry.grid(row=1,column=1,padx=20, pady=20)
+
+        self.label_fmax = ctk.CTkLabel(self, text="fmax")
+        self.label_fmax.grid(row=2,column=0,padx=20, pady=20)
+        self.sweep_fmax_entry = ctk.CTkEntry(self, textvariable=ctk.StringVar(value=20000))
+        self.sweep_fmax_entry.grid(row=2,column=1,padx=20, pady=20)
+
+        self.label_post = ctk.CTkLabel(self, text="duration")
+        self.label_post.grid(row=3,column=0,padx=20, pady=20)
+        self.sweep_dur_entry = ctk.CTkEntry(self, textvariable=ctk.StringVar(value=10.0)) # en segundos
+        self.sweep_dur_entry.grid(row=3,column=1,padx=20, pady=20) 
+
+        self.label_post = ctk.CTkLabel(self, text="post")
+        self.label_post.grid(row=4,column=0,padx=20, pady=20)   
+        self.sweep_post_entry = ctk.CTkEntry(self, textvariable=ctk.StringVar(value=1.0)) # en segundos
+        self.sweep_post_entry.grid(row=4,column=1,padx=20, pady=20)
+
+        self.label_rep = ctk.CTkLabel(self, text="repetitions")
+        self.label_rep.grid(row=5,column=0,padx=20, pady=20)
+        self.sweep_rep_entry = ctk.CTkEntry(self, textvariable=ctk.StringVar(value=1)) 
+        self.sweep_rep_entry.grid(row=5,column=1,padx=20, pady=20)
+
+        self.generate_button = ctk.CTkButton(self, text="Generate", command=self.generate)
+        self.generate_button.grid(row=6,column=0,padx=20, pady=20)
+
+    def generate(self):
+        self.sweep_fmin = int(self.sweep_fmin_entry.get())
+        self.sweep_fmax = int(self.sweep_fmax_entry.get())
+        self.sweep_dur = float(self.sweep_dur_entry.get())
+        self.sweep_post = float(self.sweep_post_entry.get())
+        self.sweep_rep = int(self.sweep_rep_entry.get())
+        self.sampling_rate = 48000
+
+        srkhz = self.sampling_rate//1000
+        maxrange = self.sweep_fmax//1000
+        self.sweepfile = f"sweep_x{self.sweep_rep}_{srkhz}k_{int(self.sweep_dur)}s_{self.sweep_fmin}_{maxrange}k"
+        print("generating sweep " + self.sweepfile)
+        sweep(T=self.sweep_dur,fs=self.sampling_rate,f1=self.sweep_fmin,f2=self.sweep_fmax,Nrep=self.sweep_rep,
+        filename=self.sweepfile,post=self.sweep_post)
 
 class Acousticfield_ctk():
     def __init__(self):
@@ -31,6 +79,7 @@ class Acousticfield_ctk():
         # configure grid layout (4x4)
         self.root.grid_columnconfigure(1, weight=1)
         self.root.grid_rowconfigure(0, weight=1)
+        self.root.toplevel_window = None
         self.create_widgets()
 
     def create_widgets(self):
@@ -115,10 +164,13 @@ class Acousticfield_ctk():
         self.sweep_file_entry = ctk.CTkEntry(tab1, placeholder_text=self.sweep_file)
         self.sweep_file_entry.grid(row=6, column=1, padx=20, pady=(20, 10))
 
+        self.sweep_generate_label = ctk.CTkButton(tab1, text="Generate Sweep",command=self.generate_sweep)
+        self.sweep_generate_label.grid(row=7, column=0, padx=20, pady=(20, 10)) 
+
         self.recording_path_label = ctk.CTkButton(tab1, text="Recording Path",command=self.browse_recording_path) 
-        self.recording_path_label.grid(row=7, column=0, padx=20, pady=(20, 10))
+        self.recording_path_label.grid(row=8, column=0, padx=20, pady=(20, 10))
         self.recording_path_entry = ctk.CTkEntry(tab1, placeholder_text=self.recording_path)    
-        self.recording_path_entry.grid(row=7, column=1, padx=20, pady=(20, 10))
+        self.recording_path_entry.grid(row=8, column=1, padx=20, pady=(20, 10))
 
         # Plano del lugar?
         self.map = ctk.CTkFrame(tab1, width=500, corner_radius=0)
@@ -157,7 +209,7 @@ class Acousticfield_ctk():
                                    values=[["file", "speaker", "mic", "dir", "take"]], corner_radius=10)
         self.data_table.grid(row=1,column=0, padx=20, pady=20)
         send_button = ctk.CTkButton(master=tab3,text="Load",command=self.load_irs)
-        send_button.grid(row=0, column=0, sticky="n")
+        send_button.grid(row=0, column=0, sticky="w", padx=20, pady=20)
 
 
         #TAB4 - Analysis
@@ -175,6 +227,12 @@ class Acousticfield_ctk():
         new_scaling_float = int(new_scaling.replace("%", "")) / 100
         ctk.set_widget_scaling(new_scaling_float)
 
+    def generate_sweep(self):
+        if self.root.toplevel_window is None or not self.root.toplevel_window.winfo_exists():
+            self.root.toplevel_window = GenerateWindow(self.root)  # create window if its None or destroyed
+        else:
+            self.root.toplevel_window.focus()  # if window exists focus it
+
     def browse_recording_path(self):
         recording_path = ctk.filedialog.askdirectory()
         self.recording_path_entry.delete(0, ctk.END)
@@ -190,7 +248,7 @@ class Acousticfield_ctk():
     def load_recording_session(self):
         print("sidebar_button click")
         self.browse_recording_path()
-        self.list_files()
+        #self.list_files()
         self.tick()
 
     def void_recording_session(self):
@@ -262,7 +320,7 @@ class Acousticfield_ctk():
         self.pars['microphones'] = ' '.join(self.microphones.split(',')).split()
         self.pars['inchan'] = list(map(int, ' '.join(self.inchan.split(',')).split()))
         self.pars['outchan'] = list(map(int, ' '.join(self.outchan.split(',')).split()))
-        self.pars['loopback'] = int(self.loopback)
+        self.pars['loopback'] = int(self.loopback) if self.loopback != '' else None
         self.pars['sampling_rate'] = int(self.sampling_rate)
 
     def audio_init(self,device=None,fs=48000):
@@ -320,7 +378,7 @@ class Acousticfield_ctk():
         pass
 
     def load_irs(self):
-        selected_files = self.data_table.get_checked(self,column=0)
+        selected_files = self.data_table.get_checked()
         print("Selected files:", selected_files)
 
     def update_window(self):
