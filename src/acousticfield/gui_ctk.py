@@ -2,7 +2,7 @@ import customtkinter as ctk
 from yaml import safe_load
 import sounddevice as sd
 from .generate import sweep
-from .display import ir_plot
+from .display import ir_plot_axes
 from .session import RecordingSession
 from .utils.ctkutils import *
 
@@ -216,8 +216,9 @@ class Acousticfield_ctk():
         self.plot_ir_frame = ctk.CTkFrame(tab2, corner_radius=25)
         self.plot_ir_frame.grid(row=2, column=0, columnspan=5, sticky="nsew")
         self.matplotlib_ir_frame = PlotFrame(self.plot_ir_frame)
-        self.matplotlib_ir_frame.pack(fill=ctk.BOTH, expand=True) 
-
+        self.matplotlib_ir_frame.pack(fill=ctk.BOTH, expand=True)
+        self.matplotlib_ir_axes = self.matplotlib_ir_frame.axes
+        
         #TAB3 - Data Table
         self.data_table = CTkTable(master=tab3, row=1, column=5, checkbox=True, 
                                    values=[["file", "speaker", "mic", "dir", "take"]], corner_radius=10)
@@ -449,9 +450,9 @@ class Acousticfield_ctk():
         )
         self.add_file()
         #plot ir
-        axes,figure = ir_plot(ir_temp, fs, tmax=0.3,figsize=(10,5))
-        self.matplotlib_ir_frame.update_figure(axes=axes, figure=figure)
-        self.matplotlib_ir_frame.pack(fill=ctk.BOTH, expand=True) 
+        ir_plot_axes(ir_temp[:,0], self.matplotlib_ir_axes, fs, tmax=0.3)
+        self.matplotlib_ir_frame.canvas.draw()
+        self.matplotlib_ir_frame.canvas.flush_events()
 
 # DATA FILES        
 

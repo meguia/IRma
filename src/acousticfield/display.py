@@ -102,6 +102,29 @@ def ir_plot(data, fs=48000, tmax=3.0, labels=None, figsize=None):
     axs[n].set_xlabel('Time (s)')
     return axs, fig
 
+def ir_plot_axes(data, axs, fs=48000, tmax=3.0, labels=None):
+    """ data (nsamples,nchannel) must be a 2D array
+    """
+    if data.ndim == 1:
+        data = data[:,np.newaxis] # el array debe ser 2D
+    nsamples, nchan = np.shape(data)
+    t = np.arange(nsamples)/fs
+    ndir = find_dir(data,pw=0.5,fs=fs)
+    if nchan==1:
+        axs = [axs]
+    for n in range(nchan):
+        if labels is not None:
+            axs[n].plot(t,data[:,n],label=labels[n])
+            axs[n].legend()
+        else:
+            axs[n].plot(t,data[:,n])
+        axs[n].plot(t[ndir[0,n]:ndir[1,n]],data[ndir[0,n]:ndir[1,n],n],'r')
+        axs[n].set_xlim([0,tmax])    
+        if n==0:
+            axs[n].set_title('IMPULSE RESPONSE')  
+    axs[n].set_xlabel('Time (s)')
+    return
+
 def irstat_plot(data, window=0.01, overlap=0.002, fs=48000, logscale=True, tmax=2.0):
     if data.ndim == 1:
         data = data[:,np.newaxis] # el array debe ser 2D

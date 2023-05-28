@@ -36,12 +36,13 @@ def ctkstring_to_value(ctkstring, type='str', convert=False):
 
 class PlotFrame(ctk.CTkFrame):
     """ Matplotlib PlotFrame Widget"""
-    def __init__(self, parent, axes=None, figure=None, **kwargs):
+    def __init__(self, parent, figure=None, axes=None, **kwargs):
         ctk.CTkFrame.__init__(self, parent, **kwargs)
-        print(axes)
-        self.figure = figure if figure else Figure()
+        #print(axes)
+        self.figure = figure if figure is not None else Figure()
+        self.axes = axes if axes is not None else self.figure.add_subplot(111)
         
-        self.canvas = FigureCanvasTkAgg(self.figure, master=self)
+        self.canvas = FigureCanvasTkAgg(self.figure, self)
         self.canvas.draw()
         self.canvas.get_tk_widget().pack(fill=ctk.BOTH, expand=True)
 
@@ -50,23 +51,21 @@ class PlotFrame(ctk.CTkFrame):
         self.toolbar.update()
         self.toolbar.pack(side=ctk.BOTTOM, fill=ctk.X)
 
-        self.canvas.mpl_connect("key_press_event", lambda event: print(f"you pressed {event.key}"))
-        self.canvas.mpl_connect("key_press_event", key_press_handler)
+        #self.canvas.mpl_connect("key_press_event", lambda event: print(f"you pressed {event.key}"))
+        #self.canvas.mpl_connect("key_press_event", key_press_handler)
         #def on_key_press(event):
         #    print("you pressed {}".format(event.key))
         #    key_press_handler(event, self.canvas, self.toolbar)
-         
-        
-    def update_figure(self, axes=None, figure=None):
-        if figure:
-            self.figure = figure
-            print(axes)
-        self.canvas.figure = self.figure
+
+    def update_figure(self, figure):
+        self.canvas.figure = figure
         self.canvas.draw()
-        self.toolbar.update()
-
-
-
+        #self.toolbar.update()     
+        
+    def update_axes(self, axes):
+        self.axes = axes 
+        self.canvas.draw()
+        #self.toolbar.update()
 
 
 class CTkTable(ctk.CTkFrame):
