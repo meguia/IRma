@@ -76,14 +76,16 @@ def display_table(data,headers,rownames):
     html += "</table>"
     display(HTML(html)) 
 
-def ir_plot(data, fs=48000, tmax=3.0, labels=None):
+def ir_plot(data, fs=48000, tmax=3.0, labels=None, figsize=None):
     """ data (nsamples,nchannel) must be a 2D array
     """
     if data.ndim == 1:
         data = data[:,np.newaxis] # el array debe ser 2D
     nsamples, nchan = np.shape(data)
     t = np.arange(nsamples)/fs
-    fig, axs = plt.subplots(nchan,1,figsize=(18,3*nchan))
+    if figsize is None:
+        figsize = (18,3*nchan)
+    fig, axs = plt.subplots(nchan,1,figsize=figsize)
     ndir = find_dir(data,pw=0.5,fs=fs)
     if nchan==1:
         axs = [axs]

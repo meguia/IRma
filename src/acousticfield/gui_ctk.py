@@ -4,7 +4,7 @@ import sounddevice as sd
 from .generate import sweep
 from .display import ir_plot
 from .session import RecordingSession
-from .utils.ctkutils import CTkTable,PlotFrame
+from .utils.ctkutils import *
 
 # las variables de la interfaz son siempre string y las de la clase RecordingSession 
 # son del tipo que corresponde, con lo cual hay que convertir una en otra al guardar o cargar
@@ -13,6 +13,7 @@ ctk.set_appearance_mode("Dark")
 ctk.set_default_color_theme("dark-blue")  
 fs = 48000 # default despues poner en menu
 
+# GENERATE SWEEP
 class GenerateWindow(ctk.CTkToplevel):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -63,6 +64,7 @@ class GenerateWindow(ctk.CTkToplevel):
         sweep(T=self.sweep_dur,fs=self.sampling_rate,f1=self.sweep_fmin,f2=self.sweep_fmax,Nrep=self.sweep_rep,
         filename=self.sweepfile,post=self.sweep_post)
 
+# MAIN WINDOW
 class Acousticfield_ctk():
     def __init__(self):
         self.root = ctk.CTk()
@@ -84,6 +86,7 @@ class Acousticfield_ctk():
         self.root.toplevel_window = None
         self.create_widgets()
 
+# WIDGETS
     def create_widgets(self):
         # create sidebar frame with widgets
         fbig = ctk.CTkFont(family="Roboto", size=32)
@@ -227,9 +230,7 @@ class Acousticfield_ctk():
 
         #TAB5 - Settings
 
-    def open_input_dialog_event(self):
-        dialog = ctk.CTkInputDialog(text="Type in a number:", title="CTkInputDialog")
-        print("CTkInputDialog:", dialog.get_input())
+# GEOMETRY
 
     def change_appearance_mode_event(self, new_appearance_mode: str):
         ctk.set_appearance_mode(new_appearance_mode)
@@ -237,6 +238,8 @@ class Acousticfield_ctk():
     def change_scaling_event(self, new_scaling: str):
         new_scaling_float = int(new_scaling.replace("%", "")) / 100
         ctk.set_widget_scaling(new_scaling_float)
+
+# SESSION BUTTONS
 
     def generate_sweep(self):
         if self.root.toplevel_window is None or not self.root.toplevel_window.winfo_exists():
@@ -258,6 +261,8 @@ class Acousticfield_ctk():
         self.sweep_file_entry.insert(ctk.END, filename.split(".")[-2])
         self.sweep_file = filename.split(".")[-2]
 
+#SAVE CLEAR AND LOAD SESSION
+
     def save_recording_session(self):
         #check if the recording session was created
         if self.recording_session is None:
@@ -273,16 +278,6 @@ class Acousticfield_ctk():
         #self.recording_session.saved = True
         #self.list_files()
     
-    def any_to_stringvar(self, value):
-        if isinstance(value, str):
-            return ctk.StringVar(value=value)
-        elif isinstance(value, int):
-            return ctk.StringVar(value=str(value))
-        elif isinstance(value, list):
-            return ctk.StringVar(value=','.join(map(str,value)))
-        else:
-            return ctk.StringVar(value="")
-
     def load_recording_session(self):
         filetypes = (('yaml files', '*.yaml'),('all files', '*.*'))
         filename = ctk.filedialog.askopenfilename(title='Open a file',initialdir='./',filetypes=filetypes)
@@ -294,15 +289,13 @@ class Acousticfield_ctk():
         s = self.recording_session.load_metadata(filename)
         self.recording_session = s
         self.sidebar_label_2.configure(text=s.session_id)
-        self.session_id = self.any_to_stringvar(s.session_id)
-        self.session_id_entry.delete(0, ctk.END) 
-        self.session_id_entry.insert(ctk.END, s.session_id)
-        self.speakers = self.any_to_stringvar(s.speakers)
-        self.speakers_entry.delete(0, ctk.END)
-        self.speakers_entry.insert(ctk.END,','.join(map(str,s.speakers)))
-        self.microphones = self.any_to_stringvar(s.microphones)
-        self.microphones_entry.delete(0, ctk.END)
-        self.microphones_entry.insert(ctk.END,','.join(map(str,s.microphones)))
+
+        self.session_id = any_to_stringvar(s.session_id)
+        self.rewrite_entry(self.session_id_entry,[s.session_id])
+        self.speakers = any_to_stringvar(s.speakers)
+        self.rewrite_entry(self.speakers_entry,s.speakers)
+        self.microphones = any_to_stringvar(s.microphones)
+        self.rewrite_entry(self.microphones_entry,s.microphones) 
         self.current_speaker = None
         self.current_microphone = None   
         self.current_direction = None
@@ -311,25 +304,19 @@ class Acousticfield_ctk():
         self.loaded_files = {}
         #speaker_pos = self.speaker_pos_entry.get()
         #microphone_pos = self.microphone_pos_entry.get()
-        self.inchan = self.any_to_stringvar(s.input_channels)
-        self.input_channels_entry.delete(0, ctk.END)
-        self.input_channels_entry.insert(ctk.END,','.join(map(str,s.input_channels)))
-        self.outchan = self.any_to_stringvar(s.output_channels)
-        self.output_channels_entry.delete(0, ctk.END)
-        self.output_channels_entry.insert(ctk.END,','.join(map(str,s.output_channels)))
-        self.loopback = self.any_to_stringvar(s.loopback)
-        self.loopback_entry.delete(0, ctk.END)
-        self.loopback_entry.insert(ctk.END,str(s.loopback))
+        self.inchan = any_to_stringvar(s.input_channels)
+        self.rewrite_entry(self.input_channels_entry,s.input_channels)        
+        self.outchan = any_to_stringvar(s.output_channels)
+        self.rewrite_entry(self.output_channels_entry,s.output_channels)    
+        self.loopback = any_to_stringvar(s.loopback)
+        self.rewrite_entry(self.loopback_entry,[s.loopback])
         self.sampling_rate = fs
         self.rtype = ""
-        #self.recording_path = self.any_to_stringvar(s.recording_path)
+        #self.recording_path = any_to_stringvar(s.recording_path)
         self.recording_path = s.recording_path
-        self.recording_path_entry.delete(0, ctk.END)
-        self.recording_path_entry.insert(ctk.END, s.recording_path)
-        #self.sweep_file = self.any_to_stringvar(s.sweep_file)
+        self.rewrite_entry(self.recording_path_entry,[s.recording_path])
         self.sweep_file = s.sweep_file
-        self.sweep_file_entry.delete(0, ctk.END) 
-        self.sweep_file_entry.insert(ctk.END, s.sweep_file)
+        self.rewrite_entry(self.sweep_file_entry,[s.sweep_file])
         self.print_entries()
         self.entries_to_pars()
         print(self.pars)
@@ -397,30 +384,19 @@ class Acousticfield_ctk():
         self.tick()
         self.print_entries()
 
-    def ctkstring_to_value(self, ctkstring, type='str', convert=False):
-        if ctkstring.get() == "":
-            return None
-        if type == 'str':
-            return ctkstring.get()
-        elif type == 'int':
-            return int(ctkstring.get())
-        elif type == 'list':
-            if convert:
-                return list(map(int, ' '.join(ctkstring.get().split(',')).split()))
-            else:  
-                return ' '.join(ctkstring.get().split(',')).split()
-        else:
-            return None
-
     def entries_to_pars(self):
         # Convert some values to their appropriate types
-        self.pars['session_id'] = self.ctkstring_to_value(self.session_id)
-        self.pars['speakers'] = self.ctkstring_to_value(self.speakers, type='list')
-        self.pars['microphones'] = self.ctkstring_to_value(self.microphones, type='list')
-        self.pars['inchan'] = self.ctkstring_to_value(self.inchan, type='list', convert=True)
-        self.pars['outchan'] = self.ctkstring_to_value(self.outchan, type='list', convert=True)
-        self.pars['loopback'] = self.ctkstring_to_value(self.loopback, type='int') 
+        self.pars['session_id'] = ctkstring_to_value(self.session_id)
+        self.pars['speakers'] = ctkstring_to_value(self.speakers, type='list')
+        self.pars['microphones'] = ctkstring_to_value(self.microphones, type='list')
+        self.pars['inchan'] = ctkstring_to_value(self.inchan, type='list', convert=True)
+        self.pars['outchan'] = ctkstring_to_value(self.outchan, type='list', convert=True)
+        self.pars['loopback'] = ctkstring_to_value(self.loopback, type='int') 
         self.pars['sampling_rate'] = int(self.sampling_rate)
+
+    def rewrite_entry(self, entry, value):
+        entry.delete(0, ctk.END)
+        entry.insert(ctk.END,','.join(map(str,value)))    
 
     def print_entries(self):
         #for debugging
@@ -436,18 +412,19 @@ class Acousticfield_ctk():
         if self.sweep_file is not None:    
             print("sweep_file: " + self.sweep_file)
 
-    
+# AUDIO AND RECORDING
+
     def audio_init(self,device=None,fs=48000):
         # Inicia el Audio, chequear la configuracion el numero de device
         # Normalmente device = [input, output] donde el numero es el
         # device que devuelve el comando query_devices de sounddevice
         print("Iniciando Audio")
         devices = sd.query_devices() # por si hay dudas de cual es el dispositivo descomentar
-        print(devices)
         if device is not None:
             sd.default.device = device
         input_device = sd.default.device[0]
         output_device = sd.default.device[1]
+        print(devices)
         output_name = devices[sd.default.device[1]]['name']
         input_name = devices[sd.default.device[0]]['name']
         print("Usando salida de audio: " + output_name)
@@ -472,10 +449,11 @@ class Acousticfield_ctk():
         )
         self.add_file()
         #plot ir
-        axes,figure = ir_plot(ir_temp, fs, tmax=0.3)
+        axes,figure = ir_plot(ir_temp, fs, tmax=0.3,figsize=(10,5))
         self.matplotlib_ir_frame.update_figure(axes=axes, figure=figure)
         self.matplotlib_ir_frame.pack(fill=ctk.BOTH, expand=True) 
-        
+
+# DATA FILES        
 
     def list_files(self):
         print("load files")
@@ -501,6 +479,8 @@ class Acousticfield_ctk():
         selected_files = self.data_table.get_checked()
         print("Selected files:", selected_files)
 
+# UPDATE METHODS
+
     def update_window(self):
         print("Update")
         print(self.session_id.get())
@@ -513,12 +493,10 @@ class Acousticfield_ctk():
                 self.microphone_box.set(self.pars['microphones'][0])
         self.sidebar_label_2.configure(text=self.session_id.get())
         
-
     def tick(self):
         self.root.update()
         self.root.update_idletasks()
         self.update_window()
-
 
     def stops(self):
         print("Stopping")

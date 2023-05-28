@@ -5,7 +5,34 @@
 
 import customtkinter as ctk
 from matplotlib.figure import Figure
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, NavigationToolbar2Tk)
+from matplotlib.backend_bases import key_press_handler
+dark_color = "#073763"
+
+def any_to_stringvar(value):
+    if isinstance(value, str):
+        return ctk.StringVar(value=value)
+    elif isinstance(value, int):
+        return ctk.StringVar(value=str(value))
+    elif isinstance(value, list):
+        return ctk.StringVar(value=','.join(map(str,value)))
+    else:
+        return ctk.StringVar(value="")
+
+def ctkstring_to_value(ctkstring, type='str', convert=False):
+    if ctkstring.get() == "":
+        return None
+    if type == 'str':
+        return ctkstring.get()
+    elif type == 'int':
+        return int(ctkstring.get())
+    elif type == 'list':
+        if convert:
+            return list(map(int, ' '.join(ctkstring.get().split(',')).split()))
+        else:  
+            return ' '.join(ctkstring.get().split(',')).split()
+    else:
+        return None
 
 class PlotFrame(ctk.CTkFrame):
     """ Matplotlib PlotFrame Widget"""
@@ -13,9 +40,22 @@ class PlotFrame(ctk.CTkFrame):
         ctk.CTkFrame.__init__(self, parent, **kwargs)
         print(axes)
         self.figure = figure if figure else Figure()
+        
         self.canvas = FigureCanvasTkAgg(self.figure, master=self)
-        self.canvas.get_tk_widget().pack(fill=ctk.BOTH, expand=True)
         self.canvas.draw()
+        self.canvas.get_tk_widget().pack(fill=ctk.BOTH, expand=True)
+
+        self.toolbar = NavigationToolbar2Tk(self.canvas, self, pack_toolbar=False)
+        #self.toolbar.config(background=dark_color)
+        self.toolbar.update()
+        self.toolbar.pack(side=ctk.BOTTOM, fill=ctk.X)
+
+        self.canvas.mpl_connect("key_press_event", lambda event: print(f"you pressed {event.key}"))
+        self.canvas.mpl_connect("key_press_event", key_press_handler)
+        #def on_key_press(event):
+        #    print("you pressed {}".format(event.key))
+        #    key_press_handler(event, self.canvas, self.toolbar)
+         
         
     def update_figure(self, axes=None, figure=None):
         if figure:
@@ -23,6 +63,10 @@ class PlotFrame(ctk.CTkFrame):
             print(axes)
         self.canvas.figure = self.figure
         self.canvas.draw()
+        self.toolbar.update()
+
+
+
 
 
 class CTkTable(ctk.CTkFrame):
