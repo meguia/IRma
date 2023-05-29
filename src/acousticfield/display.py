@@ -282,7 +282,7 @@ def pars_plot_compared(pars, keys, chans=[1],labels=None,title=None):
         if isplot[n]:
             nbars = len(chans)
             for c in chans:
-              axs[iplot].bar(np.arange(nb)+0.4/nbars*(2*c-nbars+1),pars[pgraph[n]][:,c-1],width=0.8/nbars)
+              axs[iplot].bar(np.arange(nb)+0.4/nbars*(2*c-nbars),pars[pgraph[n]][:,c-1],width=0.8/nbars)
             axs[iplot].set_xticks(np.arange(nb))
             axs[iplot].set_xticklabels(tuple(pars['fc']))
             if labels is not None:
@@ -316,7 +316,7 @@ def pars_compared_axes(pars, key, axs, chans=None,labels=None,title=None,redraw=
     if redraw:
         axs.clear()
     for c in chans:
-        axs.bar(np.arange(nb)+0.4/nbars*(2*c-nbars+1),pars[key][:,c-1],width=0.8/nbars)
+        axs.bar(np.arange(nb)+0.4/nbars*(2*c-nbars),pars[key][:,c-1],width=0.8/nbars)
     axs.set_xticks(np.arange(nb))
     axs.set_xticklabels(tuple(pars['fc']))
     if labels is not None:

@@ -16,7 +16,7 @@ ctk.set_default_color_theme("dark-blue")
 fs = 48000 # default despues poner en menu
 
 # GENERATE SWEEP
-class GenerateWindow(ctk.CTkToplevel):
+class GenerateSweep(ctk.CTkToplevel):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.geometry("400x500")
@@ -66,6 +66,55 @@ class GenerateWindow(ctk.CTkToplevel):
         sweep(T=self.sweep_dur,fs=self.sampling_rate,f1=self.sweep_fmin,f2=self.sweep_fmax,Nrep=self.sweep_rep,
         filename=self.sweepfile,post=self.sweep_post)
 
+# GENERATE FILTERBANK
+class GenerateFilterBank(ctk.CTkToplevel):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.geometry("400x500")
+        self.label = ctk.CTkLabel(self, text="Generate Filter Bank")
+        self.label.grid(row=0,column=0,padx=20, pady=20)
+        
+        self.label_fmin = ctk.CTkLabel(self, text="fmin")
+        self.label_fmin.grid(row=1,column=0,padx=20, pady=20)
+        self.fmin_entry = ctk.CTkEntry(self, textvariable=ctk.StringVar(value=62.5))
+        self.fmin_entry.grid(row=1,column=1,padx=20, pady=20)
+
+        self.label_noct = ctk.CTkLabel(self, text="Number of octaves")
+        self.label_noct.grid(row=1,column=0,padx=20, pady=20)
+        self.noct_entry = ctk.CTkEntry(self, textvariable=ctk.StringVar(value=9))
+        self.noct_entry.grid(row=1,column=1,padx=20, pady=20)
+
+        self.label_bwoct = ctk.CTkLabel(self, text="Bands per octave")
+        self.label_bwoct.grid(row=2,column=0,padx=20, pady=20)
+        self.bwoct_entry = ctk.CTkEntry(self, textvariable=ctk.StringVar(value=1))
+        self.bwoct_entry.grid(row=2,column=1,padx=20, pady=20)
+
+        self.label_fs = ctk.CTkLabel(self, text="Sampling rate")
+        self.label_fs.grid(row=3,column=0,padx=20, pady=20)
+        self.fs_entry = ctk.CTkEntry(self, textvariable=ctk.StringVar(value=48000)) # en segundos
+        self.fs_entry.grid(row=3,column=1,padx=20, pady=20) 
+
+        self.label_order = ctk.CTkLabel(self, text="Order")
+        self.label_order.grid(row=4,column=0,padx=20, pady=20)   
+        self.order_entry = ctk.CTkEntry(self, textvariable=ctk.StringVar(value=5)) # en segundos
+        self.order_entry.grid(row=4,column=1,padx=20, pady=20)
+
+        self.generate_button = ctk.CTkButton(self, text="Generate", command=self.generate)
+        self.generate_button.grid(row=6,column=0,padx=20, pady=20)
+
+    def generate(self):
+        self.fmin = float(self.fmin_entry.get())
+        self.noct = int(self.noct_entry.get())  
+        self.bwoct = int(self.bwoct_entry.get())
+        self.fs = int(self.fs_entry.get())
+        self.order = int(self.order_entry.get())
+        self.name = self.name_entry.get()
+        srkhz = self.sampling_rate//1000
+        #self.fbankfile = f"fbank_{srkhz}k_{self.noct}_{self.bwoct}"
+        self.fbankfile = "fbank"
+        print("generating filter bank " + self.fbankfile)
+        
+
 # MAIN WINDOW
 class Acousticfield_ctk():
     def __init__(self):
@@ -78,6 +127,7 @@ class Acousticfield_ctk():
         #self.root.iconbitmap("src/acousticfield/icon.ico")
         self.root.protocol("WM_DELETE_WINDOW", self.root.quit)
         # initialization
+        # settings
         self.void_recording_session()
         self.audio_init(fs=fs)
         # configure grid layout (4x4)
@@ -230,8 +280,13 @@ class Acousticfield_ctk():
         self.analyze_button = ctk.CTkButton(tab4, text="Analyze", command=self.analyze)
         self.analyze_button.grid(row=0, column=4, padx=20, pady=20, sticky="e")
 
+        self.label_tmax = ctk.CTkLabel(tab4, text="Time Max")
+        self.label_tmax.grid(row=0, column=5, padx=20, pady=0, sticky="w")
+        self.tmax_entry = ctk.CTkEntry(master=tab4, textvariable=self.tmax)
+        self.tmax_entry.grid(row=1, column=0, padx=20, pady=0, sticky="w")
+
         self.plot_analysis_frame = ctk.CTkFrame(tab4, corner_radius=25)
-        self.plot_analysis_frame.grid(row=1, column=0, columnspan=5, sticky="nsew")
+        self.plot_analysis_frame.grid(row=2, column=0, columnspan=5, sticky="nsew")
         self.matplotlib_analysis_frame = PlotFrame(self.plot_analysis_frame)
         self.matplotlib_analysis_frame.pack(fill=ctk.BOTH, expand=True)
         self.matplotlib_analysis_axes = self.matplotlib_analysis_frame.axes
@@ -251,7 +306,7 @@ class Acousticfield_ctk():
 
     def generate_sweep(self):
         if self.root.toplevel_window is None or not self.root.toplevel_window.winfo_exists():
-            self.root.toplevel_window = GenerateWindow(self.root)  # create window if its None or destroyed
+            self.root.toplevel_window = GenerateSweep(self.root)  # create window if its None or destroyed
         else:
             self.root.toplevel_window.focus()  # if window exists focus it
 
@@ -341,6 +396,9 @@ class Acousticfield_ctk():
         self.current_microphone = None   
         self.current_direction = None
         self.current_take = None
+        self.tmax = ctk.StringVar(value="1.0")
+        self.rtmethod = 'rt20'
+        self.fbankname = 'fbank'
         self.pars = {}
         self.loaded_files = {}
         self.ir_list = []
@@ -458,7 +516,7 @@ class Acousticfield_ctk():
         )
         self.add_file()
         #plot ir
-        ir_plot_axes(ir_temp[:,0], self.matplotlib_ir_axes, fs, tmax=0.3)
+        ir_plot_axes(ir_temp[:,0], self.matplotlib_ir_axes, fs, tmax=float(self.tmax.get()))
         self.matplotlib_ir_frame.canvas.draw()
         self.matplotlib_ir_frame.canvas.flush_events()
 
@@ -504,7 +562,7 @@ class Acousticfield_ctk():
             return
         # arma un multicanal con las ir cargadas en ir_list con un nsamples maximo
         self.ir_stacked = ir_list_to_multichannel(self.ir_list)
-        self.pars = paracoustic(self.ir_stacked, method='rt20',bankname='fbank48k_9_1',tmax=0.45)
+        self.pars = paracoustic(self.ir_stacked, method=self.rtmethod,bankname=self.fbankname,tmax=float(self.tmax.get()))
         return
 
     def table_pars(self,idx=0):

@@ -1,11 +1,9 @@
 # -*- mode: python ; coding: utf-8 -*-
-# command
-# pyinstaller -F src/acousticfield/examples/acousticfield_gui.py --collect-all customtkinter --hidden-import='PIL._tkinter_finder'
 from PyInstaller.utils.hooks import collect_all
 
 datas = []
 binaries = []
-hiddenimports = ['PIL._tkinter_finder']
+hiddenimports = ["'PIL._tkinter_finder'"]
 tmp_ret = collect_all('customtkinter')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 
@@ -14,7 +12,7 @@ block_cipher = None
 
 
 a = Analysis(
-    ['src/acousticfield/examples/acousticfield_gui.py'],
+    ['src\\acousticfield\\examples\\acousticfield_gui.py'],
     pathex=[],
     binaries=binaries,
     datas=datas,
