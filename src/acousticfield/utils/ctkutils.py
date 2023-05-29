@@ -1,13 +1,23 @@
 # CTK Utils
-# CTkTable with checkboxes based in the Widget by Akascape
+# CTkTable with checkboxes based on the Widget by Akascape
 # License: MIT
-# Author: LAPSo, Akash Bora
 
 import customtkinter as ctk
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, NavigationToolbar2Tk)
-from matplotlib.backend_bases import key_press_handler
-dark_color = "#073763"
+from matplotlib.backend_bases import NavigationToolbar2, key_press_handler
+dark_color = "#5a5a5a"
+NavigationToolbar2.toolitems = (
+        ('Home', 'Reset original view', 'home', 'home'),
+        ('Back', 'Back to  previous view', 'back', 'back'),
+        ('Forward', 'Forward to next view', 'forward', 'forward'),
+        (None, None, None, None),
+        ('Pan', 'Pan axes with left mouse, zoom with right', 'move', 'pan'),
+        ('Zoom', 'Zoom to rectangle', 'zoom_to_rect', 'zoom'),
+        (None, None, None, None),
+        ('Save', 'Save the figure', 'filesave', 'save_figure'),
+      )
+
 
 def any_to_stringvar(value):
     if isinstance(value, str):
@@ -34,6 +44,17 @@ def ctkstring_to_value(ctkstring, type='str', convert=False):
     else:
         return None
 
+class CustomToolbar(NavigationToolbar2Tk):  
+    def __init__(self, figcanvas, parent):
+        super().__init__(figcanvas, parent) 
+
+    def draw_rubberband(self, event, x0, y0, x1, y1):
+        self.remove_rubberband()
+        height = self.canvas.figure.bbox.height
+        y0 = height - y0
+        y1 = height - y1
+        self.lastrect = self.canvas._tkcanvas.create_rectangle(x0, y0, x1, y1,outline = 'white', dash=(4, 2))
+
 class PlotFrame(ctk.CTkFrame):
     """ Matplotlib PlotFrame Widget"""
     def __init__(self, parent, figure=None, axes=None, **kwargs):
@@ -46,17 +67,17 @@ class PlotFrame(ctk.CTkFrame):
         self.canvas.draw()
         self.canvas.get_tk_widget().pack(fill=ctk.BOTH, expand=True)
 
-        self.toolbar = NavigationToolbar2Tk(self.canvas, self, pack_toolbar=False)
-        #self.toolbar.config(background=dark_color)
+        self.toolbar = CustomToolbar(self.canvas, self)
+        self.toolbar.config(background=dark_color)
+        self.toolbar._message_label.config(background=dark_color)
+        for button in self.toolbar.winfo_children():
+            button.config(background=dark_color)
         self.toolbar.update()
         self.toolbar.pack(side=ctk.BOTTOM, fill=ctk.X)
 
         #self.canvas.mpl_connect("key_press_event", lambda event: print(f"you pressed {event.key}"))
         #self.canvas.mpl_connect("key_press_event", key_press_handler)
-        #def on_key_press(event):
-        #    print("you pressed {}".format(event.key))
-        #    key_press_handler(event, self.canvas, self.toolbar)
-
+        
     def update_figure(self, figure):
         self.canvas.figure = figure
         self.canvas.draw()
@@ -66,6 +87,11 @@ class PlotFrame(ctk.CTkFrame):
         self.axes = axes 
         self.canvas.draw()
         #self.toolbar.update()
+
+    def clear_axes_data(self):
+        self.axes.clear()
+        self.canvas.draw()
+        #self.toolbar.update()    
 
 
 class CTkTable(ctk.CTkFrame):
@@ -235,6 +261,9 @@ class CTkTable(ctk.CTkFrame):
     
     def get_checked(self):
         return [self.frame[n,0].cget("text") for n in range(1, self.rows) if self.frame[n,0].get()==1]
+    
+    def get_checked_indices(self):
+        return [n-1 for n in range(1, self.rows) if self.frame[n,0].get()==1]
     
     def get_value(self, row, column):
         return self.frame[row,column].cget("text")

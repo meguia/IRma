@@ -115,6 +115,12 @@ class RecordingSession:
                 TypeError("Type non existent, please select wav npy or npz")
         else:
             raise ValueError("recording out of range")
+    
+    def load_ir_list(self,indices,ftype="wav"):
+        ir_list = []
+        for nrecording in indices:
+            ir_list.append(self.load_ir(nrecording,ftype))
+        return ir_list
 
     def generate_backup_file_prefix(self):
         return f"{self.session_id}_backup"

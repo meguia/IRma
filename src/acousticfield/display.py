@@ -102,7 +102,7 @@ def ir_plot(data, fs=48000, tmax=3.0, labels=None, figsize=None):
     axs[n].set_xlabel('Time (s)')
     return axs, fig
 
-def ir_plot_axes(data, axs, fs=48000, tmax=3.0, labels=None):
+def ir_plot_axes(data, axs, fs=48000, tmax=3.0, labels=None, redraw=True):
     """ data (nsamples,nchannel) must be a 2D array
     """
     if data.ndim == 1:
@@ -113,6 +113,8 @@ def ir_plot_axes(data, axs, fs=48000, tmax=3.0, labels=None):
     if nchan==1:
         axs = [axs]
     for n in range(nchan):
+        if redraw:
+            axs[n].clear()
         if labels is not None:
             axs[n].plot(t,data[:,n],label=labels[n])
             axs[n].legend()
@@ -294,6 +296,41 @@ def pars_plot_compared(pars, keys, chans=[1],labels=None,title=None):
               axs[iplot].set_title(title)  
             iplot +=1
     return axs, fig 
+
+def pars_compared_axes(pars, key, axs, chans=None,labels=None,title=None,redraw=True):
+    # busca la ocurrencia de 'rt' 'edt' 'snr' 'c80' 'c50' 'ts' 'dr' en keys[:2]
+    idx = ['sn','rt','ed','c5','c8','ts','dr'].index(key[:2])
+    ylabels = [
+        'Signal/Noise (dB)',
+        'Reverberation Time (s)',
+        'Early Decay Time (s)',
+        'Clarity (dB)',
+        'Clarity (dB)',
+        'Center Time (ms)',
+        'Direct/Reverberant (dB)'
+    ]
+    if chans is None:
+        chans = np.arange(pars[key].shape[1]) + 1 
+    nb = len(pars['fc'])
+    nbars = len(chans)
+    if redraw:
+        axs.clear()
+    for c in chans:
+        axs.bar(np.arange(nb)+0.4/nbars*(2*c-nbars+1),pars[key][:,c-1],width=0.8/nbars)
+    axs.set_xticks(np.arange(nb))
+    axs.set_xticklabels(tuple(pars['fc']))
+    if labels is not None:
+        axs.legend(labels)
+    else:  
+        axs.legend(chans)
+    axs.set_xlabel('Frequency (Hz)')
+    axs.grid(axis='y')
+    axs.set_ylabel(ylabels[idx])
+    if title is not None:
+        axs.set_title(title)  
+    return
+
+
 
 def parsdecay_plot(pars, chan=1, fs=48000):    
     nb = pars['nbands']

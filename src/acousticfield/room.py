@@ -102,7 +102,7 @@ def clarity(ir_input, fs=48000, tmax = 3.0):
     return c80, c50, ts    
         
 
-def paracoustic(ir, method='rt20', bankname='fbank', tmax=3.0):
+def paracoustic(ir, method='rt20', bankname='fbank', tmax=3.0, fs_default=48000):
     '''
     Calcula los siguientes parametros acusticos POR BANDAS con los nombres de las keys correspondientes
     Reververacion: 'rt30' (o el metodo que se pida), 'edt'
@@ -124,7 +124,8 @@ def paracoustic(ir, method='rt20', bankname='fbank', tmax=3.0):
         try: 
             fs, _ = wavfile.read(ir + '.wav')
         except:
-            raise Exception('Cannot infer sample rate. Please provide wav file or filter bank with specified sample rate')    
+            #raise Exception('Cannot infer sample rate. Please provide wav file or filter bank with specified sample rate')    
+            fs = fs_default
         if (len(bankname.split('_')) > 1):
             (noct,bwoct) = [int(ss) for ss in bankname.split('_')[-2:]]
             make_filterbank(noct=noct,bwoct=bwoct,bankname=bankname,fs=fs)
@@ -167,6 +168,7 @@ def paracoustic(ir, method='rt20', bankname='fbank', tmax=3.0):
     pars['ts'] = np.zeros((pars['nbands'],pars['nchan']))
     pars['dr'] = np.zeros((pars['nbands'],pars['nchan']))
     # By Frequency Bands
+    print(data.shape)
     sos_a = A_weighting(fs)
     for n in range(nbands+2):
         if n==nbands:

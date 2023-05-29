@@ -87,6 +87,22 @@ def ir_golay(data,datainv,nchan):
     ir_stack = aa+bb
     return ir_stack
 
+def ir_list_to_multichannel(ir_list,nsamples=None,chan=0):
+    """
+    convert a list of irs to a multichannel ir taking the channel chan of each ir
+    and reducing the number of samples to nsamples 
+    (if nsamples is None, the minimum number of samples is used)    
+    """
+    if nsamples is None:
+        nsamples = np.min([ir.shape[0] for ir in ir_list])
+    ir_multichannel = np.zeros((nsamples,len(ir_list)))
+    for n,ir in enumerate(ir_list):
+        if np.ndim(ir) == 2:
+            ir_multichannel[:,n] = ir[:nsamples,chan]
+        else:
+            ir_multichannel[:,n] = ir[:nsamples]    
+    return ir_multichannel
+
 def fconvolve(in1,in2):
     '''
     in1 can be multichannel, in2 single channel

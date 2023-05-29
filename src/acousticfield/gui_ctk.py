@@ -2,7 +2,9 @@ import customtkinter as ctk
 from yaml import safe_load
 import sounddevice as sd
 from .generate import sweep
-from .display import ir_plot_axes
+from .process import ir_list_to_multichannel
+from .room import paracoustic
+from .display import ir_plot_axes, pars_compared_axes
 from .session import RecordingSession
 from .utils.ctkutils import *
 
@@ -74,9 +76,7 @@ class Acousticfield_ctk():
         self.root.geometry(f"{1200}x{700}")
         self.root.minsize(600, 400)
         #self.root.iconbitmap("src/acousticfield/icon.ico")
-        #self.root.protocol("WM_DELETE_WINDOW", self.root.close_event)
         self.root.protocol("WM_DELETE_WINDOW", self.root.quit)
-    
         # initialization
         self.void_recording_session()
         self.audio_init(fs=fs)
@@ -95,7 +95,7 @@ class Acousticfield_ctk():
         self.sidebar_frame = ctk.CTkFrame(self.root, width=140, corner_radius=0)
         self.sidebar_frame.grid(row=0, column=0, rowspan=2, sticky="nsew")
         self.sidebar_frame.grid_rowconfigure(6, weight=1)
-        
+        # SIDEBAR
         self.sidebar_label_1 = ctk.CTkLabel(self.sidebar_frame, text="Session", font=fsmall)
         self.sidebar_label_1.grid(row=0, column=0, padx=20, pady=(20,0))
         self.sidebar_label_2 = ctk.CTkLabel(self.sidebar_frame, text=self.session_id.get(), font=fbig)
@@ -226,8 +226,15 @@ class Acousticfield_ctk():
         send_button = ctk.CTkButton(master=tab3,text="Load",command=self.load_irs)
         send_button.grid(row=0, column=0, sticky="w", padx=20, pady=20)
 
-
         #TAB4 - Analysis
+        self.analyze_button = ctk.CTkButton(tab4, text="Analyze", command=self.analyze)
+        self.analyze_button.grid(row=0, column=4, padx=20, pady=20, sticky="e")
+
+        self.plot_analysis_frame = ctk.CTkFrame(tab4, corner_radius=25)
+        self.plot_analysis_frame.grid(row=1, column=0, columnspan=5, sticky="nsew")
+        self.matplotlib_analysis_frame = PlotFrame(self.plot_analysis_frame)
+        self.matplotlib_analysis_frame.pack(fill=ctk.BOTH, expand=True)
+        self.matplotlib_analysis_axes = self.matplotlib_analysis_frame.axes
 
         #TAB5 - Settings
 
@@ -302,7 +309,7 @@ class Acousticfield_ctk():
         self.current_direction = None
         self.current_take = None
         self.pars = {}
-        self.loaded_files = {}
+        self.ir_list = []
         #speaker_pos = self.speaker_pos_entry.get()
         #microphone_pos = self.microphone_pos_entry.get()
         self.inchan = any_to_stringvar(s.input_channels)
@@ -336,6 +343,7 @@ class Acousticfield_ctk():
         self.current_take = None
         self.pars = {}
         self.loaded_files = {}
+        self.ir_list = []
         self.files = [] # list of files in recording_path
         #speaker_pos = self.speaker_pos_entry.get()
         #microphone_pos = self.microphone_pos_entry.get()
@@ -477,8 +485,51 @@ class Acousticfield_ctk():
         pass
 
     def load_irs(self):
-        selected_files = self.data_table.get_checked()
-        print("Selected files:", selected_files)
+        selected_indices = self.data_table.get_checked_indices()
+        print("Selected indices:", selected_indices)
+        self.ir_list = self.recording_session.load_ir_list(selected_indices)
+
+# ROOM ACOUSTICS
+    def analyze(self):
+        # choose the key
+        key = 'rt20'
+        self.paracoustic()
+        #self.table_pars()
+        self.plot_pars(key)
+        return
+
+    def paracoustic(self,idx=0):
+        if len(self.ir_list) == 0:
+            print("There are no IRs loaded")
+            return
+        # arma un multicanal con las ir cargadas en ir_list con un nsamples maximo
+        self.ir_stacked = ir_list_to_multichannel(self.ir_list)
+        self.pars = paracoustic(self.ir_stacked, method='rt20',bankname='fbank48k_9_1',tmax=0.45)
+        return
+
+    def table_pars(self,idx=0):
+        # table for channel =0 and index = idx    
+        if self.pars is not None:
+            print("Table")
+            print(self.pars['speakers'])
+            print(self.pars['microphones'])
+            print(self.pars['rt20'][idx,0,:])
+            #self.data_table.add_row([self.pars['speakers'],self.pars['microphones'],self.pars['rt20'][idx,0,:]])
+        # display table for idx(channel) = 0
+        return
+    
+# PLOTS
+# TODO: move to a separate class
+#    add plot options        
+#    add plot buttons   
+    def plot_pars(self,key='rt20'):
+        if len(self.ir_list) == 0:
+            print("There are no IRs loaded")
+            return
+        if self.pars is not None:        
+            pars_compared_axes(self.pars, key, self.matplotlib_analysis_axes)
+            self.matplotlib_analysis_frame.canvas.draw()
+            self.matplotlib_analysis_frame.canvas.flush_events()
 
 # UPDATE METHODS
 
