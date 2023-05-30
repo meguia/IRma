@@ -140,15 +140,15 @@ class Acousticfield_ctk():
     def create_widgets(self):
         # create sidebar frame with widgets
         fbig = ctk.CTkFont(family="Roboto", size=32)
-        fnorm = ctk.CTkFont(family="Roboto", size=20)
+        fnorm = ctk.CTkFont(family="Roboto", size=18)
         fsmall = ctk.CTkFont(family="Roboto", size=14)
         self.sidebar_frame = ctk.CTkFrame(self.root, width=140, corner_radius=0)
         self.sidebar_frame.grid(row=0, column=0, rowspan=2, sticky="nsew")
-        self.sidebar_frame.grid_rowconfigure(6, weight=1)
+        self.sidebar_frame.grid_rowconfigure(7, weight=1)
         # SIDEBAR
         self.sidebar_label_1 = ctk.CTkLabel(self.sidebar_frame, text="Session", font=fsmall)
         self.sidebar_label_1.grid(row=0, column=0, padx=20, pady=(20,0))
-        self.sidebar_label_2 = ctk.CTkLabel(self.sidebar_frame, text=self.session_id.get(), font=fbig)
+        self.sidebar_label_2 = ctk.CTkLabel(self.sidebar_frame, text=self.session_id.get(), text_color="#f5d2d2", font=fbig)
         self.sidebar_label_2.grid(row=1, column=0, padx=20, pady=(20, 10))
         self.button_create = ctk.CTkButton(self.sidebar_frame, text="Create",font=fnorm,command=self.create_recording_session)
         self.button_create.grid(row=2, column=0, padx=20, pady=10)
@@ -160,22 +160,25 @@ class Acousticfield_ctk():
         self.button_clean.grid(row=5, column=0, padx=20, pady=10)
         self.button_quit = ctk.CTkButton(self.sidebar_frame, text="Quit",font=fnorm,command=self.stops)
         self.button_quit.grid(row=6, column=0, padx=20, pady=10)
+        self.separator = ctk.CTkLabel(self.sidebar_frame, text="", anchor="w")
+        self.separator.grid(row=7, column=0, padx=20, pady=(10, 0))
         self.appearance_mode_label = ctk.CTkLabel(self.sidebar_frame, text="Appearance Mode:", anchor="w")
-        self.appearance_mode_label.grid(row=7, column=0, padx=20, pady=(10, 0))
+        self.appearance_mode_label.grid(row=8, column=0, padx=20, pady=(10, 0))
         self.appearance_mode_optionemenu = ctk.CTkOptionMenu(self.sidebar_frame, values=["Light", "Dark", "System"],
                                                                     command=self.change_appearance_mode_event)
-        self.appearance_mode_optionemenu.grid(row=8, column=0, padx=20, pady=(10, 10))
+        self.appearance_mode_optionemenu.grid(row=9, column=0, padx=20, pady=(10, 10))
         self.scaling_label = ctk.CTkLabel(self.sidebar_frame, text="UI Scaling:", anchor="w")
-        self.scaling_label.grid(row=9, column=0, padx=20, pady=(10, 0))
+        self.scaling_label.grid(row=10, column=0, padx=20, pady=(10, 0))
         self.scaling_optionemenu = ctk.CTkOptionMenu(self.sidebar_frame, values=["80%", "90%", "100%", "110%", "120%"],
                                                             command=self.change_scaling_event)
-        self.scaling_optionemenu.grid(row=10, column=0, padx=20, pady=(10, 20))
+        self.scaling_optionemenu.grid(row=11, column=0, padx=20, pady=(10, 20))
 
-        # create main entry and button
-        self.entry = ctk.CTkEntry(self.root, placeholder_text="CTkEntry")
-        self.entry.grid(row=1, column=1, padx=(20, 10), pady=(10, 10), sticky="nsew")
-
+        # create status an message bar
+        self.status = ctk.CTkTextbox(self.root,height=40, font=fnorm)
+        self.status.grid(row=1, column=1, padx=(20, 10), pady=(10, 10), sticky="nsew")
+        self.status.insert("0.0", "Warning RMS pedido mayor al RMS de corte que es -3.44 dB Sweep RMS = -3.44 dB \n Sweep generated with 576000 samples.\n Total signal with 1 repetitions has a duration of 12.00 seconds\n ")
         # MAIN TABS
+    
         self.tabview = ctk.CTkTabview(self.root, width=900)
         self.tabview.grid(row=0, column=1, padx=(20, 10), pady=(0, 0), sticky="nsew")
         tab1 = self.tabview.add("Session")
@@ -183,10 +186,9 @@ class Acousticfield_ctk():
         tab3 = self.tabview.add("Data")
         tab4 = self.tabview.add("Analysis")
         tab5 = self.tabview.add("Settings") 
-        tab1.grid_columnconfigure(2, weight=1) 
-        tab2.grid_columnconfigure(1, weight=1)
 
         #TAB1 - Session
+        tab1.grid_columnconfigure(2, weight=1)
         self.session_id_label = ctk.CTkLabel(tab1, text="Session ID:")
         self.session_id_label.grid(row=0, column=0, padx=20, pady=(20, 10))
         self.session_id_entry = ctk.CTkEntry(tab1, textvariable=self.session_id)
@@ -232,9 +234,10 @@ class Acousticfield_ctk():
 
         # Plano del lugar?
         self.map = ctk.CTkFrame(tab1, width=500, corner_radius=0)
-        self.map.grid(row=0, column=2, rowspan=8, sticky="nsew")
+        self.map.grid(row=0, column=2, rowspan=9, sticky="nsew")
 
         #TAB2 - Recording
+        tab2.grid_columnconfigure(4, weight=1)
         self.label_speaker = ctk.CTkLabel(tab2, text="SPEAKER")
         self.label_speaker.grid(row=0, column=0, padx=20, pady=0, sticky="w")
 
@@ -265,11 +268,12 @@ class Acousticfield_ctk():
         #plot ir
         self.plot_ir_frame = ctk.CTkFrame(tab2, corner_radius=25)
         self.plot_ir_frame.grid(row=2, column=0, columnspan=5, sticky="nsew")
-        self.matplotlib_ir_frame = PlotFrame(self.plot_ir_frame)
+        self.matplotlib_ir_frame = PlotFrame(self.plot_ir_frame, corner_radius=25)
         self.matplotlib_ir_frame.pack(fill=ctk.BOTH, expand=True)
         self.matplotlib_ir_axes = self.matplotlib_ir_frame.axes
         
         #TAB3 - Data Table
+        tab3.grid_columnconfigure(0, weight=1)
         self.data_table = CTkTable(master=tab3, row=1, column=5, checkbox=True, 
                                    values=[["file", "speaker", "mic", "dir", "take"]], corner_radius=10)
         self.data_table.grid(row=1,column=0, padx=20, pady=20)
@@ -277,16 +281,17 @@ class Acousticfield_ctk():
         send_button.grid(row=0, column=0, sticky="w", padx=20, pady=20)
 
         #TAB4 - Analysis
+        tab4.grid_columnconfigure(6, weight=1)
         self.analyze_button = ctk.CTkButton(tab4, text="Analyze", command=self.analyze)
         self.analyze_button.grid(row=0, column=4, padx=20, pady=20, sticky="e")
 
         self.label_tmax = ctk.CTkLabel(tab4, text="Time Max")
         self.label_tmax.grid(row=0, column=5, padx=20, pady=0, sticky="w")
         self.tmax_entry = ctk.CTkEntry(master=tab4, textvariable=self.tmax)
-        self.tmax_entry.grid(row=1, column=0, padx=20, pady=0, sticky="w")
+        self.tmax_entry.grid(row=0, column=6, padx=20, pady=0, sticky="w")
 
         self.plot_analysis_frame = ctk.CTkFrame(tab4, corner_radius=25)
-        self.plot_analysis_frame.grid(row=2, column=0, columnspan=5, sticky="nsew")
+        self.plot_analysis_frame.grid(row=2, column=0, columnspan=7, sticky="nsew")
         self.matplotlib_analysis_frame = PlotFrame(self.plot_analysis_frame)
         self.matplotlib_analysis_frame.pack(fill=ctk.BOTH, expand=True)
         self.matplotlib_analysis_axes = self.matplotlib_analysis_frame.axes

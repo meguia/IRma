@@ -5,9 +5,9 @@
 import customtkinter as ctk
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, NavigationToolbar2Tk)
-from matplotlib.backend_bases import NavigationToolbar2, key_press_handler
+
 dark_color = "#5a5a5a"
-NavigationToolbar2.toolitems = (
+NavigationToolbar2Tk.toolitems = (
         ('Home', 'Reset original view', 'home', 'home'),
         ('Back', 'Back to  previous view', 'back', 'back'),
         ('Forward', 'Forward to next view', 'forward', 'forward'),
@@ -49,11 +49,11 @@ class CustomToolbar(NavigationToolbar2Tk):
         super().__init__(figcanvas, parent) 
 
     def draw_rubberband(self, event, x0, y0, x1, y1):
-        self.remove_rubberband()
+        self.canvas._tkcanvas.delete(self.canvas._rubberband_rect_white)
         height = self.canvas.figure.bbox.height
         y0 = height - y0
         y1 = height - y1
-        self.lastrect = self.canvas._tkcanvas.create_rectangle(x0, y0, x1, y1,outline = 'white', dash=(4, 2))
+        self.canvas._rubberband_rect_white = self.canvas._tkcanvas.create_rectangle(x0, y0, x1, y1,outline='white', dash=(3, 3))
 
 class PlotFrame(ctk.CTkFrame):
     """ Matplotlib PlotFrame Widget"""
