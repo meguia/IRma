@@ -7,6 +7,7 @@ from .room import paracoustic
 from .display import ir_plot_axes, pars_compared_axes
 from .session import RecordingSession
 from .utils.ctkutils import *
+from .utils.audioutils import *
 
 # las variables de la interfaz son siempre string y las de la clase RecordingSession 
 # son del tipo que corresponde, con lo cual hay que convertir una en otra al guardar o cargar
@@ -17,11 +18,12 @@ fs = 48000 # default despues poner en menu
 
 # GENERATE SWEEP
 class GenerateSweep(ctk.CTkToplevel):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, sampling_rate, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.geometry("400x500")
         self.label = ctk.CTkLabel(self, text="Generate Log Sweep")
         self.label.grid(row=0,column=0,padx=20, pady=20)
+        self.sampling_rate = sampling_rate
         
         self.label_fmin = ctk.CTkLabel(self, text="fmin")
         self.label_fmin.grid(row=1,column=0,padx=20, pady=20)
@@ -57,7 +59,6 @@ class GenerateSweep(ctk.CTkToplevel):
         self.sweep_dur = float(self.sweep_dur_entry.get())
         self.sweep_post = float(self.sweep_post_entry.get())
         self.sweep_rep = int(self.sweep_rep_entry.get())
-        self.sampling_rate = fs
 
         srkhz = self.sampling_rate//1000
         maxrange = self.sweep_fmax//1000
@@ -68,12 +69,13 @@ class GenerateSweep(ctk.CTkToplevel):
 
 # GENERATE FILTERBANK
 class GenerateFilterBank(ctk.CTkToplevel):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, sampling_rate, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.geometry("400x500")
         self.label = ctk.CTkLabel(self, text="Generate Filter Bank")
         self.label.grid(row=0,column=0,padx=20, pady=20)
         
+        self.sampling_rate = sampling_rate
         self.label_fmin = ctk.CTkLabel(self, text="fmin")
         self.label_fmin.grid(row=1,column=0,padx=20, pady=20)
         self.fmin_entry = ctk.CTkEntry(self, textvariable=ctk.StringVar(value=62.5))
@@ -91,7 +93,7 @@ class GenerateFilterBank(ctk.CTkToplevel):
 
         self.label_fs = ctk.CTkLabel(self, text="Sampling rate")
         self.label_fs.grid(row=3,column=0,padx=20, pady=20)
-        self.fs_entry = ctk.CTkEntry(self, textvariable=ctk.StringVar(value=48000)) # en segundos
+        self.fs_entry = ctk.CTkEntry(self, textvariable=ctk.StringVar(value=sampling_rate)) # en segundos
         self.fs_entry.grid(row=3,column=1,padx=20, pady=20) 
 
         self.label_order = ctk.CTkLabel(self, text="Order")
@@ -128,8 +130,8 @@ class Acousticfield_ctk():
         self.root.protocol("WM_DELETE_WINDOW", self.root.quit)
         # initialization
         # settings
+        self.inputs, self.outputs = list_devices()
         self.void_recording_session()
-        self.audio_init(fs=fs)
         # configure grid layout (4x4)
         self.root.grid_columnconfigure(1, weight=1)
         self.root.grid_rowconfigure(0, weight=1)
@@ -240,25 +242,19 @@ class Acousticfield_ctk():
         tab2.grid_columnconfigure(4, weight=1)
         self.label_speaker = ctk.CTkLabel(tab2, text="SPEAKER")
         self.label_speaker.grid(row=0, column=0, padx=20, pady=0, sticky="w")
-
         self.label_microphone = ctk.CTkLabel(tab2, text="MICROPHONE")
         self.label_microphone.grid(row=0, column=1, padx=20, pady=0, sticky="w")
-
         self.label_direction = ctk.CTkLabel(tab2, text="DIRECTION")
         self.label_direction.grid(row=0, column=2, padx=20, pady=0, sticky="w")
-
         self.label_take = ctk.CTkLabel(tab2, text="TAKE")
         self.label_take.grid(row=0, column=3, padx=20, pady=0, sticky="w")
 
         self.speaker_box = ctk.CTkComboBox(master=tab2, values=[" "], variable=self.current_speaker)
         self.speaker_box.grid(row=1, column=0, padx=20, pady=0, sticky="w")
-
         self.microphone_box = ctk.CTkComboBox(master=tab2, values=[" "], variable=self.current_microphone)
         self.microphone_box.grid(row=1, column=1, padx=20, pady=0, sticky="w")
-
         self.direction_box = ctk.CTkComboBox(master=tab2, values=["1", "2", "3", "4", "5", "6"], variable=self.current_direction)    
         self.direction_box.grid(row=1, column=2, padx=20, pady=0, sticky="w")
-
         self.take_box = ctk.CTkComboBox(master=tab2, values=["1", "2", "3", "4", "5", "6"], variable=self.current_take)    
         self.take_box.grid(row=1, column=3, padx=20, pady=0, sticky="w")
 
@@ -297,6 +293,24 @@ class Acousticfield_ctk():
         self.matplotlib_analysis_axes = self.matplotlib_analysis_frame.axes
 
         #TAB5 - Settings
+        self.label_select_input = ctk.CTkLabel(tab5, text="Audio Input")
+        self.label_select_input.grid(row=0, column=0, padx=20, pady=0, sticky="w")
+        self.label_select_output = ctk.CTkLabel(tab5, text="Audio Output")
+        self.label_select_output.grid(row=0, column=1, padx=20, pady=0, sticky="w")
+        self.label_sampling_rate = ctk.CTkLabel(tab5, text="Sampling Rate")
+        self.label_sampling_rate.grid(row=0, column=2, padx=20, pady=0, sticky="w")
+
+
+        self.select_input_box = ctk.CTkComboBox(master=tab5, values=self.inputs, variable=self.input_device)
+        self.select_input_box.grid(row=1, column=0, padx=20, pady=0, sticky="w")
+        self.select_output_box = ctk.CTkComboBox(master=tab5, values=self.outputs, variable=self.output_device)
+        self.select_output_box.grid(row=1, column=1, padx=20, pady=0, sticky="w")
+        self.sampling_rate_box = ctk.CTkComboBox(master=tab5, values=["44100", "48000","96000"], variable=self.sampling_rate)
+        self.sampling_rate_box.grid(row=1, column=2, padx=20, pady=0, sticky="w")
+
+        self.save_settings_button = ctk.CTkButton(tab5, text="Save Settings", command=self.save_settings)
+        self.save_settings_button.grid(row=0, column=4, rowspan=2, padx=20, pady=20, sticky="e")
+
 
 # GEOMETRY
 
@@ -378,7 +392,7 @@ class Acousticfield_ctk():
         self.rewrite_entry(self.output_channels_entry,s.output_channels)    
         self.loopback = any_to_stringvar(s.loopback)
         self.rewrite_entry(self.loopback_entry,[s.loopback])
-        self.sampling_rate = fs
+        self.sampling_rate = s.sampling_rate
         self.rtype = ""
         #self.recording_path = any_to_stringvar(s.recording_path)
         self.recording_path = s.recording_path
@@ -413,10 +427,13 @@ class Acousticfield_ctk():
         self.inchan = ctk.StringVar(value="")
         self.outchan = ctk.StringVar(value="")
         self.loopback = ctk.StringVar(value="")
-        self.sampling_rate = fs
+        self.sampling_rate = get_default_samplerate(sd.default.device[1])
         self.rtype = ""
         self.recording_path = None
         self.sweep_file = None
+        # load default settings
+        self.input_device = get_device_name(sd.default.device[0])
+        self.output_device = get_device_name(sd.default.device[1])
         self.print_entries()
 
     def clean_recording_session(self):
@@ -464,7 +481,7 @@ class Acousticfield_ctk():
         self.pars['inchan'] = ctkstring_to_value(self.inchan, type='list', convert=True)
         self.pars['outchan'] = ctkstring_to_value(self.outchan, type='list', convert=True)
         self.pars['loopback'] = ctkstring_to_value(self.loopback, type='int') 
-        self.pars['sampling_rate'] = int(self.sampling_rate)
+        self.pars['sampling_rate'] = self.sampling_rate
 
     def rewrite_entry(self, entry, value):
         entry.delete(0, ctk.END)
@@ -486,24 +503,12 @@ class Acousticfield_ctk():
 
 # AUDIO AND RECORDING
 
-    def audio_init(self,device=None,fs=48000):
-        # Inicia el Audio, chequear la configuracion el numero de device
-        # Normalmente device = [input, output] donde el numero es el
-        # device que devuelve el comando query_devices de sounddevice
-        print("Iniciando Audio")
-        devices = sd.query_devices() # por si hay dudas de cual es el dispositivo descomentar
-        if device is not None:
-            sd.default.device = device
-        input_device = sd.default.device[0]
-        output_device = sd.default.device[1]
-        print(devices)
-        output_name = devices[sd.default.device[1]]['name']
-        input_name = devices[sd.default.device[0]]['name']
-        print("Usando salida de audio: " + output_name)
-        sd.default.samplerate = fs
-        self.sampling_rate = fs
-        self.max_chanin = devices[input_device]['max_input_channels']
-        self.max_chanout = devices[output_device]['max_output_channels']
+    def save_settings(self):
+        self.input_device = self.select_input_box.get()
+        self.output_device = self.select_output_box.get()
+        self.sampling_rate = int(self.sampling_rate_box.get())
+        assign_device(self.input_device, self.output_device,self.sampling_rate)
+        self.max_chanin, self.max_chanout = get_max_channels(self.input_device, self.output_device)
 
     def start_recording(self):
         print("start recording")
