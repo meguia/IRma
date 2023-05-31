@@ -29,9 +29,8 @@ def get_max_channels(input_device, output_device):
     max_chanout = sd.query_devices(output_device)['max_output_channels']
     return max_chanin, max_chanout
 
-def test_output(output_device,sample_rate):
-    sd.default.device = output_device
-    sd.default.samplerate = sample_rate
+def test_output(input_device,output_device,sample_rate):
+    assign_device(input_device, output_device,sample_rate)
     duration = 1.5  # seconds
     t = np.arange(int(sample_rate * duration)) / sample_rate
     x = np.sin(2 * np.pi * 440 * t)
@@ -39,10 +38,6 @@ def test_output(output_device,sample_rate):
     sd.wait(duration)
     return 
 
-def test_input(input_device,sample_rate):
-    sd.default.device = input_device
-    sd.default.samplerate = sample_rate
-    duration = 1.5  # seconds
-    myrecording = sd.rec(int(duration * sample_rate), samplerate=sample_rate, channels=1)
-    sd.wait()
-    return myrecording   
+def test_input_tic(input_device,output_device,sample_rate,dur=0.3):
+    assign_device(input_device, output_device,sample_rate)
+    return sd.rec(int(dur * sample_rate), samplerate=sample_rate, channels=1,blocking=True)

@@ -2,7 +2,7 @@ import customtkinter as ctk
 from yaml import safe_load
 import sounddevice as sd
 from .generate import sweep
-from .process import ir_list_to_multichannel
+from .process import ir_list_to_multichannel,make_filterbank
 from .room import paracoustic
 from .display import ir_plot_axes, pars_compared_axes
 from .session import RecordingSession
@@ -21,37 +21,39 @@ class GenerateSweep(ctk.CTkToplevel):
     def __init__(self, sampling_rate, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.geometry("400x500")
-        self.label = ctk.CTkLabel(self, text="Generate Log Sweep")
-        self.label.grid(row=0,column=0,padx=20, pady=20)
-        self.sampling_rate = sampling_rate
+        self.title("Generate Sweep")
+        self.sampling_rate = ctkstring_to_value(sampling_rate, type='int')
+        self.label = ctk.CTkLabel(self, text=f"Generate Log Sweep\nSampling Rate: {self.sampling_rate} Hz")
+        self.label.grid(row=0,column=0,columnspan=2, padx=20, pady=20)
+        print(self.sampling_rate)
         
         self.label_fmin = ctk.CTkLabel(self, text="fmin")
-        self.label_fmin.grid(row=1,column=0,padx=20, pady=20)
+        self.label_fmin.grid(row=1,column=0,padx=20, pady=10)
         self.sweep_fmin_entry = ctk.CTkEntry(self, textvariable=ctk.StringVar(value=20))
-        self.sweep_fmin_entry.grid(row=1,column=1,padx=20, pady=20)
+        self.sweep_fmin_entry.grid(row=1,column=1,padx=20, pady=10)
 
         self.label_fmax = ctk.CTkLabel(self, text="fmax")
-        self.label_fmax.grid(row=2,column=0,padx=20, pady=20)
+        self.label_fmax.grid(row=2,column=0,padx=20, pady=10)
         self.sweep_fmax_entry = ctk.CTkEntry(self, textvariable=ctk.StringVar(value=20000))
-        self.sweep_fmax_entry.grid(row=2,column=1,padx=20, pady=20)
+        self.sweep_fmax_entry.grid(row=2,column=1,padx=20, pady=10)
 
         self.label_post = ctk.CTkLabel(self, text="duration")
-        self.label_post.grid(row=3,column=0,padx=20, pady=20)
+        self.label_post.grid(row=3,column=0,padx=20, pady=10)
         self.sweep_dur_entry = ctk.CTkEntry(self, textvariable=ctk.StringVar(value=10.0)) # en segundos
-        self.sweep_dur_entry.grid(row=3,column=1,padx=20, pady=20) 
+        self.sweep_dur_entry.grid(row=3,column=1,padx=20, pady=10) 
 
         self.label_post = ctk.CTkLabel(self, text="post")
-        self.label_post.grid(row=4,column=0,padx=20, pady=20)   
+        self.label_post.grid(row=4,column=0,padx=20, pady=10)   
         self.sweep_post_entry = ctk.CTkEntry(self, textvariable=ctk.StringVar(value=1.0)) # en segundos
-        self.sweep_post_entry.grid(row=4,column=1,padx=20, pady=20)
+        self.sweep_post_entry.grid(row=4,column=1,padx=20, pady=10)
 
         self.label_rep = ctk.CTkLabel(self, text="repetitions")
-        self.label_rep.grid(row=5,column=0,padx=20, pady=20)
+        self.label_rep.grid(row=5,column=0,padx=20, pady=10)
         self.sweep_rep_entry = ctk.CTkEntry(self, textvariable=ctk.StringVar(value=1)) 
-        self.sweep_rep_entry.grid(row=5,column=1,padx=20, pady=20)
+        self.sweep_rep_entry.grid(row=5,column=1,padx=20, pady=10)
 
         self.generate_button = ctk.CTkButton(self, text="Generate", command=self.generate)
-        self.generate_button.grid(row=6,column=0,padx=20, pady=20)
+        self.generate_button.grid(row=6,column=0,columnspan=2,padx=20, pady=20)
 
     def generate(self):
         self.sweep_fmin = int(self.sweep_fmin_entry.get())
@@ -66,14 +68,16 @@ class GenerateSweep(ctk.CTkToplevel):
         print("generating sweep " + self.sweepfile)
         sweep(T=self.sweep_dur,fs=self.sampling_rate,f1=self.sweep_fmin,f2=self.sweep_fmax,Nrep=self.sweep_rep,
         filename=self.sweepfile,post=self.sweep_post)
+        self.destroy()
 
 # GENERATE FILTERBANK
 class GenerateFilterBank(ctk.CTkToplevel):
     def __init__(self, sampling_rate, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.geometry("400x500")
+        self.title("Generate Filter Bank")
         self.label = ctk.CTkLabel(self, text="Generate Filter Bank")
-        self.label.grid(row=0,column=0,padx=20, pady=20)
+        self.label.grid(row=0,column=0,columnspan=2,padx=20, pady=20)
         
         self.sampling_rate = sampling_rate
         self.label_fmin = ctk.CTkLabel(self, text="fmin")
@@ -115,6 +119,9 @@ class GenerateFilterBank(ctk.CTkToplevel):
         #self.fbankfile = f"fbank_{srkhz}k_{self.noct}_{self.bwoct}"
         self.fbankfile = "fbank"
         print("generating filter bank " + self.fbankfile)
+        make_filterbank(fmin=self.fmin,noct=self.noct,bwoct=self.bwoct,fs=self.sampling_rate,order=self.order,\
+                        N=10000,bankname=self.fbankfile,show=False)
+        self.destroy()
         
 
 # MAIN WINDOW
@@ -186,8 +193,9 @@ class Acousticfield_ctk():
         tab1 = self.tabview.add("Session")
         tab2 = self.tabview.add("Recording")
         tab3 = self.tabview.add("Data")
-        tab4 = self.tabview.add("Analysis")
-        tab5 = self.tabview.add("Settings") 
+        tab4 = self.tabview.add("Tables")
+        tab5 = self.tabview.add("Plots")
+        tab6 = self.tabview.add("Settings")
 
         #TAB1 - Session
         tab1.grid_columnconfigure(2, weight=1)
@@ -276,40 +284,58 @@ class Acousticfield_ctk():
         send_button = ctk.CTkButton(master=tab3,text="Load",command=self.load_irs)
         send_button.grid(row=0, column=0, sticky="w", padx=20, pady=20)
 
-        #TAB4 - Analysis
-        tab4.grid_columnconfigure(6, weight=1)
-        self.analyze_button = ctk.CTkButton(tab4, text="Analyze", command=self.analyze)
+        #tab4 - Parameters Table
+        tab4.grid_columnconfigure(0, weight=1)
+        self.parameter_table_headers = pars['fc']    
+        self.parameter_table_keys = ['snr',rtype,'rvalue','edt','c50','c80','ts','dr']
+        self.parameter_table = CTkTable(master=tab3, row=9, column=12, checkbox=True, 
+                                   values=[["file", "speaker", "mic", "dir", "take"]], corner_radius=10)
+        self.parameter_table.grid(row=1,column=0, padx=20, pady=20)
+        send_button = ctk.CTkButton(master=tab3,text="Load",command=self.load_irs)
+        send_button.grid(row=0, column=0, sticky="w", padx=20, pady=20)
+
+        #tab5 - Parameters Plots
+        tab5.grid_columnconfigure(6, weight=1)
+        self.analyze_button = ctk.CTkButton(tab5, text="Analyze", command=self.analyze)
         self.analyze_button.grid(row=0, column=4, padx=20, pady=20, sticky="e")
 
-        self.label_tmax = ctk.CTkLabel(tab4, text="Time Max")
+        self.label_tmax = ctk.CTkLabel(tab5, text="Time Max")
         self.label_tmax.grid(row=0, column=5, padx=20, pady=0, sticky="w")
-        self.tmax_entry = ctk.CTkEntry(master=tab4, textvariable=self.tmax)
+        self.tmax_entry = ctk.CTkEntry(master=tab5, textvariable=self.tmax)
         self.tmax_entry.grid(row=0, column=6, padx=20, pady=0, sticky="w")
 
-        self.plot_analysis_frame = ctk.CTkFrame(tab4, corner_radius=25)
+        self.plot_analysis_frame = ctk.CTkFrame(tab5, corner_radius=25)
         self.plot_analysis_frame.grid(row=2, column=0, columnspan=7, sticky="nsew")
         self.matplotlib_analysis_frame = PlotFrame(self.plot_analysis_frame)
         self.matplotlib_analysis_frame.pack(fill=ctk.BOTH, expand=True)
         self.matplotlib_analysis_axes = self.matplotlib_analysis_frame.axes
 
-        #TAB5 - Settings
-        self.label_select_input = ctk.CTkLabel(tab5, text="Audio Input")
-        self.label_select_input.grid(row=0, column=0, padx=20, pady=0, sticky="w")
-        self.label_select_output = ctk.CTkLabel(tab5, text="Audio Output")
-        self.label_select_output.grid(row=0, column=1, padx=20, pady=0, sticky="w")
-        self.label_sampling_rate = ctk.CTkLabel(tab5, text="Sampling Rate")
-        self.label_sampling_rate.grid(row=0, column=2, padx=20, pady=0, sticky="w")
+        #tab6 - Settings
+        self.label_select_input = ctk.CTkLabel(tab6, text="Audio Input")
+        self.label_select_input.grid(row=0, column=0, padx=10, pady=20, sticky="w")
+        self.label_select_output = ctk.CTkLabel(tab6, text="Audio Output")
+        self.label_select_output.grid(row=1, column=0, padx=10, pady=20, sticky="w")
+        self.label_sampling_rate = ctk.CTkLabel(tab6, text="Sampling Rate")
+        self.label_sampling_rate.grid(row=2, column=0, padx=10, pady=20, sticky="w")
 
+        self.select_input_box = ctk.CTkOptionMenu(master=tab6, values=self.inputs, variable=self.input_device)
+        self.select_input_box.grid(row=0, column=1, padx=10, pady=20, sticky="w")
+        self.select_output_box = ctk.CTkOptionMenu(master=tab6, values=self.outputs, variable=self.output_device)
+        self.select_output_box.grid(row=1, column=1, padx=10, pady=20, sticky="w")
+        self.sampling_rate_box = ctk.CTkOptionMenu(master=tab6, values=["44100", "48000","96000"], variable=self.sampling_rate)
+        self.sampling_rate_box.grid(row=2, column=1, padx=10, pady=20, sticky="w")
 
-        self.select_input_box = ctk.CTkComboBox(master=tab5, values=self.inputs, variable=self.input_device)
-        self.select_input_box.grid(row=1, column=0, padx=20, pady=0, sticky="w")
-        self.select_output_box = ctk.CTkComboBox(master=tab5, values=self.outputs, variable=self.output_device)
-        self.select_output_box.grid(row=1, column=1, padx=20, pady=0, sticky="w")
-        self.sampling_rate_box = ctk.CTkComboBox(master=tab5, values=["44100", "48000","96000"], variable=self.sampling_rate)
-        self.sampling_rate_box.grid(row=1, column=2, padx=20, pady=0, sticky="w")
+        self.test_input_button = ctk.CTkButton(tab6, text="Test Input", command=self.test_input)
+        self.test_input_button.grid(row=0, column=2, padx=10, pady=20, sticky="w")
+        self.test_output_button = ctk.CTkButton(tab6, text="Test Output", command=self.test_output)
+        self.test_output_button.grid(row=1, column=2, padx=10, pady=20, sticky="w")
+        self.save_settings_button = ctk.CTkButton(tab6, text="Save Settings", command=self.save_settings)
+        self.save_settings_button.grid(row=3, column=0, columnspan=2, padx=0, pady=20, sticky="e")
 
-        self.save_settings_button = ctk.CTkButton(tab5, text="Save Settings", command=self.save_settings)
-        self.save_settings_button.grid(row=0, column=4, rowspan=2, padx=20, pady=20, sticky="e")
+        self.test_input_bar = ctk.CTkProgressBar(tab6, width=200, orientation='horizontal',mode='determinate')
+        self.test_input_bar.grid(row=0, column=3, padx=10, pady=20, sticky="w")
+        self.test_input_bar.set(0)
+                                  
 
 
 # GEOMETRY
@@ -325,7 +351,7 @@ class Acousticfield_ctk():
 
     def generate_sweep(self):
         if self.root.toplevel_window is None or not self.root.toplevel_window.winfo_exists():
-            self.root.toplevel_window = GenerateSweep(self.root)  # create window if its None or destroyed
+            self.root.toplevel_window = GenerateSweep(self.sampling_rate)  # create window if its None or destroyed
         else:
             self.root.toplevel_window.focus()  # if window exists focus it
 
@@ -392,7 +418,7 @@ class Acousticfield_ctk():
         self.rewrite_entry(self.output_channels_entry,s.output_channels)    
         self.loopback = any_to_stringvar(s.loopback)
         self.rewrite_entry(self.loopback_entry,[s.loopback])
-        self.sampling_rate = s.sampling_rate
+        self.sampling_rate = any_to_stringvar(s.sampling_rate)
         self.rtype = ""
         #self.recording_path = any_to_stringvar(s.recording_path)
         self.recording_path = s.recording_path
@@ -427,13 +453,13 @@ class Acousticfield_ctk():
         self.inchan = ctk.StringVar(value="")
         self.outchan = ctk.StringVar(value="")
         self.loopback = ctk.StringVar(value="")
-        self.sampling_rate = get_default_samplerate(sd.default.device[1])
+        self.sampling_rate = ctk.StringVar(value=int(get_default_samplerate(sd.default.device[1])))
         self.rtype = ""
         self.recording_path = None
         self.sweep_file = None
         # load default settings
-        self.input_device = get_device_name(sd.default.device[0])
-        self.output_device = get_device_name(sd.default.device[1])
+        self.input_device = ctk.StringVar(value=get_device_name(sd.default.device[0]))
+        self.output_device = ctk.StringVar(value=get_device_name(sd.default.device[1]))
         self.print_entries()
 
     def clean_recording_session(self):
@@ -481,7 +507,7 @@ class Acousticfield_ctk():
         self.pars['inchan'] = ctkstring_to_value(self.inchan, type='list', convert=True)
         self.pars['outchan'] = ctkstring_to_value(self.outchan, type='list', convert=True)
         self.pars['loopback'] = ctkstring_to_value(self.loopback, type='int') 
-        self.pars['sampling_rate'] = self.sampling_rate
+        self.pars['sampling_rate'] = ctkstring_to_value(self.sampling_rate, type='int')
 
     def rewrite_entry(self, entry, value):
         entry.delete(0, ctk.END)
@@ -504,11 +530,21 @@ class Acousticfield_ctk():
 # AUDIO AND RECORDING
 
     def save_settings(self):
-        self.input_device = self.select_input_box.get()
-        self.output_device = self.select_output_box.get()
-        self.sampling_rate = int(self.sampling_rate_box.get())
-        assign_device(self.input_device, self.output_device,self.sampling_rate)
-        self.max_chanin, self.max_chanout = get_max_channels(self.input_device, self.output_device)
+        assign_device(self.input_device.get(), self.output_device.get(),int(self.sampling_rate.get()))
+        self.max_chanin, self.max_chanout = get_max_channels(self.input_device.get(), self.output_device.get())
+
+    def test_input(self):
+        self.test_input_bar.start()
+        for _ in range(20):
+            temp=test_input_tic(self.input_device.get(), self.output_device.get(),int(self.sampling_rate.get()))
+            maxval = np.max(np.abs(temp))
+            self.test_input_bar.set(maxval)
+            self.root.update_idletasks()
+        self.test_input_bar.set(0)
+        self.test_input_bar.stop()
+
+    def test_output(self):
+        test_output(self.input_device.get(),self.output_device.get(), int(self.sampling_rate.get()))    
 
     def start_recording(self):
         print("start recording")
