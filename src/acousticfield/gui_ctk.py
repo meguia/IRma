@@ -70,6 +70,7 @@ class GenerateSweep(ctk.CTkToplevel):
         print("generating sweep " + self.sweepfile)
         sweep(T=self.sweep_dur,fs=self.sampling_rate,f1=self.sweep_fmin,f2=self.sweep_fmax,Nrep=self.sweep_rep,
         filename=self.sweepfile,post=self.sweep_post)
+        self.parent.sweep_file = self.sweepfile
         self.parent.rewrite_entry(self.parent.sweep_file_entry,[self.sweepfile])
         self.parent.rewrite_textbox(self.parent.status,f"Sweep generated in {self.sweepfile}.wav")
         self.destroy()

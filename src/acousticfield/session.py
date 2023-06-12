@@ -1,3 +1,4 @@
+import os
 import yaml 
 import datetime
 import numpy as np
@@ -54,11 +55,11 @@ class RecordingSession:
         valid = True
         prefix = self.generate_audio_file_prefix(speaker, microphone, direction, nchannels, self.loopback, self.rtype, int(take),overwrite)
         print("Recording ... "+prefix)
-        rec_temp = play_rec(self.sweep_file,self.recording_path+'rec_'+prefix,chanin=self.input_channels,chanout=self.output_channels)
+        rec_temp = play_rec(self.sweep_file,os.path.join(self.recording_path,'rec_'+prefix),chanin=self.input_channels,chanout=self.output_channels)
         rec_max = np.max(np.delete(rec_temp,self.loopback-1,axis=1)) if self.loopback is not None else np.max(rec_temp)
         print(f"Maximum sample value = {rec_max}")
         print("Extracting ---> "+prefix)
-        ir_temp = ir_extract(rec_temp,self.sweep_file,self.recording_path+'ir_'+prefix,loopback=self.loopback,fs=self.sampling_rate)
+        ir_temp = ir_extract(rec_temp,self.sweep_file,os.path.join(self.recording_path,'ir_'+prefix),loopback=self.loopback,fs=self.sampling_rate)
         print(f"IR shape = {ir_temp.shape}")
         rec_dic = dict(
             spk=speaker,
@@ -89,7 +90,7 @@ class RecordingSession:
         prefix = self.generate_audio_file_prefix(speaker, microphone, direction, nchannels, self.loopback, self.rtype, take)
         recfile = filename + "_" + prefix
         print(f"Recording Audio file {filename} in {recfile}")
-        rec_temp = play_rec(data,self.recording_path+recfile,chanin=self.input_channels,chanout=self.output_channels,fs=fs) 
+        rec_temp = play_rec(data,os.path.join(self.recording_path,recfile),chanin=self.input_channels,chanout=self.output_channels,fs=fs) 
         print(f"Maximum sample value = {np.max(rec_temp)}")
         self.recordings.append([recfile, comment])
 
@@ -102,7 +103,7 @@ class RecordingSession:
 
     def load_ir(self,nrecording,ftype="wav"):
         if nrecording<len(self.recordings):
-            fname = self.recording_path+'ir_'+self.recordings[nrecording]['filename']
+            fname =os.path.join(self.recording_path,'ir_'+self.recordings[nrecording]['filename'])
             if ftype == "wav":
                 _, data = wavfile.read(fname+'.wav')
                 return data
