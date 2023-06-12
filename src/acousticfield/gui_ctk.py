@@ -1,3 +1,4 @@
+import os
 import customtkinter as ctk
 from yaml import safe_load
 import sounddevice as sd
@@ -18,11 +19,12 @@ fs = 48000 # default despues poner en menu
 
 # GENERATE SWEEP
 class GenerateSweep(ctk.CTkToplevel):
-    def __init__(self, sampling_rate, *args, **kwargs):
+    def __init__(self, main_frame, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.geometry("400x500")
+        self.parent = main_frame
         self.title("Generate Sweep")
-        self.sampling_rate = ctkstring_to_value(sampling_rate, type='int')
+        self.sampling_rate = ctkstring_to_value(self.parent.sampling_rate, type='int')
         self.label = ctk.CTkLabel(self, text=f"Generate Log Sweep\nSampling Rate: {self.sampling_rate} Hz")
         self.label.grid(row=0,column=0,columnspan=2, padx=20, pady=20)
         print(self.sampling_rate)
@@ -68,18 +70,20 @@ class GenerateSweep(ctk.CTkToplevel):
         print("generating sweep " + self.sweepfile)
         sweep(T=self.sweep_dur,fs=self.sampling_rate,f1=self.sweep_fmin,f2=self.sweep_fmax,Nrep=self.sweep_rep,
         filename=self.sweepfile,post=self.sweep_post)
+        self.parent.rewrite_entry(self.parent.sweep_file_entry,[self.sweepfile])
+        self.parent.rewrite_textbox(self.parent.status,f"Sweep generated in {self.sweepfile}.wav")
         self.destroy()
 
 # GENERATE FILTERBANK
 class GenerateFilterBank(ctk.CTkToplevel):
-    def __init__(self, sampling_rate, *args, **kwargs):
+    def __init__(self, main_frame, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.geometry("400x500")
         self.title("Generate Filter Bank")
         self.label = ctk.CTkLabel(self, text="Generate Filter Bank")
         self.label.grid(row=0,column=0,columnspan=2,padx=20, pady=20)
-        
-        self.sampling_rate = sampling_rate
+        self.parent = main_frame
+        self.sampling_rate = ctkstring_to_value(self.parent.sampling_rate, type='int')
         self.label_fmin = ctk.CTkLabel(self, text="fmin")
         self.label_fmin.grid(row=1,column=0,padx=20, pady=20)
         self.fmin_entry = ctk.CTkEntry(self, textvariable=ctk.StringVar(value=62.5))
@@ -97,7 +101,7 @@ class GenerateFilterBank(ctk.CTkToplevel):
 
         self.label_fs = ctk.CTkLabel(self, text="Sampling rate")
         self.label_fs.grid(row=3,column=0,padx=20, pady=20)
-        self.fs_entry = ctk.CTkEntry(self, textvariable=ctk.StringVar(value=sampling_rate)) # en segundos
+        self.fs_entry = ctk.CTkEntry(self, textvariable=ctk.StringVar(value=self.sampling_rate)) # en segundos
         self.fs_entry.grid(row=3,column=1,padx=20, pady=20) 
 
         self.label_order = ctk.CTkLabel(self, text="Order")
@@ -114,13 +118,14 @@ class GenerateFilterBank(ctk.CTkToplevel):
         self.bwoct = int(self.bwoct_entry.get())
         self.fs = int(self.fs_entry.get())
         self.order = int(self.order_entry.get())
-        self.name = self.name_entry.get()
-        srkhz = self.sampling_rate//1000
+        #self.name = self.name_entry.get()
+        #srkhz = self.sampling_rate//1000
         #self.fbankfile = f"fbank_{srkhz}k_{self.noct}_{self.bwoct}"
         self.fbankfile = "fbank"
         print("generating filter bank " + self.fbankfile)
         make_filterbank(fmin=self.fmin,noct=self.noct,bwoct=self.bwoct,fs=self.sampling_rate,order=self.order,\
                         N=10000,bankname=self.fbankfile,show=False)
+        self.parent.rewrite_textbox(self.parent.status,f"Filter Bank generated in {self.fbankfile}.npz")
         self.destroy()
         
 
@@ -185,7 +190,7 @@ class Acousticfield_ctk():
         # create status an message bar
         self.status = ctk.CTkTextbox(self.root,height=40, font=fnorm)
         self.status.grid(row=1, column=1, padx=(20, 10), pady=(10, 10), sticky="nsew")
-        self.status.insert("0.0", "Warning RMS pedido mayor al RMS de corte que es -3.44 dB Sweep RMS = -3.44 dB \n Sweep generated with 576000 samples.\n Total signal with 1 repetitions has a duration of 12.00 seconds\n ")
+        self.status.insert("0.0", "Welcome to Acoustic Field! Please create a new session or load an existing one")
         # MAIN TABS
     
         self.tabview = ctk.CTkTabview(self.root, width=900)
@@ -290,19 +295,21 @@ class Acousticfield_ctk():
         self.parameter_table_keys = ['band','snr','rt20','rvalue','edt','c50','c80','ts','dr']
         self.parameter_table = CTkTable(master=tab4, row=len(self.parameter_table_keys), column=len(self.parameter_table_headers), 
                                         checkbox=False, values=[self.parameter_table_headers], corner_radius=10)
-        self.parameter_table.grid(row=1,column=0, columnspan=5, padx=20, pady=20)
+        self.parameter_table.grid(row=1,column=0, columnspan=6, padx=20, pady=20)
         self.parameter_table.edit_column(column=0,values=self.parameter_table_keys)
 
+        self.filterbank_button = ctk.CTkButton(master=tab4,text="Filter Bank",command=self.generate_filterbank)
+        self.filterbank_button.grid(row=0, column=0, sticky="w", padx=20, pady=20)
         self.label_file = ctk.CTkLabel(tab4, text="File")
-        self.label_file.grid(row=0, column=0, padx=20, pady=0, sticky="w")
+        self.label_file.grid(row=0, column=1, padx=20, pady=0, sticky="w")
         self.select_file_box = ctk.CTkComboBox(master=tab4, values=[" "], variable=self.current_file,command=self.set_channel)
-        self.select_file_box.grid(row=0, column=1, padx=20, pady=0, sticky="w")
+        self.select_file_box.grid(row=0, column=2, padx=20, pady=0, sticky="w")
         self.label_channel = ctk.CTkLabel(tab4, text="Channel")
-        self.label_channel.grid(row=0, column=2, padx=20, pady=0, sticky="w")
+        self.label_channel.grid(row=0, column=3, padx=20, pady=0, sticky="w")
         self.select_channel_box = ctk.CTkComboBox(master=tab4, values=['0'], variable=self.current_channel)
-        self.select_channel_box.grid(row=0, column=3, padx=20, pady=0, sticky="w")
+        self.select_channel_box.grid(row=0, column=4, padx=20, pady=0, sticky="w")
         self.table_button = ctk.CTkButton(master=tab4,text="Display",command=self.display_params)
-        self.table_button.grid(row=0, column=4, sticky="w", padx=20, pady=20)
+        self.table_button.grid(row=0, column=5, sticky="w", padx=20, pady=20)
 
         #tab5 - Parameters Plots
         tab5.grid_columnconfigure(6, weight=1)
@@ -366,9 +373,15 @@ class Acousticfield_ctk():
 
     def generate_sweep(self):
         if self.root.toplevel_window is None or not self.root.toplevel_window.winfo_exists():
-            self.root.toplevel_window = GenerateSweep(self.sampling_rate)  # create window if its None or destroyed
+            self.root.toplevel_window = GenerateSweep(self)  # create window if its None or destroyed
         else:
             self.root.toplevel_window.focus()  # if window exists focus it
+
+    def generate_filterbank(self):
+        if self.root.toplevel_window is None or not self.root.toplevel_window.winfo_exists():
+            self.root.toplevel_window = GenerateFilterBank(self)  # create window if its None or destroyed
+        else:
+            self.root.toplevel_window.focus()  # if window exists focus it        
 
     def browse_recording_path(self):
         recording_path = ctk.filedialog.askdirectory()
@@ -398,6 +411,7 @@ class Acousticfield_ctk():
         fname = self.session_id.get() + ".yaml"
         self.recording_session.save_metadata(fname)
         print("Session saved in: " + fname)
+        self.rewrite_textbox(self.status,f"Session saved in: {fname}")
         #self.recording_session.saved = True
         #self.list_files()
     
@@ -405,10 +419,12 @@ class Acousticfield_ctk():
         filetypes = (('yaml files', '*.yaml'),('all files', '*.*'))
         filename = ctk.filedialog.askopenfilename(title='Open a file',initialdir='./',filetypes=filetypes)
         print(filename)
+        
         if filename == "":
             return
         if self.recording_session is None:
             self.recording_session = RecordingSession(session_id="")
+        self.rewrite_textbox(self.status,f"Opening Session saved in: {filename}")    
         s = self.recording_session.load_metadata(filename)
         self.recording_session = s
         self.sidebar_label_2.configure(text=s.session_id)
@@ -476,8 +492,8 @@ class Acousticfield_ctk():
         self.loopback = ctk.StringVar(value="")
         self.sampling_rate = ctk.StringVar(value=int(get_default_samplerate(sd.default.device[1])))
         self.rtype = ""
-        self.recording_path = None
-        self.sweep_file = None
+        self.recording_path = ""
+        self.sweep_file = ""
         # load default settings
         self.input_device = ctk.StringVar(value=get_device_name(sd.default.device[0]))
         self.output_device = ctk.StringVar(value=get_device_name(sd.default.device[1]))
@@ -494,6 +510,7 @@ class Acousticfield_ctk():
         self.output_channels_entry.delete(0, ctk.END)
         self.loopback_entry.delete(0, ctk.END)       
         self.remove_files()    
+        self.rewrite_textbox(self.status,f"Session cleaned")
         self.tick()
 
     def create_recording_session(self):
@@ -517,6 +534,7 @@ class Acousticfield_ctk():
             sweepfile=self.sweep_file
         )
         print("Session created: " + self.pars['session_id'])
+        self.rewrite_textbox(self.status,f"Session created: {self.pars['session_id']}")
         self.tick()
         self.print_entries()
 
@@ -533,6 +551,10 @@ class Acousticfield_ctk():
     def rewrite_entry(self, entry, value):
         entry.delete(0, ctk.END)
         entry.insert(ctk.END,','.join(map(str,value)))    
+
+    def rewrite_textbox(self, textbox, string):    
+        textbox.delete("0.0", ctk.END)
+        textbox.insert(ctk.END,string)
 
     def print_entries(self):
         #for debugging
@@ -553,27 +575,32 @@ class Acousticfield_ctk():
     def save_settings(self):
         assign_device(self.input_device.get(), self.output_device.get(),int(self.sampling_rate.get()))
         self.max_chanin, self.max_chanout = get_max_channels(self.input_device.get(), self.output_device.get())
+        self.rewrite_textbox(self.status,f"Settings saved")
 
     def test_input(self):
         self.test_input_bar.start()
+        self.rewrite_textbox(self.status,f"Speak into the microphone...")
         for _ in range(20):
             temp=test_input_tic(self.input_device.get(), self.output_device.get(),int(self.sampling_rate.get()))
             maxval = np.max(np.abs(temp))
             self.test_input_bar.set(maxval)
             self.root.update_idletasks()
+        self.rewrite_textbox(self.status,f"Maximum input level: {maxval}")    
         self.test_input_bar.set(0)
         self.test_input_bar.stop()
 
     def test_output(self):
+        self.rewrite_textbox(self.status,f"Check your speakers...")
         test_output(self.input_device.get(),self.output_device.get(), int(self.sampling_rate.get()))    
 
     def start_recording(self):
         print("start recording")
+        self.rewrite_textbox(self.status,f"Recording started ....")
         self.current_speaker = self.speaker_box.get()
         self.current_microphone = self.microphone_box.get()
         self.current_direction = self.direction_box.get()
         self.current_take = self.take_box.get()
-        print(f"Parlante {self.current_speaker}, Microfono {self.current_microphone}, Direccion {self.current_direction}, Toma {self.current_take}")    
+        textinfo=f"Parlante {self.current_speaker}, Microfono {self.current_microphone}, Direccion {self.current_direction}, Toma {self.current_take}"
         #self.recording_session.start_recording()
         ir_temp = self.recording_session.record_ir(
             self.current_speaker,
@@ -581,6 +608,7 @@ class Acousticfield_ctk():
             self.current_direction,
             self.current_take
         )
+        self.rewrite_textbox(self.status,f"Finished -> {textinfo}")
         self.add_file()
         #plot ir
         ir_plot_axes(ir_temp[:,0], self.matplotlib_ir_axes, fs, tmax=float(self.tmax.get()))
@@ -615,12 +643,13 @@ class Acousticfield_ctk():
         self.ir_list = self.recording_session.load_ir_list(selected_indices)
         self.list_files = [self.recording_session.recordings[n]['filename'] for n in selected_indices]
         print(self.list_files)
+        self.rewrite_textbox(self.status,f"Files: {self.list_files}")
         if len(self.list_files) > 0:
             self.select_file_box.configure(values=self.list_files)
             self.select_file_box.set(self.list_files[0])
 
     def set_channel(self,file):
-        temp = np.load(self.recording_path+'ir_'+file+'.npy')
+        temp = np.load(os.path.join(self.recording_path,f"ir_{file}.npy"))
         _, nchannels = temp.shape
         self.select_channel_box.configure(values=[str(n) for n in np.arange(nchannels)])
         self.select_channel_box.set('0')
@@ -629,6 +658,7 @@ class Acousticfield_ctk():
     def analyze(self):
         # choose the key
         #key = 'rt20'
+        self.rewrite_textbox(self.status,f"Computing parameters using filterbank {self.fbankname}")
         self.paracoustic()
         self.current_key = self.select_key_box.get()
         self.plot_params(self.current_key)
@@ -637,6 +667,7 @@ class Acousticfield_ctk():
     def paracoustic(self):
         if len(self.ir_list) == 0:
             print("There are no IRs loaded")
+            self.rewrite_textbox(self.status,f"There are no IRs loaded")
             return
         # arma un multicanal con las ir cargadas en ir_list con un nsamples maximo
         self.ir_stacked = ir_list_to_multichannel(self.ir_list)
@@ -648,7 +679,8 @@ class Acousticfield_ctk():
         self.current_file = self.select_file_box.get()
         self.current_channel = int(self.select_channel_box.get())
         print(self.current_file, self.current_channel)
-        filename = self.recording_path+'ir_'+self.current_file
+        filename = os.path.join(self.recording_path,f"ir_{self.current_file}")
+        self.rewrite_textbox(self.status,f"Computing parameters of {self.current_file} using filterbank {self.fbankname}")
         self.params = paracoustic(filename, method=self.rtmethod,bankname=self.fbankname,tmax=float(self.tmax.get()))
         for row,key in enumerate(self.parameter_table_keys):
             if row>0:
@@ -663,6 +695,7 @@ class Acousticfield_ctk():
     def plot_params(self,key):
         if len(self.ir_list) == 0:
             print("There are no IRs loaded")
+            self.rewrite_textbox(self.status,f"There are no IRs loaded")
             return
         if self.params is not None:        
             pars_compared_axes(self.params, key, self.matplotlib_analysis_axes)
