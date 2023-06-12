@@ -181,15 +181,21 @@ class CTkTable(ctk.CTkFrame):
                 self.rowconfigure(i, weight=1)
                 self.columnconfigure(j, weight=1)
     
-    def edit_row(self, row, **kwargs):
+    def edit_row(self, row, values,**kwargs):
         """ edit all parameters of a single row """
-        for i in range(self.columns):
-            self.frame[row, i].configure(**kwargs)
+        if len(values)!=self.columns:
+            raise ValueError("The number of values must be equal to the number of columns")
+        else:
+            for i in range(self.columns):
+                self.insert(row, i, values[i], **kwargs)
         
-    def edit_column(self, column, **kwargs):
+    def edit_column(self, column, values,**kwargs):
         """ edit all parameters of a single column """
-        for i in range(self.rows):
-            self.frame[i, column].configure(**kwargs)
+        if len(values)!=self.rows:
+            raise ValueError("The number of values must be equal to the number of rows")
+        else:
+            for i in range(self.rows):
+                self.insert(i, column, values[i], **kwargs)
             
     def update_values(self, values, **kwargs):
         """ update all values at once """
