@@ -197,6 +197,25 @@ def make_filterbank(fmin=62.5,noct=8,bwoct=1,fs=48000,order=5,N=10000,bankname='
     #if show:
     #    plt.show()
     return
+
+def load_filterbank(bankname):
+    ''' Load filterbank and return parameters and sos '''
+    fbank = np.load(bankname+'.npz')
+    nbands, _, _ = fbank['sos'].shape
+    fc = fbank['fc']
+    fs = fbank['fs']
+    headers = ['']*(nbands+2)
+    for n in range(nbands+2):
+        if n==nbands:
+            headers[n] = 'A'
+        elif n>nbands:
+            headers[n] = 'Flat'
+        else:
+            if fc[n]<1000:
+                headers[n] = str(int(fc[n]))
+            else:
+                headers[n] = str(int(fc[n])/1000) + 'k'
+    return headers,fs
     
 def A_weighting(fs=48000):
     """

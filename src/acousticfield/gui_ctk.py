@@ -3,7 +3,7 @@ import customtkinter as ctk
 from yaml import safe_load
 import sounddevice as sd
 from .generate import sweep
-from .process import ir_list_to_multichannel,make_filterbank
+from .process import ir_list_to_multichannel,make_filterbank,load_filterbank
 from .room import paracoustic
 from .display import ir_plot_axes, pars_compared_axes
 from .session import RecordingSession
@@ -91,24 +91,24 @@ class GenerateFilterBank(ctk.CTkToplevel):
         self.fmin_entry.grid(row=1,column=1,padx=20, pady=20)
 
         self.label_noct = ctk.CTkLabel(self, text="Number of octaves")
-        self.label_noct.grid(row=1,column=0,padx=20, pady=20)
+        self.label_noct.grid(row=2,column=0,padx=20, pady=20)
         self.noct_entry = ctk.CTkEntry(self, textvariable=ctk.StringVar(value=9))
-        self.noct_entry.grid(row=1,column=1,padx=20, pady=20)
+        self.noct_entry.grid(row=2,column=1,padx=20, pady=20)
 
         self.label_bwoct = ctk.CTkLabel(self, text="Bands per octave")
-        self.label_bwoct.grid(row=2,column=0,padx=20, pady=20)
+        self.label_bwoct.grid(row=3,column=0,padx=20, pady=20)
         self.bwoct_entry = ctk.CTkEntry(self, textvariable=ctk.StringVar(value=1))
-        self.bwoct_entry.grid(row=2,column=1,padx=20, pady=20)
+        self.bwoct_entry.grid(row=3,column=1,padx=20, pady=20)
 
         self.label_fs = ctk.CTkLabel(self, text="Sampling rate")
-        self.label_fs.grid(row=3,column=0,padx=20, pady=20)
+        self.label_fs.grid(row=4,column=0,padx=20, pady=20)
         self.fs_entry = ctk.CTkEntry(self, textvariable=ctk.StringVar(value=self.sampling_rate)) # en segundos
-        self.fs_entry.grid(row=3,column=1,padx=20, pady=20) 
+        self.fs_entry.grid(row=4,column=1,padx=20, pady=20) 
 
         self.label_order = ctk.CTkLabel(self, text="Order")
-        self.label_order.grid(row=4,column=0,padx=20, pady=20)   
+        self.label_order.grid(row=5,column=0,padx=20, pady=20)   
         self.order_entry = ctk.CTkEntry(self, textvariable=ctk.StringVar(value=5)) # en segundos
-        self.order_entry.grid(row=4,column=1,padx=20, pady=20)
+        self.order_entry.grid(row=5,column=1,padx=20, pady=20)
 
         self.generate_button = ctk.CTkButton(self, text="Generate", command=self.generate)
         self.generate_button.grid(row=6,column=0,padx=20, pady=20)
@@ -124,9 +124,16 @@ class GenerateFilterBank(ctk.CTkToplevel):
         #self.fbankfile = f"fbank_{srkhz}k_{self.noct}_{self.bwoct}"
         self.fbankfile = "fbank"
         print("generating filter bank " + self.fbankfile)
-        make_filterbank(fmin=self.fmin,noct=self.noct,bwoct=self.bwoct,fs=self.sampling_rate,order=self.order,\
-                        N=10000,bankname=self.fbankfile,show=False)
+        make_filterbank(fmin=self.fmin,noct=self.noct,bwoct=self.bwoct,fs=self.sampling_rate,\
+                        order=self.order,N=10000,bankname=self.fbankfile)
+        self.parent.parameter_table_headers, _ = load_filterbank(self.fbankfile)
+        self.parent.parameter_table_headers.insert(0,'')
         self.parent.rewrite_textbox(self.parent.status,f"Filter Bank generated in {self.fbankfile}.npz")
+        #remake table with new headers
+        self.parent.parameter_table.values = [self.parent.parameter_table_headers]
+        self.parent.parameter_table.column=len(self.parent.parameter_table_headers)
+        self.parent.parameter_table.redraw_table()
+        self.parent.parameter_table.edit_column(column=0,values=self.parent.parameter_table_keys)
         self.destroy()
         
 
@@ -292,7 +299,7 @@ class Acousticfield_ctk():
 
         #tab4 - Parameters Table
         tab4.grid_columnconfigure(0, weight=1)
-        self.parameter_table_headers = ['','62.5','125','250','500','1k','2k','4k','8k','A','flat']
+        #self.parameter_table_headers = ['','62.5','125','250','500','1k','2k','4k','8k','A','flat']
         self.parameter_table_keys = ['band','snr','rt20','rvalue','edt','c50','c80','ts','dr']
         self.parameter_table = CTkTable(master=tab4, row=len(self.parameter_table_keys), column=len(self.parameter_table_headers), 
                                         checkbox=False, values=[self.parameter_table_headers], corner_radius=10)
@@ -382,7 +389,8 @@ class Acousticfield_ctk():
         if self.root.toplevel_window is None or not self.root.toplevel_window.winfo_exists():
             self.root.toplevel_window = GenerateFilterBank(self)  # create window if its None or destroyed
         else:
-            self.root.toplevel_window.focus()  # if window exists focus it        
+            self.root.toplevel_window.focus()  # if window exists focus it   
+        
 
     def browse_recording_path(self):
         recording_path = ctk.filedialog.askdirectory()
@@ -486,6 +494,9 @@ class Acousticfield_ctk():
         self.loaded_files = []
         self.ir_list = []
         self.files = [] # list of files in recording_path
+        # check if fbankfile exists
+        self.parameter_table_headers, _ = load_filterbank(self.fbankname)
+        self.parameter_table_headers.insert(0,'')
         #speaker_pos = self.speaker_pos_entry.get()
         #microphone_pos = self.microphone_pos_entry.get()
         self.inchan = ctk.StringVar(value="")
