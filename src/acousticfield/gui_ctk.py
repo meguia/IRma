@@ -265,7 +265,7 @@ class Acousticfield_ctk():
         self.map.grid(row=0, column=2, rowspan=9, sticky="nsew")
 
         #TAB2 - Recording
-        #tab_recording.grid_columnconfigure(8, weight=1)
+        tab_recording.grid_columnconfigure(0, weight=1)
         self.label_speaker = ctk.CTkLabel(tab_recording, text="SPEAKER")
         self.label_speaker.grid(row=0, column=0, padx=10, pady=0, sticky="w")
         self.label_microphone = ctk.CTkLabel(tab_recording, text="MICROPHONE")
@@ -285,8 +285,10 @@ class Acousticfield_ctk():
         self.take_box.grid(row=0, column=7, padx=10, pady=0, sticky="w")
 
         self.start_recording_button = ctk.CTkButton(tab_recording, text="Start Recording", command=self.start_recording)
-        self.start_recording_button.grid(row=0, column=8, padx=10, pady=20, sticky="w")
+        self.start_recording_button.grid(row=0, column=8, padx=10, pady=0, sticky="w")
 
+        self.comment_entry = ctk.CTkEntry(master=tab_recording, textvariable=self.comment)
+        self.comment_entry.grid(row=1, column=0, columnspan=9, padx=20, pady=10, sticky="nsew")
         
         #plot ir
         self.plot_ir_frame = ctk.CTkFrame(tab_recording, corner_radius=25)
@@ -480,6 +482,7 @@ class Acousticfield_ctk():
         self.current_channel = 0
         self.current_key = None
         self.current_plot_stats = None
+        self.comment = ''
         self.pars = {}
         self.ir_list = []
         #speaker_pos = self.speaker_pos_entry.get()
@@ -518,6 +521,7 @@ class Acousticfield_ctk():
         self.current_key = None
         self.current_plot_stats = None
         self.tmax = ctk.StringVar(value="3.0")
+        self.comment = ''
         self.rtmethod = 'RT20'
         self.fbankname = 'fbank'
         self.pars = {}
@@ -643,13 +647,15 @@ class Acousticfield_ctk():
         self.current_microphone = self.microphone_box.get()
         self.current_direction = self.direction_box.get()
         self.current_take = self.take_box.get()
+        self.comment = self.comment_entry.get()
         textinfo=f"Parlante {self.current_speaker}, Microfono {self.current_microphone}, Direccion {self.current_direction}, Toma {self.current_take}"
         #self.recording_session.start_recording()
         ir_temp = self.recording_session.record_ir(
             self.current_speaker,
             self.current_microphone,
             self.current_direction,
-            self.current_take
+            self.current_take,
+            self.comment
         )
         self.rewrite_textbox(self.status,f"Finished -> {textinfo}")
         self.add_file()
