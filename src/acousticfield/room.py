@@ -3,11 +3,12 @@ from scipy import signal
 from scipy.io import wavfile
 from scipy.stats import linregress, kurtosis
 from .process import make_filterbank, A_weighting
+eps = np.finfo(float).eps
 
-def revtime(ir_input, method='rt20', fs=48000, tmax=3.0):
+def revtime(ir_input, method='RT20', fs=48000, tmax=3.0):
     '''
     Calcula el tiempo de reverberacion y la integral de Schroeder a partir de la respuesta
-    impulso almacenada en ir_input (array numpy o nombre de archivo wav) usando el metodo 'rt30' 'rt20' o 'edt'
+    impulso almacenada en ir_input (array numpy o nombre de archivo wav) usando el metodo 'RT30' 'RT20' o 'EDT'
     Lo hace para cada canal del archivo fileir.
     Atencion asume por defecto una decaimiento maximo de 3 segundos (no TR, decaimiento a piso de ruido
     lo cual es un asuncion razonable en la mayor parte de los casos)
@@ -28,7 +29,7 @@ def revtime(ir_input, method='rt20', fs=48000, tmax=3.0):
     nsamples, nchan = np.shape(data)
     nmax = int(min(tmax*fs,nsamples))
     schr = np.zeros((nchan,nmax))
-    snr = np.zeros((nchan,))
+    SNR = np.zeros((nchan,))
     rt = np.zeros((nchan,))
     t12 = np.zeros((nchan,2))
     l12 = np.zeros((nchan,2))
@@ -42,37 +43,37 @@ def revtime(ir_input, method='rt20', fs=48000, tmax=3.0):
         xv = 10*np.log10(stemp)-10*np.log10(mm[:nmax])
         xv = xv - np.amax(xv)
         tv =  np.arange(nsamples)/fs # array de tiempo
-        snr[n] = -xv[-1] # full range del decaimiento SNR
+        SNR[n] = -xv[-1] # full range del decaimiento SNR
         schr[n][:nmax] = xv
-        if method.lower() == 'rt30' and snr[n]>35:
+        if method.lower() == 'RT30' and SNR[n]>35:
             #  Calcula RT usando la definicion del RT30
             pt1 = np.argmax(xv<-5)
             pt2 = np.argmax(xv<-35)
-        elif method.lower() == 'rt20' and snr[n]>25:
+        elif method.lower() == 'RT20' and SNR[n]>25:
             # Idem la definicion del RT20
             pt1 = np.argmax(xv<-5)
             pt2 = np.argmax(xv<-25)
-        elif method.lower() == 'rt15' and snr[n]>20:
+        elif method.lower() == 'RT15' and SNR[n]>20:
             # Idem la definicion del RT20
             pt1 = np.argmax(xv<-5)
             pt2 = np.argmax(xv<-20)
-        elif method.lower() == 'edt' and snr[n]>10.5:
+        elif method.lower() == 'EDT' and SNR[n]>10.5:
             # Calculo del decaimiento temprano EDT
             pt1 = np.argmax(xv<-0.5)
             pt2 = np.argmax(xv<-10.5)
         else:
-            return rt, t12, l12, schr, snr, rvalue 
+            return rt, t12, l12, schr, SNR, rvalue 
         slope, intercept, r_value, _, _ = linregress(tv[pt1:pt2], xv[pt1:pt2])
         rt[n] = -(intercept + 60)/slope
         t12[n] = tv[[pt1,pt2]]
         l12[n] = intercept+slope*tv[[pt1,pt2]]
         rvalue[n] = r_value    
-    return rt, t12, l12, schr, snr, rvalue 
+    return rt, t12, l12, schr, SNR, rvalue 
 
 
 def clarity(ir_input, fs=48000, tmax = 3.0):
     '''
-    Calcula valores de claridad C80 C50 y centro temporal ts a partir de la respuesta impulso ir
+    Calcula valores de claridad C80 C50 y centro temporal TS a partir de la respuesta impulso ir
     mas adelante deberia tener en cuenta la relacion senal ruido para no sobreestimar la reverberacion
     '''
     if type(ir_input) is str:
@@ -86,9 +87,9 @@ def clarity(ir_input, fs=48000, tmax = 3.0):
     nsamples, nchan = np.shape(data)
     nmax = int(min(tmax*fs,nsamples))
     ndir = find_dir(data, pw=1.0,fs=fs)
-    c80 = np.zeros((nchan,))
-    c50 = np.zeros((nchan,))
-    ts = np.zeros((nchan,))
+    C80 = np.zeros((nchan,))
+    C50 = np.zeros((nchan,))
+    TS = np.zeros((nchan,))
     n80 = int(0.08*fs)
     n50 = int(0.05*fs)
     for n, ir in enumerate(data.T):
@@ -96,23 +97,23 @@ def clarity(ir_input, fs=48000, tmax = 3.0):
         e80 = np.sum(np.square(ir[ndir[0,n]:ndir[0,n]+n80]))
         er = np.sum(np.square(ir[ndir[0,n]:nmax]))
         etr = np.sum(np.multiply((np.arange(ndir[0,n],nmax)-ndir[0,n])/fs,np.square(ir[ndir[0,n]:nmax])))
-        c80[n] = 10*np.log10(e80/(er-e80))
-        c50[n] = 10*np.log10(e50/(er-e50))
-        ts[n] = 1000*etr/er
-    return c80, c50, ts    
+        C80[n] = 10*np.log10(e80/(er-e80))
+        C50[n] = 10*np.log10(e50/(er-e50))
+        TS[n] = 1000*etr/er
+    return C80, C50, TS    
         
 
-def paracoustic(ir, method='rt20', bankname='fbank', tmax=3.0, fs_default=48000):
+def paracoustic(ir, method='RT20', bankname='fbank', tmax=3.0, fs_default=48000):
     '''
     Calcula los siguientes parametros acusticos POR BANDAS con los nombres de las keys correspondientes
-    Reververacion: 'rt30' (o el metodo que se pida), 'edt'
-    Claridad: 'c80', 'c50', 'ts', 
-    Relacion senal ruido 'snr'
-    Directo reverberante 'dr'
+    Reververacion: 'RT30' (o el metodo que se pida), 'EDT'
+    Claridad: 'C80', 'C50', 'TS', 
+    Relacion senal ruido 'SNR'
+    Directo reverberante 'DRR'
     a partir de la respuesta impulso almacenada en ir (array numpy o nombre de archivo wav) 
     Lo hace para cada canal del archivo fileir y para el banco de filtros almacenado en bankname (extension npz)
     devueve un diccionario rev que tiene las siguientes keys: nchan (num canales), nbands (num bandas), fc (frecuencias)
-    tr20 (o tr30 o edt, array de nbands x nchan con los tiempos de reverberancia) tfit, lfit, dchr, lvalues son 
+    tr20 (o tr30 o EDT, array de nbands x nchan con los tiempos de reverberancia) tfit, lfit, dchr, lvalues son 
     las salidas de revtime (ver) para cada banda. La banda 0 es wideband (fc = 1)
     '''
     # si bankname es None lo hace wideband
@@ -151,24 +152,25 @@ def paracoustic(ir, method='rt20', bankname='fbank', tmax=3.0, fs_default=48000)
     tnoise = np.mean(pstat['tnoise'][0,:])
     nsamples, nchan = np.shape(data)
     nmax = int(min(tmax*fs,nsamples))
-    listofkeys = ['nchan','nbands','fc',method,'edt','tfit','lfit','schr','rvalue','snr','c80','c50','ts','dr']
+    listofkeys = ['nchan','nbands','fc',method,'EDT','tfit','lfit','schr','rvalue','SNR','C80','C50','TS','DRR']
     pars = dict.fromkeys(listofkeys,0 )
     pars['nchan'] = nchan
     pars['nbands'] = nbands+2
     pars['fc'] = [None]*pars['nbands']
     pars[method] = np.zeros((pars['nbands'],pars['nchan']))
-    pars['edt'] = np.zeros((pars['nbands'],pars['nchan']))
+    pars['EDT'] = np.zeros((pars['nbands'],pars['nchan']))
     pars['tfit'] = np.zeros((pars['nbands'],pars['nchan'],2))
     pars['lfit'] = np.zeros((pars['nbands'],pars['nchan'],2))
     pars['schr'] = np.zeros((pars['nbands'],pars['nchan'],nmax))
     pars['rvalue'] = np.zeros((pars['nbands'],pars['nchan']))
-    pars['snr'] = np.zeros((pars['nbands'],pars['nchan']))
-    pars['c80'] = np.zeros((pars['nbands'],pars['nchan']))
-    pars['c50'] = np.zeros((pars['nbands'],pars['nchan']))
-    pars['ts'] = np.zeros((pars['nbands'],pars['nchan']))
-    pars['dr'] = np.zeros((pars['nbands'],pars['nchan']))
+    pars['SNR'] = np.zeros((pars['nbands'],pars['nchan']))
+    pars['C80'] = np.zeros((pars['nbands'],pars['nchan']))
+    pars['C50'] = np.zeros((pars['nbands'],pars['nchan']))
+    pars['TS'] = np.zeros((pars['nbands'],pars['nchan']))
+    pars['DRR'] = np.zeros((pars['nbands'],pars['nchan']))
     # By Frequency Bands
-    print(data.shape)
+    ndir = find_dir(data, pw=0.5,fs=fs)
+    print(int(tnoise*fs))
     sos_a = A_weighting(fs)
     for n in range(nbands+2):
         if n==nbands:
@@ -180,16 +182,17 @@ def paracoustic(ir, method='rt20', bankname='fbank', tmax=3.0, fs_default=48000)
         else:    
             pars['fc'][n] = str(int(fbank['fc'][n]))
             data_filt = signal.sosfiltfilt(fbank['sos'][n], data/np.amax(np.abs(data)), axis=0)
-        pars['edt'][n], *_ = revtime(data_filt,'edt',fs,tmax)
-        pars[method][n], pars['tfit'][n], pars['lfit'][n], pars['schr'][n], pars['snr'][n], pars['rvalue'][n] = revtime(data_filt,method,fs,tmax)
-        pars['c80'][n], pars['c50'][n], pars['ts'][n] = clarity(data_filt,fs,tmax)
-        pars['dr'][n] = direct_to_reverb(data_filt,int(tnoise*fs),fs)
+        pars['EDT'][n], *_ = revtime(data_filt,'EDT',fs,tmax)
+        pars[method][n], pars['tfit'][n], pars['lfit'][n], pars['schr'][n], pars['SNR'][n], pars['rvalue'][n] = revtime(data_filt,method,fs,tmax)
+        pars['C80'][n], pars['C50'][n], pars['TS'][n] = clarity(data_filt,fs,tmax)
+        pars['DRR'][n] = direct_to_reverb(data_filt,int(tnoise*fs),ndir,fs)
     return pars
 
-def direct_to_reverb(data, nmax, fs=48000):
+def direct_to_reverb(data, nmax, ndir=None, fs=48000):
     nsamples,nchan = data.shape
     nmax = np.minimum(nmax,nsamples)
-    ndir = find_dir(data, pw=0.5,fs=fs)
+    if ndir is None:
+        ndir = find_dir(data, pw=0.5,fs=fs)
     ddirmax = np.max(np.diff(ndir,axis=0))
     drevmin = nmax-np.max(ndir[1:])
     dirs = [data[ndir[0,n]:ndir[0,n]+ddirmax,n] for n in range(nchan)]
@@ -268,7 +271,11 @@ def irstats(ir, window=0.01, overlap=0.005, fs=48000):
         av = np.mean(fr,axis=0)
         isdir = np.full((nchan,),np.nan)
         isdir[frames[m][1] > ndir[0,:]] = 1
-        pars['std'][m] = np.std(fr,axis=0) * isdir
+        temp = np.std(fr,axis=0) * isdir
+        if np.any(np.isnan(temp)):
+            pars['std'][m] = np.zeros((1,nchan))   
+        else:
+            pars['std'][m] = temp
         pars['kurtosis'][m] = kurtosis(fr,axis=0) * isdir
         pars['stdexcess'][m] = np.mean(np.abs(fr-av)>pars['std'][m],axis=0)*3.0*isdir
     nmix = np.argmax(pars['kurtosis']<kurt_confidence,axis=0)    

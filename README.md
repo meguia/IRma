@@ -1,13 +1,13 @@
 # acousticfield
 Tools for soundscape / acoustic field / recording, processing and analysis
 
-## Instalation with Anaconda (sept 2021)
+## Instalation with Anaconda (jun 2023)
 base:
-- python = 3.8.8
-- numpy = 1.20.1
-- scipy = 1.6.2
-- matplotlib = 3.3.4
-- ipython = 7.22
+- python = 3.9.13
+- numpy = 1.21.5
+- scipy = 1.9.1
+- matplotlib = 3.5.2
+- ipython = 7.31.1
 
 ## python sounddevice
 For linux, mac, or windows without ASIO or OSX/Linux
@@ -20,7 +20,7 @@ or, using pip:
 
 For windows with ASIO support:
 
-Install latest version from
+Install latest version (0.4.5) from
 https://readthedocs.org/projects/python-sounddevice/downloads/pdf/latest/
 
 using the most recent package from 

@@ -12,7 +12,7 @@ def pars_print(pars, keys=None, cols=None, chan=1):
     '''
     if keys is None:
         rtype = list(filter(lambda x: 'rt' in x, pars.keys()))[0]
-        keys = ['snr',rtype,'rvalue','edt','c50','c80','ts','dr']
+        keys = ['SNR',rtype,'rvalue','EDT','C50','C80','TS','DRR']
     if cols is None:
         cols = pars['fc']    
     tabla = np.vstack(list(pars[key][:,chan-1] for key in keys))
@@ -159,6 +159,40 @@ def irstat_plot(data, window=0.01, overlap=0.002, fs=48000, logscale=True, tmax=
     axs[n].set_xlabel('Time (s)')
     return axs, fig 
 
+def irstat_plot_axes(data, axs, window=0.01, overlap=0.002, fs=48000, logscale=True, tmax=2.0):
+    if data.ndim == 1:
+        data = data[:,np.newaxis] # el array debe ser 2D
+    pstat = irstats(data, window=window, overlap=overlap, fs=fs)
+    nsamples, nchan = np.shape(data)
+    t = np.arange(1,nsamples+1)/fs
+    ndir = find_dir(data,pw=0.5,fs=fs)
+    #fig, axs = plt.subplots(nchan,1,figsize=(18,3*nchan))
+    irmax = np.max(np.abs(data))
+    kurtmax =  np.nanmax(pstat['kurtosis'])
+    stdbupmax =  np.nanmax(pstat['stdbup'])
+    if nchan==1:
+        axs = [axs]
+    for n in range(nchan):
+        axs[n].clear()
+        axs[n].plot(t,data[:,n]/irmax)
+        axs[n].plot(t[ndir[0,n]:ndir[1,n]],data[ndir[0,n]:ndir[1,n],n]/irmax,'r',label='direct')
+        axs[n].plot(pstat['tframe'],pstat['kurtosis'][:,n]/kurtmax,'w',label='kurtosis')
+        axs[n].plot(pstat['tframe'],pstat['stdexcess'][:,n],'y',label='stdexcess')
+        axs[n].plot(pstat['tframe'],pstat['stdbup'][:,n]/stdbupmax,'c',label='stdbup')
+        axs[n].plot([pstat['mixing'][0,n],pstat['mixing'][0,n]],[-1,1],'w')
+        axs[n].plot([pstat['mixing'][1,n],pstat['mixing'][1,n]],[-1,1],'y')
+        axs[n].plot([pstat['tnoise'][0,n],pstat['tnoise'][0,n]],[-1,1],'c')
+        if logscale:
+            axs[n].set_xscale('log')
+        axs[n].set_xlabel('Time (s)')
+        axs[n].set_xlim([0.5*t[ndir[0,n]],tmax])
+        axs[n].legend()
+        if n==0:
+            axs[n].set_title('IMPULSE RESPONSE (Mixing Time)')
+    axs[n].set_xlabel('Time (s)')
+    return 
+
+
 def acorr_plot(data, trange=0.2, fs=48000):
     if data.ndim == 1:
         data = data[:,np.newaxis] # el array debe ser 2D
@@ -224,9 +258,9 @@ def spectrogram_plot(data,window,overlap,fs,chan=0,fmax=22000,tmax=2.0,normalize
     return ax, fig
 
 def pars_plot(pars, keys, chan=1):
-    # busca la ocurrencia de 'rt' 'edt' 'snr' 'c80' 'c50' 'ts' 'dr' en keys
+    # busca la ocurrencia de 'RT' 'EDT' 'SNR' 'C80' 'C50' 'TS' 'DRR' en keys
     rtype = list(filter(lambda x: 'rt' in x, pars.keys()))
-    pgraph = [['snr'],[rtype[0],'edt'],['c50','c80'],['ts'],['dr']]
+    pgraph = [['SNR'],[rtype[0],'EDT'],['C50','C80'],['TS'],['DRR']]
     isplot = []
     for pl in pgraph:
         isplot.append(np.any([p in keys for p in pl]))
@@ -257,9 +291,9 @@ def pars_plot(pars, keys, chan=1):
 
 
 def pars_plot_compared(pars, keys, chans=[1],labels=None,title=None):
-    # busca la ocurrencia de 'rt' 'edt' 'snr' 'c80' 'c50' 'ts' 'dr' en keys
+    # busca la ocurrencia de 'RT' 'EDT' 'SNR' 'C80' 'C50' 'TS' 'DRR' en keys
     rtype = list(filter(lambda x: 'rt' in x, pars.keys()))
-    pgraph = ['snr',rtype[0],'edt','c50','c80','ts','dr']
+    pgraph = ['SNR',rtype[0],'EDT','C50','C80','TS','DRR']
     isplot = []
     for pl in pgraph:
         isplot.append(pl in keys)
@@ -298,8 +332,8 @@ def pars_plot_compared(pars, keys, chans=[1],labels=None,title=None):
     return axs, fig 
 
 def pars_compared_axes(pars, key, axs, chans=None,labels=None,title=None,redraw=True):
-    # busca la ocurrencia de 'rt' 'edt' 'snr' 'c80' 'c50' 'ts' 'dr' en keys[:2]
-    idx = ['sn','rt','ed','c5','c8','ts','dr'].index(key[:2])
+    # busca la ocurrencia de 'SNR' 'RT' 'EDT' 'C80' 'C50' 'TS' 'DRR' en keys[:2]
+    idx = ['SN','RT','ED','C5','C8','TS','DR'].index(key[:2])
     ylabels = [
         'Signal/Noise (dB)',
         'Reverberation Time (s)',

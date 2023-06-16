@@ -181,12 +181,11 @@ class CTkTable(ctk.CTkFrame):
                 self.rowconfigure(i, weight=1)
                 self.columnconfigure(j, weight=1)
     
-    def redraw_table(self, **kwargs):
+    def destroy_table(self, **kwargs):
         """ redraw the table """
-        for i in self.frame.values():
-            i.destroy()
-        self.frame = {}
-        self.draw_table(**kwargs)
+        for i in range(self.rows):
+            for j in range(self.columns):
+                self.frame[i,j].destroy()
 
     def edit_row(self, row, values,**kwargs):
         """ edit all parameters of a single row """
