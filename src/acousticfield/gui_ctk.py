@@ -5,7 +5,7 @@ import sounddevice as sd
 from .generate import sweep
 from .process import ir_list_to_multichannel,make_filterbank,load_filterbank
 from .room import paracoustic
-from .display import ir_plot_axes, pars_compared_axes,irstat_plot_axes
+from .display import ir_plot, pars_compared_axes,irstat_plot
 from .session import RecordingSession
 from .utils.ctkutils import *
 from .utils.audioutils import *
@@ -265,40 +265,40 @@ class Acousticfield_ctk():
         self.map.grid(row=0, column=2, rowspan=9, sticky="nsew")
 
         #TAB2 - Recording
-        tab_recording.grid_columnconfigure(4, weight=1)
+        #tab_recording.grid_columnconfigure(8, weight=1)
         self.label_speaker = ctk.CTkLabel(tab_recording, text="SPEAKER")
         self.label_speaker.grid(row=0, column=0, padx=10, pady=0, sticky="w")
         self.label_microphone = ctk.CTkLabel(tab_recording, text="MICROPHONE")
-        self.label_microphone.grid(row=0, column=1, padx=10, pady=0, sticky="w")
+        self.label_microphone.grid(row=0, column=2, padx=10, pady=0, sticky="w")
         self.label_direction = ctk.CTkLabel(tab_recording, text="DIRECTION")
-        self.label_direction.grid(row=0, column=2, padx=10, pady=0, sticky="w")
+        self.label_direction.grid(row=0, column=4, padx=10, pady=0, sticky="w")
         self.label_take = ctk.CTkLabel(tab_recording, text="TAKE")
-        self.label_take.grid(row=0, column=3, padx=10, pady=0, sticky="w")
+        self.label_take.grid(row=0, column=6, padx=10, pady=0, sticky="w")
 
         self.speaker_box = ctk.CTkComboBox(master=tab_recording, values=[" "], variable=self.current_speaker)
-        self.speaker_box.grid(row=1, column=0, padx=10, pady=0, sticky="w")
+        self.speaker_box.grid(row=0, column=1, padx=10, pady=0, sticky="w")
         self.microphone_box = ctk.CTkComboBox(master=tab_recording, values=[" "], variable=self.current_microphone)
-        self.microphone_box.grid(row=1, column=1, padx=10, pady=0, sticky="w")
-        self.direction_box = ctk.CTkComboBox(master=tab_recording, values=["1", "2", "3", "4", "5", "6"], variable=self.current_direction)    
-        self.direction_box.grid(row=1, column=2, padx=10, pady=0, sticky="w")
-        self.take_box = ctk.CTkComboBox(master=tab_recording, values=["1", "2", "3", "4", "5", "6"], variable=self.current_take)    
-        self.take_box.grid(row=1, column=3, padx=10, pady=0, sticky="w")
+        self.microphone_box.grid(row=0, column=3, padx=10, pady=0, sticky="w")
+        self.direction_box = ctk.CTkComboBox(master=tab_recording, width=30,values=["1", "2", "3", "4", "5", "6"], variable=self.current_direction)    
+        self.direction_box.grid(row=0, column=5, padx=10, pady=0, sticky="w")
+        self.take_box = ctk.CTkComboBox(master=tab_recording, width=30,values=["1", "2", "3", "4", "5", "6"], variable=self.current_take)    
+        self.take_box.grid(row=0, column=7, padx=10, pady=0, sticky="w")
 
         self.start_recording_button = ctk.CTkButton(tab_recording, text="Start Recording", command=self.start_recording)
-        self.start_recording_button.grid(row=0, column=4, rowspan=2, padx=10, pady=20, sticky="w")
+        self.start_recording_button.grid(row=0, column=8, padx=10, pady=20, sticky="w")
 
         
         #plot ir
         self.plot_ir_frame = ctk.CTkFrame(tab_recording, corner_radius=25)
-        self.plot_ir_frame.grid(row=2, column=0, columnspan=5, sticky="nsew")
+        self.plot_ir_frame.grid(row=2, column=0, columnspan=9, sticky="nsew")
         self.matplotlib_ir_frame = PlotFrame(self.plot_ir_frame, corner_radius=25)
         self.matplotlib_ir_frame.pack(fill=ctk.BOTH, expand=True)
         self.matplotlib_ir_axes = self.matplotlib_ir_frame.axes
         
         #TAB3 - Data Table
         tab_data.grid_columnconfigure(0, weight=1)
-        self.data_table = CTkTable(master=tab_data, row=1, column=5, checkbox=True, 
-                                   values=[["file", "speaker", "mic", "dir", "take"]], corner_radius=10)
+        self.data_table = CTkTable(master=tab_data, row=1, column=5, checkbox=True, values=[["file", "speaker", "mic", "dir", "take"]], 
+                                   corner_radius=10, header_color=True,column1st_color=True)
         self.data_table.grid(row=1,column=0, padx=20, pady=20)
         self.load_button = ctk.CTkButton(master=tab_data,text="Load",command=self.load_irs)
         self.load_button.grid(row=0, column=0, sticky="w", padx=20, pady=20)
@@ -307,7 +307,7 @@ class Acousticfield_ctk():
         tab_stats.grid_columnconfigure(0, weight=1)
         self.label_tmax = ctk.CTkLabel(tab_stats, text="Time Max")
         self.label_tmax.grid(row=0, column=1, padx=10, pady=0, sticky="e")
-        self.tmax_entry = ctk.CTkEntry(master=tab_stats, textvariable=self.tmax)
+        self.tmax_entry = ctk.CTkEntry(master=tab_stats, width=50,textvariable=self.tmax)
         self.tmax_entry.grid(row=0, column=2, padx=10, pady=0, sticky="e")
         self.label_file_s = ctk.CTkLabel(tab_stats, text="File")
         self.label_file_s.grid(row=0, column=3, padx=10, pady=0, sticky="w")
@@ -315,7 +315,7 @@ class Acousticfield_ctk():
         self.select_file_box_s.grid(row=0, column=4, padx=10, pady=0, sticky="w")
         self.label_channel_s = ctk.CTkLabel(tab_stats, text="Channel")
         self.label_channel_s.grid(row=0, column=5, padx=10, pady=0, sticky="w")
-        self.select_channel_box_s = ctk.CTkComboBox(master=tab_stats, values=['0'], variable=self.current_channel)
+        self.select_channel_box_s = ctk.CTkComboBox(master=tab_stats, values=['0'], width=30,variable=self.current_channel)
         self.select_channel_box_s.grid(row=0, column=6, padx=10, pady=0, sticky="w")
         self.select_plot_stats_box = ctk.CTkComboBox(master=tab_stats, values=["IR Plot","IR Stats"], variable=self.current_plot_stats)
         self.select_plot_stats_box.grid(row=0, column=7, sticky="w", padx=10, pady=0)
@@ -330,9 +330,10 @@ class Acousticfield_ctk():
 
         #tab_table - Parameters Table
         tab_table.grid_columnconfigure(0, weight=1)
-        self.parameter_table_keys = ['Band','SNR','RT20','rvalue','EDT','C50','C80','TS','DRR']
+        self.parameter_table_keys = ['Band','RT20','rvalue','EDT','C50','C80','TS','DRR','SNR']
         self.parameter_table = CTkTable(master=tab_table, row=len(self.parameter_table_keys), column=len(self.parameter_table_headers), 
-                                        checkbox=False, values=[self.parameter_table_headers], corner_radius=10)
+                                        checkbox=False, values=[self.parameter_table_headers], corner_radius=10,header_color=True,\
+                                        column1st_color=True)
         self.parameter_table.grid(row=1,column=0, columnspan=6, padx=20, pady=20)
         self.parameter_table.edit_column(column=0,values=self.parameter_table_keys)
 
@@ -344,7 +345,7 @@ class Acousticfield_ctk():
         self.select_file_box.grid(row=0, column=2, padx=20, pady=0, sticky="w")
         self.label_channel = ctk.CTkLabel(tab_table, text="Channel")
         self.label_channel.grid(row=0, column=3, padx=20, pady=0, sticky="w")
-        self.select_channel_box = ctk.CTkComboBox(master=tab_table, values=['0'], variable=self.current_channel)
+        self.select_channel_box = ctk.CTkComboBox(master=tab_table, values=['0'], width=30,variable=self.current_channel)
         self.select_channel_box.grid(row=0, column=4, padx=20, pady=0, sticky="w")
         self.table_button = ctk.CTkButton(master=tab_table,text="Display",command=self.display_params)
         self.table_button.grid(row=0, column=5, sticky="w", padx=20, pady=20)
@@ -354,7 +355,7 @@ class Acousticfield_ctk():
         self.analyze_button = ctk.CTkButton(tab_plot, text="Analyze", command=self.analyze)
         self.analyze_button.grid(row=0, column=2, padx=20, pady=20, sticky="e")
 
-        self.parameter_plot_keys = ['SNR','RT20','EDT','C50','C80','TS','DRR']
+        self.parameter_plot_keys = ['RT20','EDT','C50','C80','TS','DRR','SNR']
         self.label_key = ctk.CTkLabel(tab_plot, text="Parameter")
         self.label_key.grid(row=0, column=3, padx=20, pady=0, sticky="w")
         self.select_key_box = ctk.CTkComboBox(master=tab_plot, values=self.parameter_plot_keys, variable=self.current_key)
@@ -653,7 +654,7 @@ class Acousticfield_ctk():
         self.rewrite_textbox(self.status,f"Finished -> {textinfo}")
         self.add_file()
         #plot ir
-        ir_plot_axes(ir_temp[:,0], self.matplotlib_ir_axes, fs, tmax=float(self.tmax.get()))
+        ir_plot(ir_temp[:,0], fs, tmax=float(self.tmax.get()),axs=self.matplotlib_ir_axes)
         self.matplotlib_ir_frame.canvas.draw()
         self.matplotlib_ir_frame.canvas.flush_events()
 
@@ -753,13 +754,13 @@ class Acousticfield_ctk():
         self.current_channel = int(self.select_channel_box_s.get())
         if (self.current_plot_stats == "IR Plot"):
             #plot IR
-            ir_plot_axes(ir[:,self.current_channel], self.matplotlib_stats_axes, fs, tmax=float(self.tmax.get()))
+            ir_plot(ir[:,self.current_channel], fs, tmax=float(self.tmax.get()), axs=self.matplotlib_stats_axes)
             self.matplotlib_stats_frame.canvas.draw()
             self.matplotlib_stats_frame.canvas.flush_events()
         elif (self.current_plot_stats == "IR Stats"):    
             #plot stats
-            irstat_plot_axes(ir[:,self.current_channel], self.matplotlib_stats_axes, window=0.01, overlap=0.002, \
-                             fs=fs, logscale=True, tmax=float(self.tmax.get()))
+            irstat_plot(ir[:,self.current_channel], window=0.01, overlap=0.002, fs=fs, logscale=True, \
+                        tmax=float(self.tmax.get()),axs=self.matplotlib_stats_axes)
             self.matplotlib_stats_frame.canvas.draw()
             self.matplotlib_stats_frame.canvas.flush_events()
         else:

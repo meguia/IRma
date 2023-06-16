@@ -55,6 +55,17 @@ class CustomToolbar(NavigationToolbar2Tk):
         y1 = height - y1
         self.canvas._rubberband_rect_white = self.canvas._tkcanvas.create_rectangle(x0, y0, x1, y1,outline='white', dash=(3, 3))
 
+class CustomToolbar_old(NavigationToolbar2Tk):  # for matplotlib 3.5.2
+    def __init__(self, figcanvas, parent):
+        super().__init__(figcanvas, parent)  
+
+    def draw_rubberband(self, event, x0, y0, x1, y1):
+        self.remove_rubberband()
+        height = self.canvas.figure.bbox.height
+        y0 = height - y0
+        y1 = height - y1
+        self.lastrect = self.canvas._tkcanvas.create_rectangle(x0, y0, x1, y1,outline = 'white', dash=(3, 3))           
+
 class PlotFrame(ctk.CTkFrame):
     """ Matplotlib PlotFrame Widget"""
     def __init__(self, parent, figure=None, axes=None, **kwargs):
@@ -67,7 +78,7 @@ class PlotFrame(ctk.CTkFrame):
         self.canvas.draw()
         self.canvas.get_tk_widget().pack(fill=ctk.BOTH, expand=True)
 
-        self.toolbar = CustomToolbar(self.canvas, self)
+        self.toolbar = CustomToolbar_old(self.canvas, self)
         self.toolbar.config(background=dark_color)
         self.toolbar._message_label.config(background=dark_color)
         for button in self.toolbar.winfo_children():
@@ -106,9 +117,10 @@ class CTkTable(ctk.CTkFrame):
         padx: int = 1, 
         pady: int = 0,
         values: list = [[None]],
-        colors: list = [None, None],
+        colors: list = [None, None, None],
         color_phase: str = "rows",
-        header_color: str = None,
+        header_color: bool = False,
+        column1st_color: bool = False,
         corner_radius: int = 25,
         **kwargs):
         
@@ -124,11 +136,13 @@ class CTkTable(ctk.CTkFrame):
         self.checked = [ctk.BooleanVar() for i in range(row)] # list of checked rows
         self.colors = colors # colors of the table if required
         self.header_color = header_color # specify the topmost row color
+        self.column1st_color = column1st_color # specify the topmost row color
         self.phase = color_phase
         self.corner = corner_radius
         # if colors are None then use the default frame colors:
         self.fg_color = ctk.ThemeManager.theme["CTkFrame"]["fg_color"] if not self.colors[0] else self.colors[0]
         self.fg_color2 = ctk.ThemeManager.theme["CTkFrame"]["top_fg_color"] if not self.colors[1] else self.colors[1]
+        self.fg_color3 = ctk.ThemeManager.theme["CTkFrame"]["border_color"] if not self.colors[2] else self.colors[2]
         
         self.frame = {}
         self.draw_table(**kwargs)
@@ -150,7 +164,11 @@ class CTkTable(ctk.CTkFrame):
                         
                 if self.header_color:
                     if i==0:
-                        fg = self.header_color
+                        fg = self.fg_color3
+
+                if self.column1st_color:
+                    if j==0:
+                        fg = self.fg_color3       
                         
                 corner_radius = self.corner    
                 if i==0 and j==0:

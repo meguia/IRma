@@ -76,7 +76,7 @@ def display_table(data,headers,rownames):
     html += "</table>"
     display(HTML(html)) 
 
-def ir_plot(data, fs=48000, tmax=3.0, labels=None, figsize=None):
+def ir_plot(data, fs=48000, tmax=3.0, labels=None, figsize=None, redraw=True, axs=None):
     """ data (nsamples,nchannel) must be a 2D array
     """
     if data.ndim == 1:
@@ -85,30 +85,8 @@ def ir_plot(data, fs=48000, tmax=3.0, labels=None, figsize=None):
     t = np.arange(nsamples)/fs
     if figsize is None:
         figsize = (18,3*nchan)
-    fig, axs = plt.subplots(nchan,1,figsize=figsize)
-    ndir = find_dir(data,pw=0.5,fs=fs)
-    if nchan==1:
-        axs = [axs]
-    for n in range(nchan):
-        if labels is not None:
-            axs[n].plot(t,data[:,n],label=labels[n])
-            axs[n].legend()
-        else:
-            axs[n].plot(t,data[:,n])
-        axs[n].plot(t[ndir[0,n]:ndir[1,n]],data[ndir[0,n]:ndir[1,n],n],'r')
-        axs[n].set_xlim([0,tmax])    
-        if n==0:
-            axs[n].set_title('IMPULSE RESPONSE')  
-    axs[n].set_xlabel('Time (s)')
-    return axs, fig
-
-def ir_plot_axes(data, axs, fs=48000, tmax=3.0, labels=None, redraw=True):
-    """ data (nsamples,nchannel) must be a 2D array
-    """
-    if data.ndim == 1:
-        data = data[:,np.newaxis] # el array debe ser 2D
-    nsamples, nchan = np.shape(data)
-    t = np.arange(nsamples)/fs
+    if axs is None:    
+        _, axs = plt.subplots(nchan,1,figsize=figsize)
     ndir = find_dir(data,pw=0.5,fs=fs)
     if nchan==1:
         axs = [axs]
@@ -125,48 +103,18 @@ def ir_plot_axes(data, axs, fs=48000, tmax=3.0, labels=None, redraw=True):
         if n==0:
             axs[n].set_title('IMPULSE RESPONSE')  
     axs[n].set_xlabel('Time (s)')
-    return
+    return axs
 
-def irstat_plot(data, window=0.01, overlap=0.002, fs=48000, logscale=True, tmax=2.0):
+
+def irstat_plot(data, window=0.01, overlap=0.002, fs=48000, logscale=True, tmax=2.0, axs = None):
     if data.ndim == 1:
         data = data[:,np.newaxis] # el array debe ser 2D
     pstat = irstats(data, window=window, overlap=overlap, fs=fs)
     nsamples, nchan = np.shape(data)
     t = np.arange(1,nsamples+1)/fs
     ndir = find_dir(data,pw=0.5,fs=fs)
-    fig, axs = plt.subplots(nchan,1,figsize=(18,3*nchan))
-    irmax = np.max(np.abs(data))
-    kurtmax =  np.nanmax(pstat['kurtosis'])
-    stdbupmax =  np.nanmax(pstat['stdbup'])
-    if nchan==1:
-        axs = [axs]
-    for n in range(nchan):
-        axs[n].plot(t,data[:,n]/irmax)
-        axs[n].plot(t[ndir[0,n]:ndir[1,n]],data[ndir[0,n]:ndir[1,n],n]/irmax,'r',label='direct')
-        axs[n].plot(pstat['tframe'],pstat['kurtosis'][:,n]/kurtmax,'w',label='kurtosis')
-        axs[n].plot(pstat['tframe'],pstat['stdexcess'][:,n],'y',label='stdexcess')
-        axs[n].plot(pstat['tframe'],pstat['stdbup'][:,n]/stdbupmax,'c',label='stdbup')
-        axs[n].plot([pstat['mixing'][0,n],pstat['mixing'][0,n]],[-1,1],'w')
-        axs[n].plot([pstat['mixing'][1,n],pstat['mixing'][1,n]],[-1,1],'y')
-        axs[n].plot([pstat['tnoise'][0,n],pstat['tnoise'][0,n]],[-1,1],'c')
-        if logscale:
-            axs[n].set_xscale('log')
-        axs[n].set_xlabel('Time (s)')
-        axs[n].set_xlim([0.5*t[ndir[0,n]],tmax])
-        axs[n].legend()
-        if n==0:
-            axs[n].set_title('IMPULSE RESPONSE (Mixing Time)')
-    axs[n].set_xlabel('Time (s)')
-    return axs, fig 
-
-def irstat_plot_axes(data, axs, window=0.01, overlap=0.002, fs=48000, logscale=True, tmax=2.0):
-    if data.ndim == 1:
-        data = data[:,np.newaxis] # el array debe ser 2D
-    pstat = irstats(data, window=window, overlap=overlap, fs=fs)
-    nsamples, nchan = np.shape(data)
-    t = np.arange(1,nsamples+1)/fs
-    ndir = find_dir(data,pw=0.5,fs=fs)
-    #fig, axs = plt.subplots(nchan,1,figsize=(18,3*nchan))
+    if axs is None:
+        _, axs = plt.subplots(nchan,1,figsize=(18,3*nchan))
     irmax = np.max(np.abs(data))
     kurtmax =  np.nanmax(pstat['kurtosis'])
     stdbupmax =  np.nanmax(pstat['stdbup'])
@@ -190,7 +138,8 @@ def irstat_plot_axes(data, axs, window=0.01, overlap=0.002, fs=48000, logscale=T
         if n==0:
             axs[n].set_title('IMPULSE RESPONSE (Mixing Time)')
     axs[n].set_xlabel('Time (s)')
-    return 
+    return axs
+
 
 
 def acorr_plot(data, trange=0.2, fs=48000):
@@ -290,7 +239,7 @@ def pars_plot(pars, keys, chan=1):
     return axs, fig
 
 
-def pars_plot_compared(pars, keys, chans=[1],labels=None,title=None):
+def pars_plot_compared(pars, keys, chans=[1],labels=None,title=None,axs=None):
     # busca la ocurrencia de 'RT' 'EDT' 'SNR' 'C80' 'C50' 'TS' 'DRR' en keys
     rtype = list(filter(lambda x: 'rt' in x, pars.keys()))
     pgraph = ['SNR',rtype[0],'EDT','C50','C80','TS','DRR']
@@ -307,7 +256,8 @@ def pars_plot_compared(pars, keys, chans=[1],labels=None,title=None):
         'Center Time (ms)',
         'Direct/Reverberant (dB)'
     ]
-    fig, axs = plt.subplots(nplot,1,figsize=(18,3*nplot))
+    if axs is None:
+        _, axs = plt.subplots(nplot,1,figsize=(18,3*nplot))
     iplot = 0
     nb = len(pars['fc'])
     if nplot==1:
@@ -315,6 +265,7 @@ def pars_plot_compared(pars, keys, chans=[1],labels=None,title=None):
     for n in range(7):
         if isplot[n]:
             nbars = len(chans)
+            axs[iplot].clear()
             for c in chans:
               axs[iplot].bar(np.arange(nb)+0.4/nbars*(2*c-nbars),pars[pgraph[n]][:,c-1],width=0.8/nbars)
             axs[iplot].set_xticks(np.arange(nb))
@@ -329,7 +280,7 @@ def pars_plot_compared(pars, keys, chans=[1],labels=None,title=None):
             if iplot==0 and title is not None:
               axs[iplot].set_title(title)  
             iplot +=1
-    return axs, fig 
+    return axs
 
 def pars_compared_axes(pars, key, axs, chans=None,labels=None,title=None,redraw=True):
     # busca la ocurrencia de 'SNR' 'RT' 'EDT' 'C80' 'C50' 'TS' 'DRR' en keys[:2]
