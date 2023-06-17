@@ -286,9 +286,11 @@ class Acousticfield_ctk():
 
         self.start_recording_button = ctk.CTkButton(tab_recording, text="Start Recording", command=self.start_recording)
         self.start_recording_button.grid(row=0, column=8, padx=10, pady=0, sticky="w")
-
+        
+        self.label_comment = ctk.CTkLabel(tab_recording, text="comment")
+        self.label_comment.grid(row=1, column=0, padx=10, pady=0, sticky="w")
         self.comment_entry = ctk.CTkEntry(master=tab_recording, textvariable=self.comment)
-        self.comment_entry.grid(row=1, column=0, columnspan=9, padx=20, pady=10, sticky="nsew")
+        self.comment_entry.grid(row=1, column=1, columnspan=8, padx=10, pady=10, sticky="nsew")
         
         #plot ir
         self.plot_ir_frame = ctk.CTkFrame(tab_recording, corner_radius=25)
@@ -313,7 +315,7 @@ class Acousticfield_ctk():
         self.tmax_entry.grid(row=0, column=2, padx=10, pady=0, sticky="e")
         self.label_file_s = ctk.CTkLabel(tab_stats, text="File")
         self.label_file_s.grid(row=0, column=3, padx=10, pady=0, sticky="w")
-        self.select_file_box_s = ctk.CTkComboBox(master=tab_stats, values=[" "], variable=self.current_file,command=self.set_channel)
+        self.select_file_box_s = ctk.CTkComboBox(master=tab_stats, values=[" "], width=180,variable=self.current_file,command=self.set_channel)
         self.select_file_box_s.grid(row=0, column=4, padx=10, pady=0, sticky="w")
         self.label_channel_s = ctk.CTkLabel(tab_stats, text="Channel")
         self.label_channel_s.grid(row=0, column=5, padx=10, pady=0, sticky="w")
@@ -343,7 +345,7 @@ class Acousticfield_ctk():
         self.filterbank_button.grid(row=0, column=0, sticky="w", padx=20, pady=20)
         self.label_file = ctk.CTkLabel(tab_table, text="File")
         self.label_file.grid(row=0, column=1, padx=20, pady=0, sticky="w")
-        self.select_file_box = ctk.CTkComboBox(master=tab_table, values=[" "], variable=self.current_file,command=self.set_channel)
+        self.select_file_box = ctk.CTkComboBox(master=tab_table, values=[" "], width=180, variable=self.current_file,command=self.set_channel)
         self.select_file_box.grid(row=0, column=2, padx=20, pady=0, sticky="w")
         self.label_channel = ctk.CTkLabel(tab_table, text="Channel")
         self.label_channel.grid(row=0, column=3, padx=20, pady=0, sticky="w")
@@ -374,7 +376,7 @@ class Acousticfield_ctk():
         tab_decays.grid_columnconfigure(0, weight=1)
         self.label_file_d = ctk.CTkLabel(tab_decays, text="File")
         self.label_file_d.grid(row=0, column=3, padx=10, pady=0, sticky="w")
-        self.select_file_box_d = ctk.CTkComboBox(master=tab_decays, values=[" "], variable=self.current_file,command=self.set_channel)
+        self.select_file_box_d = ctk.CTkComboBox(master=tab_decays, values=[" "], width=180, variable=self.current_file,command=self.set_channel)
         self.select_file_box_d.grid(row=0, column=4, padx=10, pady=0, sticky="w")
         self.label_channel_d = ctk.CTkLabel(tab_decays, text="Channel")
         self.label_channel_d.grid(row=0, column=5, padx=10, pady=0, sticky="w")
@@ -383,7 +385,7 @@ class Acousticfield_ctk():
         self.plot_decay_button = ctk.CTkButton(tab_decays, text="Plot Decays", command=self.plot_decays)
         self.plot_decay_button.grid(row=0, column=7, padx=20, pady=20, sticky="e")
 
-        self.plot_decay_frame = ctk.CTkFrame(tab_decays, corner_radius=25)
+        self.plot_decay_frame = ctk.CTkFrame(tab_decays, width=900, height=500, corner_radius=25)
         self.plot_decay_frame.grid(row=1, column=0, columnspan=8, sticky="nsew")
         self.image_decay_frame = ctk.CTkLabel(self.plot_decay_frame, image=None, text='')
         self.image_decay_frame.pack(fill=ctk.BOTH, expand=True)

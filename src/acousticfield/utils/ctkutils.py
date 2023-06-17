@@ -5,7 +5,7 @@
 import customtkinter as ctk
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, NavigationToolbar2Tk)
-from PIL import Image,ImageTk
+from PIL import Image
 
 dark_color = "#5a5a5a"
 NavigationToolbar2Tk.toolitems = (
