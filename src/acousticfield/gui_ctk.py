@@ -5,7 +5,7 @@ import sounddevice as sd
 from .generate import sweep
 from .process import ir_list_to_multichannel,make_filterbank,load_filterbank
 from .room import paracoustic
-from .display import ir_plot, pars_compared_axes,irstat_plot
+from .display import ir_plot, pars_compared_axes,irstat_plot,parsdecay_plot
 from .session import RecordingSession
 from .utils.ctkutils import *
 from .utils.audioutils import *
@@ -369,6 +369,25 @@ class Acousticfield_ctk():
         self.matplotlib_analysis_frame = PlotFrame(self.plot_analysis_frame)
         self.matplotlib_analysis_frame.pack(fill=ctk.BOTH, expand=True)
         self.matplotlib_analysis_axes = self.matplotlib_analysis_frame.axes
+
+        #tab_decays - Decays Plots
+        tab_decays.grid_columnconfigure(0, weight=1)
+        self.label_file_d = ctk.CTkLabel(tab_decays, text="File")
+        self.label_file_d.grid(row=0, column=3, padx=10, pady=0, sticky="w")
+        self.select_file_box_d = ctk.CTkComboBox(master=tab_decays, values=[" "], variable=self.current_file,command=self.set_channel)
+        self.select_file_box_d.grid(row=0, column=4, padx=10, pady=0, sticky="w")
+        self.label_channel_d = ctk.CTkLabel(tab_decays, text="Channel")
+        self.label_channel_d.grid(row=0, column=5, padx=10, pady=0, sticky="w")
+        self.select_channel_box_d = ctk.CTkComboBox(master=tab_decays, values=['0'], width=30,variable=self.current_channel)
+        self.select_channel_box_d.grid(row=0, column=6, padx=10, pady=0, sticky="w")
+        self.plot_decay_button = ctk.CTkButton(tab_decays, text="Plot Decays", command=self.plot_decays)
+        self.plot_decay_button.grid(row=0, column=7, padx=20, pady=20, sticky="e")
+
+        self.plot_decay_frame = ctk.CTkFrame(tab_decays, corner_radius=25)
+        self.plot_decay_frame.grid(row=1, column=0, columnspan=8, sticky="nsew")
+        self.image_decay_frame = ctk.CTkLabel(self.plot_decay_frame, image=None, text='')
+        self.image_decay_frame.pack(fill=ctk.BOTH, expand=True)
+
 
         #tab_settings - Settings
         self.label_select_input = ctk.CTkLabel(tab_settings, text="Audio Input")
@@ -771,7 +790,20 @@ class Acousticfield_ctk():
             self.matplotlib_stats_frame.canvas.flush_events()
         else:
             raise ValueError("Plot type not recognized")
-        return        
+        return  
+    
+    def plot_decays(self):
+        self.current_file = self.select_file_box_d.get()
+        ir = np.load(os.path.join(self.recording_path,f"ir_{self.current_file}.npy"))
+        self.current_channel = int(self.select_channel_box_d.get())
+        filename = os.path.join(self.recording_path,f"ir_{self.current_file}")
+        self.rewrite_textbox(self.status,f"Computing Decays of {self.current_file} using filterbank {self.fbankname}")
+        self.params = paracoustic(filename, method=self.rtmethod,bankname=self.fbankname,tmax=float(self.tmax.get()))      
+        _, fig = parsdecay_plot(self.params, chan=self.current_channel, fs=fs)
+        img = figure_to_image(fig,width=900,height=500)
+        self.image_decay_frame.configure(image=img)
+        return
+
 
 # UPDATE METHODS
 
@@ -790,8 +822,11 @@ class Acousticfield_ctk():
             self.select_file_box.set(self.list_files[0])
             self.select_file_box_s.configure(values=self.list_files)
             self.select_file_box_s.set(self.list_files[0])
+            self.select_file_box_d.configure(values=self.list_files)
+            self.select_file_box_d.set(self.list_files[0])
             self.select_channel_box.set(self.current_channel)
             self.select_channel_box_s.set(self.current_channel)
+            self.select_channel_box_d.set(self.current_channel)
         self.sidebar_label_2.configure(text=self.session_id.get())
         self.root.update_idletasks()
         

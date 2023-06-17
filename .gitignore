@@ -136,3 +136,4 @@ ir_*.*
 *.code-workspace
 .DS_Store
 dist/acousticfield_gui.exe
+temp.png
