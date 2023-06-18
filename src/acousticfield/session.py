@@ -68,6 +68,7 @@ class RecordingSession:
             take=take,
             valid=valid,
             filename=prefix,
+            nchan=nchannels,
             comment=comment
         )
         self.recordings.append(rec_dic)

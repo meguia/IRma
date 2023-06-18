@@ -76,7 +76,6 @@ class PlotFrame(ctk.CTkFrame):
     """ Matplotlib PlotFrame Widget"""
     def __init__(self, parent, figure=None, axes=None, **kwargs):
         ctk.CTkFrame.__init__(self, parent, **kwargs)
-        #print(axes)
         self.figure = figure if figure is not None else Figure()
         self.axes = axes if axes is not None else self.figure.add_subplot(111)
         
@@ -92,9 +91,6 @@ class PlotFrame(ctk.CTkFrame):
             button.config(background=dark_color)
         self.toolbar.update()
         self.toolbar.pack(side=ctk.BOTTOM, fill=ctk.X)
-
-        #self.canvas.mpl_connect("key_press_event", lambda event: print(f"you pressed {event.key}"))
-        #self.canvas.mpl_connect("key_press_event", key_press_handler)
         
     def update_figure(self, figure):
         self.canvas.figure = figure
