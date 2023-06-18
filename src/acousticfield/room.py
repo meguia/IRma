@@ -35,7 +35,8 @@ def revtime(ir_input, method='RT20', fs=48000, tmax=3.0):
     l12 = np.zeros((nchan,2))
     rvalue = np.zeros((nchan,))
     for n, ir in enumerate(data.T):
-        ns = np.mean(ir[nmax:-1][0]**2)
+        #ns = np.mean(ir[nmax:-1][0]**2)  por que estaba esto antes?
+        ns = np.mean(ir[nmax:-1]**2)
         stemp = np.flip(np.cumsum(ir[::-1]**2)) # integral de Schroeder
         stemp = stemp[:nmax]
         mm = np.arange(nsamples,0,-1)*ns
@@ -170,7 +171,8 @@ def paracoustic(ir, method='RT20', bankname='fbank', tmax=3.0, fs_default=48000)
     pars['DRR'] = np.zeros((pars['nbands'],pars['nchan']))
     # By Frequency Bands
     ndir = find_dir(data, pw=0.5,fs=fs)
-    print(int(tnoise*fs))
+    #print(int(tnoise*fs))
+    #print(data.shape)
     sos_a = A_weighting(fs)
     for n in range(nbands+2):
         if n==nbands:

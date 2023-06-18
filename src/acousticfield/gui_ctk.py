@@ -334,32 +334,36 @@ class Acousticfield_ctk():
 
         #tab_table - Parameters Table
         tab_table.grid_columnconfigure(0, weight=1)
-        self.parameter_table_keys = ['Band','RT20','rvalue','EDT','C50','C80','TS','DRR','SNR']
+        self.parameter_table_keys = ['Band',self.rtmethod,'rvalue','EDT','C50','C80','TS','DRR','SNR']
         self.parameter_table = CTkTable(master=tab_table, row=len(self.parameter_table_keys), column=len(self.parameter_table_headers), 
                                         checkbox=False, values=[self.parameter_table_headers], corner_radius=10,header_color=True,\
                                         column1st_color=True)
-        self.parameter_table.grid(row=1,column=0, columnspan=6, padx=20, pady=20)
+        self.parameter_table.grid(row=1,column=0, columnspan=8, padx=20, pady=20)
         self.parameter_table.edit_column(column=0,values=self.parameter_table_keys)
 
         self.filterbank_button = ctk.CTkButton(master=tab_table,text="Filter Bank",command=self.generate_filterbank)
-        self.filterbank_button.grid(row=0, column=0, sticky="w", padx=20, pady=20)
+        self.filterbank_button.grid(row=0, column=0, sticky="w", padx=10, pady=20)
+        self.label_method = ctk.CTkLabel(tab_table, text="Method")
+        self.label_method.grid(row=0, column=1, padx=10, pady=0, sticky="w")
+        self.select_method_box = ctk.CTkComboBox(master=tab_table, values=["RT20","RT15","RT30"], width=100,variable=self.rtmethod,command=self.set_method)
+        self.select_method_box.grid(row=0, column=2, padx=10, pady=0, sticky="w")
         self.label_file = ctk.CTkLabel(tab_table, text="File")
-        self.label_file.grid(row=0, column=1, padx=20, pady=0, sticky="w")
+        self.label_file.grid(row=0, column=3, padx=10, pady=0, sticky="w")
         self.select_file_box = ctk.CTkComboBox(master=tab_table, values=[" "], width=180, variable=self.current_file,command=self.set_channel)
-        self.select_file_box.grid(row=0, column=2, padx=20, pady=0, sticky="w")
+        self.select_file_box.grid(row=0, column=4, padx=10, pady=0, sticky="w")
         self.label_channel = ctk.CTkLabel(tab_table, text="Channel")
-        self.label_channel.grid(row=0, column=3, padx=20, pady=0, sticky="w")
+        self.label_channel.grid(row=0, column=5, padx=10, pady=0, sticky="w")
         self.select_channel_box = ctk.CTkComboBox(master=tab_table, values=['0'], width=30,variable=self.current_channel)
-        self.select_channel_box.grid(row=0, column=4, padx=20, pady=0, sticky="w")
+        self.select_channel_box.grid(row=0, column=6, padx=10, pady=0, sticky="w")
         self.table_button = ctk.CTkButton(master=tab_table,text="Display",command=self.display_params)
-        self.table_button.grid(row=0, column=5, sticky="w", padx=20, pady=20)
+        self.table_button.grid(row=0, column=7, sticky="w", padx=10, pady=20)
 
         #tab_plot - Parameters Plots
         tab_plot.grid_columnconfigure(6, weight=1)
         self.analyze_button = ctk.CTkButton(tab_plot, text="Analyze", command=self.analyze)
         self.analyze_button.grid(row=0, column=2, padx=20, pady=20, sticky="e")
 
-        self.parameter_plot_keys = ['RT20','EDT','C50','C80','TS','DRR','SNR']
+        self.parameter_plot_keys = [self.rtmethod,'EDT','C50','C80','TS','DRR','SNR']
         self.label_key = ctk.CTkLabel(tab_plot, text="Parameter")
         self.label_key.grid(row=0, column=3, padx=20, pady=0, sticky="w")
         self.select_key_box = ctk.CTkComboBox(master=tab_plot, values=self.parameter_plot_keys, variable=self.current_key)
@@ -525,7 +529,7 @@ class Acousticfield_ctk():
         self.entries_to_pars()
         print(self.pars)
         self.remove_files()
-        self.list_files()
+        self.load_files()
         self.tick()
 
     def void_recording_session(self):
@@ -687,7 +691,7 @@ class Acousticfield_ctk():
 
 # DATA FILES        
 
-    def list_files(self):
+    def load_files(self):
         print("load files")
         for n,rec in enumerate(self.recording_session.recordings):
             fname = rec['filename']
@@ -724,10 +728,17 @@ class Acousticfield_ctk():
         self.select_channel_box_s.configure(values=[str(n) for n in np.arange(nchannels)])
         self.select_channel_box_s.set('0')
 
+    def set_method(self,method):
+        self.rtmethod = method
+        self.parameter_plot_keys = [self.rtmethod,'EDT','C50','C80','TS','DRR','SNR']
+        self.select_key_box.configure(values=self.parameter_plot_keys)
+        self.select_key_box.set(self.rtmethod)
+        self.parameter_table_keys = ['Band',self.rtmethod,'rvalue','EDT','C50','C80','TS','DRR','SNR']
+        self.parameter_table.edit_column(column=0,values=self.parameter_table_keys)
+
 # ROOM ACOUSTICS
     def analyze(self):
         # choose the key
-        #key = 'RT20'
         self.rewrite_textbox(self.status,f"Computing parameters using filterbank {self.fbankname}")
         self.paracoustic()
         self.current_key = self.select_key_box.get()

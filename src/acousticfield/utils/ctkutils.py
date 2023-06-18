@@ -50,7 +50,7 @@ def figure_to_image(fig,width=500,height=400):
     return ctk.CTkImage(Image.open(r"temp.png"),size=(width,height))
     
 
-class CustomToolbar(NavigationToolbar2Tk):  
+class CustomToolbar(NavigationToolbar2Tk):  # for matplotlib 3.7.1
     def __init__(self, figcanvas, parent):
         super().__init__(figcanvas, parent) 
 
@@ -84,7 +84,8 @@ class PlotFrame(ctk.CTkFrame):
         self.canvas.draw()
         self.canvas.get_tk_widget().pack(fill=ctk.BOTH, expand=True)
 
-        self.toolbar = CustomToolbar_old(self.canvas, self)
+        #self.toolbar = CustomToolbar_old(self.canvas, self)
+        self.toolbar = CustomToolbar(self.canvas, self)
         self.toolbar.config(background=dark_color)
         self.toolbar._message_label.config(background=dark_color)
         for button in self.toolbar.winfo_children():
