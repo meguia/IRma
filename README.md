@@ -3,11 +3,12 @@ Tools for soundscape / acoustic field / recording, processing and analysis
 
 ## Instalation with Anaconda (jun 2023)
 base:
-- python = 3.9.13
-- numpy = 1.21.5
-- scipy = 1.9.1
-- matplotlib = 3.5.2
-- ipython = 7.31.1
+- python >= 3.9.13
+- numpy >= 1.21.5
+- scipy >= 1.9.1
+- matplotlib >= 3.5.2
+- ipython >= 7.31.1
+- pyyaml >= 6.0
 
 ## python sounddevice
 For linux, mac, or windows without ASIO or OSX/Linux
@@ -35,3 +36,25 @@ Download the latest dist or install via pip with
 
 `pip install -i https://test.pypi.org/simple/ acousticfield --no-deps`
 
+## Usage
+
+Two jupyter notebooks (still in spanish) provide the basics for interactive use
+
+`notebooks/test_acousticfield.ipynb`
+
+and on a session-based operation:
+
+`notebooks/field_session.ipynb`
+
+## GUI
+
+A GUI using [customtkinter] (https://github.com/tomschimansky/customtkinter) is under development.
+
+If you want to give a try you will need 
+
+-matplotlib >= 3.7
+-customtkinter >= 5.1
+
+And the you can run the example with
+
+`python examples/acousticfield_gui.py`
