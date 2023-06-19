@@ -42,7 +42,7 @@ Two jupyter notebooks (still in spanish) provide the basics for interactive use
 
 `notebooks/test_acousticfield.ipynb`
 
-and on a session-based operation:
+and for a session-based operation:
 
 `notebooks/field_session.ipynb`
 
@@ -50,11 +50,11 @@ and on a session-based operation:
 
 A GUI using [customtkinter](https://github.com/tomschimansky/customtkinter) is under development.
 
-If you want to give a try you will need 
+If you want to give a try you will need:
 
--matplotlib >= 3.7
--customtkinter >= 5.1
+- matplotlib >= 3.7
+- customtkinter >= 5.1
 
-And the you can run the example with
+And then you can run the example with
 
 `python examples/acousticfield_gui.py`
