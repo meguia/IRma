@@ -48,7 +48,7 @@ and on a session-based operation:
 
 ## GUI
 
-A GUI using [customtkinter] (https://github.com/tomschimansky/customtkinter) is under development.
+A GUI using [customtkinter](https://github.com/tomschimansky/customtkinter) is under development.
 
 If you want to give a try you will need 
 
