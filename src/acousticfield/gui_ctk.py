@@ -142,7 +142,10 @@ class Acousticfield_ctk():
         self.root.minsize(600, 400)
         #self.root.iconbitmap("src/acousticfield/icon.ico")
         self.root.protocol("WM_DELETE_WINDOW", self.root.quit)
-        # initialization
+        # initialization fonts
+        self.fbig = ctk.CTkFont(family="Roboto", size=32)
+        self.fnorm = ctk.CTkFont(family="Roboto", size=18)
+        self.fsmall = ctk.CTkFont(family="Roboto", size=14)
         # settings
         self.inputs, self.outputs = list_devices()
         self.void_recording_session()
@@ -150,31 +153,27 @@ class Acousticfield_ctk():
         self.root.grid_columnconfigure(1, weight=1)
         self.root.grid_rowconfigure(0, weight=1)
         self.root.toplevel_window = None
+        self.create_static_widgets()
+        self.create_settings_widgets()
         self.create_widgets()
 
-# WIDGETS
-    def create_widgets(self):
-        # create sidebar frame with widgets
-        fbig = ctk.CTkFont(family="Roboto", size=32)
-        fnorm = ctk.CTkFont(family="Roboto", size=18)
-        fsmall = ctk.CTkFont(family="Roboto", size=14)
+#STATIC WIDGETS
+    def create_static_widgets(self):
         self.sidebar_frame = ctk.CTkFrame(self.root, width=140, corner_radius=0)
         self.sidebar_frame.grid(row=0, column=0, rowspan=2, sticky="nsew")
         self.sidebar_frame.grid_rowconfigure(7, weight=1)
         # SIDEBAR
-        self.sidebar_label_1 = ctk.CTkLabel(self.sidebar_frame, text="Session", font=fsmall)
+        self.sidebar_label_1 = ctk.CTkLabel(self.sidebar_frame, text="Session", font=self.fsmall)
         self.sidebar_label_1.grid(row=0, column=0, padx=20, pady=(20,0))
-        self.sidebar_label_2 = ctk.CTkLabel(self.sidebar_frame, text=self.session_id.get(), text_color="#f5d2d2", font=fbig)
-        self.sidebar_label_2.grid(row=1, column=0, padx=20, pady=(20, 10))
-        self.button_create = ctk.CTkButton(self.sidebar_frame, text="Create",font=fnorm,command=self.create_recording_session)
+        self.button_create = ctk.CTkButton(self.sidebar_frame, text="Create",font=self.fnorm,command=self.create_recording_session)
         self.button_create.grid(row=2, column=0, padx=20, pady=10)
-        self.button_save = ctk.CTkButton(self.sidebar_frame, text="Save",font=fnorm,command=self.save_recording_session)
+        self.button_save = ctk.CTkButton(self.sidebar_frame, text="Save",font=self.fnorm,command=self.save_recording_session)
         self.button_save.grid(row=3, column=0, padx=20, pady=10)
-        self.button_load = ctk.CTkButton(self.sidebar_frame, text="Load",font=fnorm,command=self.load_recording_session)
+        self.button_load = ctk.CTkButton(self.sidebar_frame, text="Load",font=self.fnorm,command=self.load_recording_session)
         self.button_load.grid(row=4, column=0, padx=20, pady=10)
-        self.button_clean = ctk.CTkButton(self.sidebar_frame, text="Clean",font=fnorm,command=self.clean_recording_session)
+        self.button_clean = ctk.CTkButton(self.sidebar_frame, text="Clean",font=self.fnorm,command=self.clean_recording_session)
         self.button_clean.grid(row=5, column=0, padx=20, pady=10)
-        self.button_quit = ctk.CTkButton(self.sidebar_frame, text="Quit",font=fnorm,command=self.stops)
+        self.button_quit = ctk.CTkButton(self.sidebar_frame, text="Quit",font=self.fnorm,command=self.stops)
         self.button_quit.grid(row=6, column=0, padx=20, pady=10)
         self.separator = ctk.CTkLabel(self.sidebar_frame, text="", anchor="w")
         self.separator.grid(row=7, column=0, padx=20, pady=(10, 0))
@@ -188,245 +187,233 @@ class Acousticfield_ctk():
         self.scaling_optionemenu = ctk.CTkOptionMenu(self.sidebar_frame, values=["80%", "90%", "100%", "110%", "120%"],
                                                             command=self.change_scaling_event)
         self.scaling_optionemenu.grid(row=11, column=0, padx=20, pady=(10, 20))
-
         # create status an message bar
-        self.status = ctk.CTkTextbox(self.root,height=40, font=fnorm)
+        self.status = ctk.CTkTextbox(self.root,height=40, font=self.fnorm)
         self.status.grid(row=1, column=1, padx=(20, 10), pady=(10, 10), sticky="nsew")
         self.status.insert("0.0", "Welcome to Acoustic Field! Please create a new session or load an existing one")
         # MAIN TABS
-    
         self.tabview = ctk.CTkTabview(self.root, width=900)
         self.tabview.grid(row=0, column=1, padx=(20, 10), pady=(0, 0), sticky="nsew")
-        tab_session = self.tabview.add(" SESSION ")
-        tab_recording = self.tabview.add(" RECORDING ")
-        tab_data = self.tabview.add(" DATA ")
-        tab_stats = self.tabview.add(" IR ")
-        tab_table = self.tabview.add(" TABLE ")
-        tab_plot = self.tabview.add(" PLOT ")
-        tab_decays = self.tabview.add(" DECAYS ")
-        tab_settings = self.tabview.add(" SETTINGS")
-
-        #TAB1 - Session
-        tab_session.grid_columnconfigure(2, weight=1)
-        self.session_id_label = ctk.CTkLabel(tab_session, text="Session ID:")
+        self.tab_session = self.tabview.add(" SESSION ")
+        self.tab_recording = self.tabview.add(" RECORDING ")
+        self.tab_data = self.tabview.add(" DATA ")
+        self.tab_stats = self.tabview.add(" IR ")
+        self.tab_table = self.tabview.add(" TABLE ")
+        self.tab_plot = self.tabview.add(" PLOT ")
+        self.tab_decays = self.tabview.add(" DECAYS ")
+        self.tab_settings = self.tabview.add(" SETTINGS")
+        self.tab_session.grid_columnconfigure(2, weight=1)
+        self.tab_recording.grid_columnconfigure(0, weight=1)
+        self.tab_data.grid_columnconfigure(0, weight=1)
+        self.tab_stats.grid_columnconfigure(0, weight=1)
+        self.tab_table.grid_columnconfigure(0, weight=1)
+        self.tab_table.grid_rowconfigure(2, weight=1)
+        self.tab_plot.grid_columnconfigure(0, weight=1)
+        self.tab_decays.grid_columnconfigure(0, weight=1)
+        #TAB SESSION
+        self.session_id_label = ctk.CTkLabel(self.tab_session, text="Session ID:")
         self.session_id_label.grid(row=0, column=0, padx=20, pady=(20, 10))
-        self.session_id_entry = ctk.CTkEntry(tab_session, textvariable=self.session_id)
-        self.session_id_entry.grid(row=0, column=1, padx=20, pady=(20, 10))
-
-        self.speakers_label = ctk.CTkLabel(tab_session, text="Speakers:")
-        self.speakers_label.grid(row=1, column=0, padx=20, pady=(20, 10))   
-        self.speakers_entry = ctk.CTkEntry(tab_session, textvariable=self.speakers)
-        self.speakers_entry.grid(row=1, column=1, padx=20, pady=(20, 10))
-
-        self.microphones_label = ctk.CTkLabel(tab_session, text="Microphones:")
+        self.speakers_label = ctk.CTkLabel(self.tab_session, text="Speakers:")
+        self.speakers_label.grid(row=1, column=0, padx=20, pady=(20, 10))           
+        self.microphones_label = ctk.CTkLabel(self.tab_session, text="Microphones:")
         self.microphones_label.grid(row=2, column=0, padx=20, pady=(20, 10))
-        self.microphones_entry = ctk.CTkEntry(tab_session, textvariable=self.microphones)
-        self.microphones_entry.grid(row=2, column=1, padx=20, pady=(20, 10))
-
-        self.input_channels_label = ctk.CTkLabel(tab_session, text="Input Channels:")
+        self.input_channels_label = ctk.CTkLabel(self.tab_session, text="Input Channels:")
         self.input_channels_label.grid(row=3, column=0, padx=20, pady=(20, 10))
-        self.input_channels_entry = ctk.CTkEntry(tab_session, textvariable=self.inchan)
-        self.input_channels_entry.grid(row=3, column=1, padx=20, pady=(20, 10))
-
-        self.output_channels_label = ctk.CTkLabel(tab_session, text="Output Channels:")
-        self.output_channels_label.grid(row=4, column=0, padx=20, pady=(20, 10))
-        self.output_channels_entry = ctk.CTkEntry(tab_session, textvariable=self.outchan)
-        self.output_channels_entry.grid(row=4, column=1, padx=20, pady=(20, 10))
-
-        self.loopback_label = ctk.CTkLabel(tab_session, text="Loopback:")
+        self.output_channels_label = ctk.CTkLabel(self.tab_session, text="Output Channels:")
+        self.loopback_label = ctk.CTkLabel(self.tab_session, text="Loopback:")
         self.loopback_label.grid(row=5, column=0, padx=20, pady=(20, 10))
-        self.loopback_entry = ctk.CTkEntry(tab_session, textvariable=self.loopback)
+
+        self.output_channels_label.grid(row=4, column=0, padx=20, pady=(20, 10))
+        self.sweep_file_button = ctk.CTkButton(self.tab_session, text="Sweep File",command=self.open_sweep_file)
+        self.sweep_file_button.grid(row=6, column=0, padx=20, pady=(20, 10)) 
+        self.sweep_file_entry = ctk.CTkEntry(self.tab_session, placeholder_text=self.sweep_file)
+        self.sweep_file_entry.grid(row=6, column=1, padx=20, pady=(20, 10))
+        self.sweep_generate_label = ctk.CTkButton(self.tab_session, text="Generate Sweep",command=self.generate_sweep)
+        self.sweep_generate_label.grid(row=7, column=0, padx=20, pady=(20, 10)) 
+        self.recording_path_button = ctk.CTkButton(self.tab_session, text="Recording Path",command=self.browse_recording_path) 
+        self.recording_path_button.grid(row=8, column=0, padx=20, pady=(20, 10))
+        self.recording_path_entry = ctk.CTkEntry(self.tab_session, placeholder_text=self.recording_path)    
+        self.recording_path_entry.grid(row=8, column=1, padx=20, pady=(20, 10))
+        # Plano del lugar?
+        self.map = ctk.CTkFrame(self.tab_session, width=500, corner_radius=0)
+        self.map.grid(row=0, column=2, rowspan=9, sticky="nsew")
+         #TAB2 - Recording
+        self.label_speaker = ctk.CTkLabel(self.tab_recording, text="SPEAKER")
+        self.label_speaker.grid(row=0, column=0, padx=10, pady=0, sticky="w")
+        self.label_microphone = ctk.CTkLabel(self.tab_recording, text="MICROPHONE")
+        self.label_microphone.grid(row=0, column=2, padx=10, pady=0, sticky="w")
+        self.label_direction = ctk.CTkLabel(self.tab_recording, text="DIRECTION")
+        self.label_direction.grid(row=0, column=4, padx=10, pady=0, sticky="w")
+        self.label_take = ctk.CTkLabel(self.tab_recording, text="TAKE")
+        self.label_take.grid(row=0, column=6, padx=10, pady=0, sticky="w")
+        self.start_recording_button = ctk.CTkButton(self.tab_recording, text="Start Recording", command=self.start_recording)
+        self.start_recording_button.grid(row=0, column=8, padx=10, pady=0, sticky="w")
+        self.label_comment = ctk.CTkLabel(self.tab_recording, text="comment")
+        self.label_comment.grid(row=1, column=0, padx=10, pady=0, sticky="w")
+
+
+    def create_settings_widgets(self):
+        self.label_select_input = ctk.CTkLabel(self.tab_settings, text="Audio Input")
+        self.label_select_input.grid(row=0, column=0, padx=10, pady=20, sticky="w")
+        self.label_select_output = ctk.CTkLabel(self.tab_settings, text="Audio Output")
+        self.label_select_output.grid(row=1, column=0, padx=10, pady=20, sticky="w")
+        self.label_sampling_rate = ctk.CTkLabel(self.tab_settings, text="Sampling Rate")
+        self.label_sampling_rate.grid(row=2, column=0, padx=10, pady=20, sticky="w")
+
+        self.select_input_box = ctk.CTkOptionMenu(master=self.tab_settings, values=self.inputs, variable=self.input_device)
+        self.select_input_box.grid(row=0, column=1, padx=10, pady=20, sticky="w")
+        self.select_output_box = ctk.CTkOptionMenu(master=self.tab_settings, values=self.outputs, variable=self.output_device)
+        self.select_output_box.grid(row=1, column=1, padx=10, pady=20, sticky="w")
+        self.sampling_rate_box = ctk.CTkOptionMenu(master=self.tab_settings, values=["44100", "48000","96000"], variable=self.sampling_rate)
+        self.sampling_rate_box.grid(row=2, column=1, padx=10, pady=20, sticky="w")
+
+        self.test_input_button = ctk.CTkButton(self.tab_settings, text="Test Input", command=self.test_input)
+        self.test_input_button.grid(row=0, column=2, padx=10, pady=20, sticky="w")
+        self.test_output_button = ctk.CTkButton(self.tab_settings, text="Test Output", command=self.test_output)
+        self.test_output_button.grid(row=1, column=2, padx=10, pady=20, sticky="w")
+        self.save_settings_button = ctk.CTkButton(self.tab_settings, text="Save Settings", command=self.save_settings)
+        self.save_settings_button.grid(row=3, column=0, columnspan=2, padx=0, pady=20, sticky="e")
+
+        self.test_input_bar = ctk.CTkProgressBar(self.tab_settings, width=200, orientation='horizontal',mode='determinate')
+        self.test_input_bar.grid(row=0, column=3, padx=10, pady=20, sticky="w")
+        self.test_input_bar.set(0)    
+
+# WIDGETS
+    def create_widgets(self):
+        # sidebar frame with widgets
+        self.sidebar_label_2 = ctk.CTkLabel(self.sidebar_frame, text=self.session_id.get(), text_color="#f5d2d2", font=self.fbig)
+        self.sidebar_label_2.grid(row=1, column=0, padx=20, pady=(20, 10))
+        #TAB1 - Session
+        self.session_id_entry = ctk.CTkEntry(self.tab_session, textvariable=self.session_id)
+        self.session_id_entry.grid(row=0, column=1, padx=20, pady=(20, 10))
+        self.speakers_entry = ctk.CTkEntry(self.tab_session, textvariable=self.speakers)
+        self.speakers_entry.grid(row=1, column=1, padx=20, pady=(20, 10))
+        self.microphones_entry = ctk.CTkEntry(self.tab_session, textvariable=self.microphones)
+        self.microphones_entry.grid(row=2, column=1, padx=20, pady=(20, 10))       
+        self.input_channels_entry = ctk.CTkEntry(self.tab_session, textvariable=self.inchan)
+        self.input_channels_entry.grid(row=3, column=1, padx=20, pady=(20, 10))        
+        self.output_channels_entry = ctk.CTkEntry(self.tab_session, textvariable=self.outchan)
+        self.output_channels_entry.grid(row=4, column=1, padx=20, pady=(20, 10))        
+        self.loopback_entry = ctk.CTkEntry(self.tab_session, textvariable=self.loopback)
         self.loopback_entry.grid(row=5, column=1, padx=20, pady=(20, 10))
 
-        self.sweep_file_button = ctk.CTkButton(tab_session, text="Sweep File",command=self.open_sweep_file)
-        self.sweep_file_button.grid(row=6, column=0, padx=20, pady=(20, 10)) 
-        self.sweep_file_entry = ctk.CTkEntry(tab_session, placeholder_text=self.sweep_file)
-        self.sweep_file_entry.grid(row=6, column=1, padx=20, pady=(20, 10))
-
-        self.sweep_generate_label = ctk.CTkButton(tab_session, text="Generate Sweep",command=self.generate_sweep)
-        self.sweep_generate_label.grid(row=7, column=0, padx=20, pady=(20, 10)) 
-
-        self.recording_path_button = ctk.CTkButton(tab_session, text="Recording Path",command=self.browse_recording_path) 
-        self.recording_path_button.grid(row=8, column=0, padx=20, pady=(20, 10))
-        self.recording_path_entry = ctk.CTkEntry(tab_session, placeholder_text=self.recording_path)    
-        self.recording_path_entry.grid(row=8, column=1, padx=20, pady=(20, 10))
-
-        # Plano del lugar?
-        self.map = ctk.CTkFrame(tab_session, width=500, corner_radius=0)
-        self.map.grid(row=0, column=2, rowspan=9, sticky="nsew")
-
         #TAB2 - Recording
-        tab_recording.grid_columnconfigure(0, weight=1)
-        self.label_speaker = ctk.CTkLabel(tab_recording, text="SPEAKER")
-        self.label_speaker.grid(row=0, column=0, padx=10, pady=0, sticky="w")
-        self.label_microphone = ctk.CTkLabel(tab_recording, text="MICROPHONE")
-        self.label_microphone.grid(row=0, column=2, padx=10, pady=0, sticky="w")
-        self.label_direction = ctk.CTkLabel(tab_recording, text="DIRECTION")
-        self.label_direction.grid(row=0, column=4, padx=10, pady=0, sticky="w")
-        self.label_take = ctk.CTkLabel(tab_recording, text="TAKE")
-        self.label_take.grid(row=0, column=6, padx=10, pady=0, sticky="w")
-
-        self.speaker_box = ctk.CTkComboBox(master=tab_recording, values=[" "], variable=self.current_speaker)
+        self.speaker_box = ctk.CTkComboBox(master=self.tab_recording, values=[" "], variable=self.current_speaker)
         self.speaker_box.grid(row=0, column=1, padx=10, pady=0, sticky="w")
-        self.microphone_box = ctk.CTkComboBox(master=tab_recording, values=[" "], variable=self.current_microphone)
+        self.microphone_box = ctk.CTkComboBox(master=self.tab_recording, values=[" "], variable=self.current_microphone)
         self.microphone_box.grid(row=0, column=3, padx=10, pady=0, sticky="w")
-        self.direction_box = ctk.CTkComboBox(master=tab_recording, width=30,values=["1", "2", "3", "4", "5", "6"], variable=self.current_direction)    
+        self.direction_box = ctk.CTkComboBox(master=self.tab_recording, width=30,values=["1", "2", "3", "4", "5", "6"], variable=self.current_direction)    
         self.direction_box.grid(row=0, column=5, padx=10, pady=0, sticky="w")
-        self.take_box = ctk.CTkComboBox(master=tab_recording, width=30,values=["1", "2", "3", "4", "5", "6"], variable=self.current_take)    
+        self.take_box = ctk.CTkComboBox(master=self.tab_recording, width=30,values=["1", "2", "3", "4", "5", "6"], variable=self.current_take)    
         self.take_box.grid(row=0, column=7, padx=10, pady=0, sticky="w")
 
-        self.start_recording_button = ctk.CTkButton(tab_recording, text="Start Recording", command=self.start_recording)
-        self.start_recording_button.grid(row=0, column=8, padx=10, pady=0, sticky="w")
-        
-        self.label_comment = ctk.CTkLabel(tab_recording, text="comment")
-        self.label_comment.grid(row=1, column=0, padx=10, pady=0, sticky="w")
-        self.comment_entry = ctk.CTkEntry(master=tab_recording, textvariable=self.comment)
-        self.comment_entry.grid(row=1, column=1, columnspan=8, padx=10, pady=10, sticky="nsew")
-        
+        self.comment_entry = ctk.CTkEntry(master=self.tab_recording, textvariable=self.comment)
+        self.comment_entry.grid(row=1, column=1, columnspan=8, padx=10, pady=10, sticky="nsew")        
         #plot ir
-        self.plot_ir_frame = ctk.CTkFrame(tab_recording, corner_radius=25)
+        self.plot_ir_frame = ctk.CTkFrame(self.tab_recording, corner_radius=25)
         self.plot_ir_frame.grid(row=2, column=0, columnspan=9, sticky="nsew")
         self.matplotlib_ir_frame = PlotFrame(self.plot_ir_frame, corner_radius=25)
         self.matplotlib_ir_frame.pack(fill=ctk.BOTH, expand=True)
         self.matplotlib_ir_axes = self.matplotlib_ir_frame.axes
         
         #TAB3 - Data Table
-        tab_data.grid_columnconfigure(0, weight=1)
-        self.data_table = CTkTable(master=tab_data, row=1, column=6, checkbox=True, values=[["file", "speaker", "mic", "dir", "take","nchan"]], 
+        self.data_table = CTkTable(master=self.tab_data, row=1, column=6, checkbox=True, values=[["file", "speaker", "mic", "dir", "take","nchan"]], 
                                    corner_radius=10, header_color=True,column1st_color=True)
         self.data_table.grid(row=1,column=0, padx=20, pady=20)
-        self.load_button = ctk.CTkButton(master=tab_data,text="Load",command=self.load_irs)
+        self.load_button = ctk.CTkButton(master=self.tab_data,text="Load",command=self.load_irs)
         self.load_button.grid(row=0, column=0, sticky="w", padx=20, pady=20)
 
-        #tab_ir - IR Stats
-        tab_stats.grid_columnconfigure(0, weight=1)
-        self.label_tmax = ctk.CTkLabel(tab_stats, text="Time Max")
+        #self.tab_ir - IR Stats
+        self.label_tmax = ctk.CTkLabel(self.tab_stats, text="Time Max")
         self.label_tmax.grid(row=0, column=1, padx=10, pady=0, sticky="e")
-        self.tmax_entry = ctk.CTkEntry(master=tab_stats, width=50,textvariable=self.tmax)
+        self.tmax_entry = ctk.CTkEntry(master=self.tab_stats, width=50,textvariable=self.tmax)
         self.tmax_entry.grid(row=0, column=2, padx=10, pady=0, sticky="e")
-        self.label_file_s = ctk.CTkLabel(tab_stats, text="File")
+        self.label_file_s = ctk.CTkLabel(self.tab_stats, text="File")
         self.label_file_s.grid(row=0, column=3, padx=10, pady=0, sticky="w")
-        self.select_file_box_s = ctk.CTkComboBox(master=tab_stats, values=[" "], width=180,variable=self.current_file,command=self.set_channel)
+        self.select_file_box_s = ctk.CTkComboBox(master=self.tab_stats, values=[" "], width=180,variable=self.current_file,command=self.set_channel)
         self.select_file_box_s.grid(row=0, column=4, padx=10, pady=0, sticky="w")
-        self.label_channel_s = ctk.CTkLabel(tab_stats, text="Channel")
+        self.label_channel_s = ctk.CTkLabel(self.tab_stats, text="Channel")
         self.label_channel_s.grid(row=0, column=5, padx=10, pady=0, sticky="w")
-        self.select_channel_box_s = ctk.CTkComboBox(master=tab_stats, values=['0'], width=30,variable=self.current_channel)
+        self.select_channel_box_s = ctk.CTkComboBox(master=self.tab_stats, values=['0'], width=30,variable=self.current_channel)
         self.select_channel_box_s.grid(row=0, column=6, padx=10, pady=0, sticky="w")
-        self.select_plot_stats_box = ctk.CTkComboBox(master=tab_stats, values=["IR Plot","IR Stats"], variable=self.current_plot_stats)
+        self.select_plot_stats_box = ctk.CTkComboBox(master=self.tab_stats, values=["IR Plot","IR Stats"], variable=self.current_plot_stats)
         self.select_plot_stats_box.grid(row=0, column=7, sticky="w", padx=10, pady=0)
-        self.plot_stats_button = ctk.CTkButton(tab_stats, text="Plot", command=self.plot_stats)
+        self.plot_stats_button = ctk.CTkButton(self.tab_stats, text="Plot", command=self.plot_stats)
         self.plot_stats_button.grid(row=0, column=8, padx=10, pady=0, sticky="e")
-        
-        self.plot_stats_frame = ctk.CTkFrame(tab_stats, corner_radius=25)
+        self.plot_stats_frame = ctk.CTkFrame(self.tab_stats, corner_radius=25)
         self.plot_stats_frame.grid(row=1, column=0, columnspan=9, sticky="nsew")
         self.matplotlib_stats_frame = PlotFrame(self.plot_stats_frame, corner_radius=25)
         self.matplotlib_stats_frame.pack(fill=ctk.BOTH, expand=True)
         self.matplotlib_stats_axes = self.matplotlib_stats_frame.axes
 
-        #tab_table - Parameters Table
-        tab_table.grid_columnconfigure(0, weight=1)
-        tab_table.grid_rowconfigure(2, weight=1)
+        #self.tab_table - Parameters Table
         self.parameter_table_keys = ['Band',self.rtmethod,'rvalue','EDT','C50','C80','TS','DRR','SNR']
-        self.parameter_table = CTkTable(master=tab_table, row=len(self.parameter_table_keys), column=len(self.parameter_table_headers), 
-                                        checkbox=False, values=[self.parameter_table_headers], corner_radius=10,header_color=True,\
-                                        column1st_color=True)
+        self.parameter_table = CTkTable(master=self.tab_table, row=len(self.parameter_table_keys), column=len(self.parameter_table_headers), 
+                                        checkbox=False, values=[self.parameter_table_headers], corner_radius=10,header_color=True,column1st_color=True)
         self.parameter_table.grid(row=1,column=0, columnspan=8, padx=20, pady=20)
         self.parameter_table.edit_column(column=0,values=self.parameter_table_keys)
-        self.comment_box = ctk.CTkTextbox(master=tab_table, height=10)
+        self.comment_box = ctk.CTkTextbox(master=self.tab_table, height=10)
         self.comment_box.grid(row=2, column=0, columnspan=8, padx=10, pady=10, sticky="nsew")
 
-        self.filterbank_button = ctk.CTkButton(master=tab_table,text="Filter Bank",command=self.generate_filterbank)
+        self.filterbank_button = ctk.CTkButton(master=self.tab_table,text="Filter Bank",command=self.generate_filterbank)
         self.filterbank_button.grid(row=0, column=0, sticky="w", padx=10, pady=20)
-        self.label_method = ctk.CTkLabel(tab_table, text="Method")
+        self.label_method = ctk.CTkLabel(self.tab_table, text="Method")
         self.label_method.grid(row=0, column=1, padx=10, pady=0, sticky="w")
-        self.select_method_box = ctk.CTkComboBox(master=tab_table, values=["RT20","RT15","RT30"], width=100,variable=self.rtmethod,command=self.set_method)
+        self.select_method_box = ctk.CTkComboBox(master=self.tab_table, values=["RT20","RT15","RT30"], width=100,variable=self.rtmethod,command=self.set_method)
         self.select_method_box.grid(row=0, column=2, padx=10, pady=0, sticky="w")
-        self.label_file = ctk.CTkLabel(tab_table, text="File")
+        self.label_file = ctk.CTkLabel(self.tab_table, text="File")
         self.label_file.grid(row=0, column=3, padx=10, pady=0, sticky="w")
-        self.select_file_box = ctk.CTkComboBox(master=tab_table, values=[" "], width=180, variable=self.current_file,command=self.set_channel)
+        self.select_file_box = ctk.CTkComboBox(master=self.tab_table, values=[" "], width=180, variable=self.current_file,command=self.set_channel)
         self.select_file_box.grid(row=0, column=4, padx=10, pady=0, sticky="w")
-        self.label_channel = ctk.CTkLabel(tab_table, text="Channel")
+        self.label_channel = ctk.CTkLabel(self.tab_table, text="Channel")
         self.label_channel.grid(row=0, column=5, padx=10, pady=0, sticky="w")
-        self.select_channel_box = ctk.CTkComboBox(master=tab_table, values=['0'], width=30,variable=self.current_channel)
+        self.select_channel_box = ctk.CTkComboBox(master=self.tab_table, values=['0'], width=30,variable=self.current_channel)
         self.select_channel_box.grid(row=0, column=6, padx=10, pady=0, sticky="w")
-        self.table_button = ctk.CTkButton(master=tab_table,text="Display",command=self.display_params)
+        self.table_button = ctk.CTkButton(master=self.tab_table,text="Display",command=self.display_params)
         self.table_button.grid(row=0, column=7, sticky="w", padx=10, pady=20)
 
-        #tab_plot - Parameters Plots
-        tab_plot.grid_columnconfigure(0, weight=1)
-        
+        #self.tab_plot - Parameters Plots
         self.parameter_plot_keys = [self.rtmethod,'EDT','C50','C80','TS','DRR','SNR']
-        self.label_key = ctk.CTkLabel(tab_plot, text="Parameter")
+        self.label_key = ctk.CTkLabel(self.tab_plot, text="Parameter")
         self.label_key.grid(row=0, column=1, padx=20, pady=0, sticky="w")
-        self.select_key_box = ctk.CTkComboBox(master=tab_plot, values=self.parameter_plot_keys, variable=self.current_key)
+        self.select_key_box = ctk.CTkComboBox(master=self.tab_plot, values=self.parameter_plot_keys, variable=self.current_key)
         self.select_key_box.grid(row=0, column=2, padx=20, pady=0, sticky="w")
 
-        self.label_file_p = ctk.CTkLabel(tab_plot, text="File")
+        self.label_file_p = ctk.CTkLabel(self.tab_plot, text="File")
         self.label_file_p.grid(row=0, column=3, padx=10, pady=0, sticky="w")
-        self.select_file_box_p = ctk.CTkComboBox(master=tab_plot, values=[" "], width=180, variable=self.plot_files,command=self.set_plot_channels)
+        self.select_file_box_p = ctk.CTkComboBox(master=self.tab_plot, values=[" "], width=180, variable=self.plot_files,command=self.set_plot_channels)
         self.select_file_box_p.grid(row=0, column=4, padx=10, pady=0, sticky="w")
-        self.label_channel_p = ctk.CTkLabel(tab_plot, text="Channel")
+        self.label_channel_p = ctk.CTkLabel(self.tab_plot, text="Channel")
         self.label_channel_p.grid(row=0, column=5, padx=10, pady=0, sticky="w")
-        self.select_channel_box_p = ctk.CTkComboBox(master=tab_plot, values=["0"], width=100,variable=self.plot_channels)
+        self.select_channel_box_p = ctk.CTkComboBox(master=self.tab_plot, values=["0"], width=100,variable=self.plot_channels)
         self.select_channel_box_p.grid(row=0, column=6, padx=10, pady=0, sticky="w")
-
-        self.analyze_button = ctk.CTkButton(tab_plot, text="Analyze", command=self.analyze)
+        self.analyze_button = ctk.CTkButton(self.tab_plot, text="Analyze", command=self.analyze)
         self.analyze_button.grid(row=0, column=7, padx=20, pady=20, sticky="e")
 
-
-        self.plot_analysis_frame = ctk.CTkFrame(tab_plot, corner_radius=25)
+        self.plot_analysis_frame = ctk.CTkFrame(self.tab_plot, corner_radius=25)
         self.plot_analysis_frame.grid(row=2, column=0, columnspan=8, sticky="nsew")
         self.matplotlib_analysis_frame = PlotFrame(self.plot_analysis_frame)
         self.matplotlib_analysis_frame.pack(fill=ctk.BOTH, expand=True)
         self.matplotlib_analysis_axes = self.matplotlib_analysis_frame.axes
 
-        #tab_decays - Decays Plots
-        tab_decays.grid_columnconfigure(0, weight=1)
-        self.label_file_d = ctk.CTkLabel(tab_decays, text="File")
+        #self.tab_decays - Decays Plots
+        self.label_file_d = ctk.CTkLabel(self.tab_decays, text="File")
         self.label_file_d.grid(row=0, column=3, padx=10, pady=0, sticky="w")
-        self.select_file_box_d = ctk.CTkComboBox(master=tab_decays, values=[" "], width=180, variable=self.current_file,command=self.set_channel)
+        self.select_file_box_d = ctk.CTkComboBox(master=self.tab_decays, values=[" "], width=180, variable=self.current_file,command=self.set_channel)
         self.select_file_box_d.grid(row=0, column=4, padx=10, pady=0, sticky="w")
-        self.label_channel_d = ctk.CTkLabel(tab_decays, text="Channel")
+        self.label_channel_d = ctk.CTkLabel(self.tab_decays, text="Channel")
         self.label_channel_d.grid(row=0, column=5, padx=10, pady=0, sticky="w")
-        self.select_channel_box_d = ctk.CTkComboBox(master=tab_decays, values=['0'], width=30,variable=self.current_channel)
+        self.select_channel_box_d = ctk.CTkComboBox(master=self.tab_decays, values=['0'], width=30,variable=self.current_channel)
         self.select_channel_box_d.grid(row=0, column=6, padx=10, pady=0, sticky="w")
-        self.plot_decay_button = ctk.CTkButton(tab_decays, text="Plot Decays", command=self.plot_decays)
+        self.plot_decay_button = ctk.CTkButton(self.tab_decays, text="Plot Decays", command=self.plot_decays)
         self.plot_decay_button.grid(row=0, column=7, padx=20, pady=20, sticky="e")
 
-        self.plot_decay_frame = ctk.CTkFrame(tab_decays, width=900, height=500, corner_radius=25)
+        self.plot_decay_frame = ctk.CTkFrame(self.tab_decays, width=900, height=500, corner_radius=25)
         self.plot_decay_frame.grid(row=1, column=0, columnspan=8, sticky="nsew")
         self.image_decay_frame = ctk.CTkLabel(self.plot_decay_frame, image=None, text='')
         self.image_decay_frame.pack(fill=ctk.BOTH, expand=True)
-
-        #tab_settings - Settings
-        self.label_select_input = ctk.CTkLabel(tab_settings, text="Audio Input")
-        self.label_select_input.grid(row=0, column=0, padx=10, pady=20, sticky="w")
-        self.label_select_output = ctk.CTkLabel(tab_settings, text="Audio Output")
-        self.label_select_output.grid(row=1, column=0, padx=10, pady=20, sticky="w")
-        self.label_sampling_rate = ctk.CTkLabel(tab_settings, text="Sampling Rate")
-        self.label_sampling_rate.grid(row=2, column=0, padx=10, pady=20, sticky="w")
-
-        self.select_input_box = ctk.CTkOptionMenu(master=tab_settings, values=self.inputs, variable=self.input_device)
-        self.select_input_box.grid(row=0, column=1, padx=10, pady=20, sticky="w")
-        self.select_output_box = ctk.CTkOptionMenu(master=tab_settings, values=self.outputs, variable=self.output_device)
-        self.select_output_box.grid(row=1, column=1, padx=10, pady=20, sticky="w")
-        self.sampling_rate_box = ctk.CTkOptionMenu(master=tab_settings, values=["44100", "48000","96000"], variable=self.sampling_rate)
-        self.sampling_rate_box.grid(row=2, column=1, padx=10, pady=20, sticky="w")
-
-        self.test_input_button = ctk.CTkButton(tab_settings, text="Test Input", command=self.test_input)
-        self.test_input_button.grid(row=0, column=2, padx=10, pady=20, sticky="w")
-        self.test_output_button = ctk.CTkButton(tab_settings, text="Test Output", command=self.test_output)
-        self.test_output_button.grid(row=1, column=2, padx=10, pady=20, sticky="w")
-        self.save_settings_button = ctk.CTkButton(tab_settings, text="Save Settings", command=self.save_settings)
-        self.save_settings_button.grid(row=3, column=0, columnspan=2, padx=0, pady=20, sticky="e")
-
-        self.test_input_bar = ctk.CTkProgressBar(tab_settings, width=200, orientation='horizontal',mode='determinate')
-        self.test_input_bar.grid(row=0, column=3, padx=10, pady=20, sticky="w")
-        self.test_input_bar.set(0)
-                              
-
+       
 # GEOMETRY
-
     def change_appearance_mode_event(self, new_appearance_mode: str):
         ctk.set_appearance_mode(new_appearance_mode)
 
@@ -576,7 +563,6 @@ class Acousticfield_ctk():
         self.output_device = ctk.StringVar(value=get_device_name(sd.default.device[1]))
 
     def clean_recording_session(self):
-        self.void_recording_session()
         self.session_id_entry.delete(0, ctk.END)
         self.speakers_entry.delete(0, ctk.END)
         self.microphones_entry.delete(0, ctk.END)   
@@ -584,10 +570,12 @@ class Acousticfield_ctk():
         # self.microphone_pos_entry.delete(0, ctk.END)
         self.input_channels_entry.delete(0, ctk.END)
         self.output_channels_entry.delete(0, ctk.END)
-        self.loopback_entry.delete(0, ctk.END)       
+        self.loopback_entry.delete(0, ctk.END)
+        self.sidebar_label_2.configure(text="")
         self.remove_files()    
         self.rewrite_textbox(self.status,f"Session cleaned")
-        self.tick()
+        self.void_recording_session()
+        self.create_widgets()
 
     def create_recording_session(self):
         # check if sesion already exists
@@ -672,7 +660,6 @@ class Acousticfield_ctk():
     def start_recording(self):
         print("start recording")
         self.rewrite_textbox(self.status,f"Recording started ....")
-        self.tick()
         self.current_speaker = self.speaker_box.get()
         self.current_microphone = self.microphone_box.get()
         self.current_direction = self.direction_box.get()
@@ -699,6 +686,8 @@ class Acousticfield_ctk():
 
     def load_files(self):
         print("load files")
+        print(self.recording_session)
+        print(self.recording_session.recordings)
         for n,rec in enumerate(self.recording_session.recordings):
             fname = rec['filename']
             self.data_table.add_row([[fname],rec['spk'],rec['mic'],rec['dir'],rec['take'],rec['nchan']])
