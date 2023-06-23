@@ -139,3 +139,4 @@ dist/acousticfield_gui.exe
 temp.png
 src/notebooks/*.npy
 src/notebooks/*.npz
+src/acousticfield/examples/acousticfield_gui.spec
