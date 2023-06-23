@@ -58,7 +58,7 @@ class RecordingSession:
         rec_temp = play_rec(self.sweep_file,os.path.join(self.recording_path,'rec_'+prefix),chanin=self.input_channels,chanout=self.output_channels)
         rec_max = np.max(np.delete(rec_temp,self.loopback-1,axis=1)) if self.loopback is not None else np.max(rec_temp)
         print(f"Maximum sample value = {rec_max}")
-        print("Extracting ---> "+prefix)
+        print(f"Extracting ---> {prefix} using sr = {self.sampling_rate}")
         ir_temp = ir_extract(rec_temp,self.sweep_file,os.path.join(self.recording_path,'ir_'+prefix),loopback=self.loopback,fs=self.sampling_rate)
         print(f"IR shape = {ir_temp.shape}")
         rec_dic = dict(

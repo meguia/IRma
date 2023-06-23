@@ -11,14 +11,14 @@ def pars_print(pars, keys=None, cols=None, chan=1):
     y usa como headers de las columnas cols (normalmente se usa 'fc' para esto)
     '''
     if keys is None:
-        rtype = list(filter(lambda x: 'rt' in x, pars.keys()))[0]
+        rtype = list(filter(lambda x: 'RT' in x, pars.keys()))[0]
         keys = ['SNR',rtype,'rvalue','EDT','C50','C80','TS','DRR']
     if cols is None:
         cols = pars['fc']    
     tabla = np.vstack(list(pars[key][:,chan-1] for key in keys))
     display_table(tabla,cols,keys)    
 
-def echo_display(data, nechoes, pw=0.7, scale=0.1, wplot=True, fs=48000):
+def echo_display(data, nechoes, pw=0.7, scale=0.1, wplot=True, table=True, fs=48000, axs=None,redraw=True):
     '''
     Imprime una tabla en formati HTML con los echoes y el directo ordenados
     y si wplot es True grafica espigas en los echoes junto a la RI
@@ -26,6 +26,7 @@ def echo_display(data, nechoes, pw=0.7, scale=0.1, wplot=True, fs=48000):
     keys = [str(n) for n in np.arange(nechoes)]
     cols = ['time (ms)', 'level (dB)', 'distance (m)', 'DIRECT']    
     echoes_multi = find_echoes(data,nechoes,pw,fs=fs)
+    print(echoes_multi)
     if data.ndim == 1:
         data = data[:,np.newaxis] # el array debe ser 2D
     nchan = echoes_multi.shape[2]
@@ -38,13 +39,17 @@ def echo_display(data, nechoes, pw=0.7, scale=0.1, wplot=True, fs=48000):
         direct[0] = 1
         echoes = np.hstack([echoes, dist, direct])
         echoes = echoes[np.argsort(-echoes[:, 1])]
-        display_table(echoes,cols,keys) 
+        if table:
+            display_table(echoes,cols,keys) 
     if (wplot):
         t = 1000*np.arange(len(data))/fs
-        _, axs = plt.subplots(nchan,1,figsize=(18,3*nchan))
+        if axs is None:    
+            _, axs = plt.subplots(nchan,1,figsize=(18,3*nchan))
         if nchan ==1:
             axs = [axs]
         for n in range(nchan):
+            if redraw:
+                axs[n].clear()
             echoes = echoes_multi[:,:,n]
             axs[n].plot(t,data[:,n],label='RI')
             for m in range(nechoes):
@@ -139,7 +144,6 @@ def irstat_plot(data, window=0.01, overlap=0.002, fs=48000, logscale=True, tmax=
             axs[n].set_title('IMPULSE RESPONSE (Mixing Time)')
     axs[n].set_xlabel('Time (s)')
     return axs
-
 
 
 def acorr_plot(data, trange=0.2, fs=48000):

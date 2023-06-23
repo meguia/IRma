@@ -3,7 +3,7 @@ import sounddevice as sd
 from .generate import sweep
 from .process import ir_list_to_multichannel,make_filterbank,load_filterbank
 from .room import paracoustic
-from .display import ir_plot, pars_compared_axes,irstat_plot,parsdecay_plot
+from .display import ir_plot, pars_compared_axes,irstat_plot,parsdecay_plot,echo_display
 from .session import RecordingSession
 from .utils.ctkutils import *
 from .utils.audioutils import *
@@ -336,7 +336,7 @@ class Acousticfield_ctk():
         self.label_channel_s.grid(row=0, column=5, padx=10, pady=0, sticky="w")
         self.select_channel_box_s = ctk.CTkComboBox(master=self.tab_stats, values=['0'], width=30,variable=self.current_channel)
         self.select_channel_box_s.grid(row=0, column=6, padx=10, pady=0, sticky="w")
-        self.select_plot_stats_box = ctk.CTkComboBox(master=self.tab_stats, values=["IR Plot","IR Stats"], variable=self.current_plot_stats)
+        self.select_plot_stats_box = ctk.CTkComboBox(master=self.tab_stats, values=["IR Plot","IR Echo","IR Stats"], variable=self.current_plot_stats)
         self.select_plot_stats_box.grid(row=0, column=7, sticky="w", padx=10, pady=0)
         self.plot_stats_button = ctk.CTkButton(self.tab_stats, text="Plot", command=self.plot_stats)
         self.plot_stats_button.grid(row=0, column=8, padx=10, pady=0, sticky="e")
@@ -559,8 +559,8 @@ class Acousticfield_ctk():
         self.recording_path = ""
         self.sweep_file = ""
         # load default settings
-        self.input_device = ctk.StringVar(value=get_device_name(sd.default.device[0]))
-        self.output_device = ctk.StringVar(value=get_device_name(sd.default.device[1]))
+        self.input_device = ctk.StringVar(value=get_device_number_name(sd.default.device[0]))
+        self.output_device = ctk.StringVar(value=get_device_number_name(sd.default.device[1]))
 
     def clean_recording_session(self):
         self.session_id_entry.delete(0, ctk.END)
@@ -828,6 +828,12 @@ class Acousticfield_ctk():
                         tmax=float(self.tmax.get()),axs=self.matplotlib_stats_axes)
             self.matplotlib_stats_frame.canvas.draw()
             self.matplotlib_stats_frame.canvas.flush_events()
+        elif (self.current_plot_stats == "IR Echo"):    
+            #plot echogram
+            echo_display(ir[:,self.current_channel], 7, pw=0.7, scale=0.1, wplot=True, table=False, fs=fs, \
+                         axs=self.matplotlib_stats_axes)
+            self.matplotlib_stats_frame.canvas.draw()
+            self.matplotlib_stats_frame.canvas.flush_events()    
         else:
             raise ValueError("Plot type not recognized")
         return  

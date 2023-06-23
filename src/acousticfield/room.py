@@ -46,19 +46,19 @@ def revtime(ir_input, method='RT20', fs=48000, tmax=3.0):
         tv =  np.arange(nsamples)/fs # array de tiempo
         SNR[n] = -xv[-1] # full range del decaimiento SNR
         schr[n][:nmax] = xv
-        if method.lower() == 'RT30' and SNR[n]>35:
+        if method == 'RT30' and SNR[n]>35:
             #  Calcula RT usando la definicion del RT30
             pt1 = np.argmax(xv<-5)
             pt2 = np.argmax(xv<-35)
-        elif method.lower() == 'RT20' and SNR[n]>25:
+        elif method == 'RT20' and SNR[n]>25:
             # Idem la definicion del RT20
             pt1 = np.argmax(xv<-5)
             pt2 = np.argmax(xv<-25)
-        elif method.lower() == 'RT15' and SNR[n]>20:
+        elif method == 'RT15' and SNR[n]>20:
             # Idem la definicion del RT20
             pt1 = np.argmax(xv<-5)
             pt2 = np.argmax(xv<-20)
-        elif method.lower() == 'EDT' and SNR[n]>10.5:
+        elif method == 'EDT' and SNR[n]>10.5:
             # Calculo del decaimiento temprano EDT
             pt1 = np.argmax(xv<-0.5)
             pt2 = np.argmax(xv<-10.5)
