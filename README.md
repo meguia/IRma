@@ -3,12 +3,12 @@ Tools for soundscape / acoustic field / recording, processing and analysis
 
 ## Instalation with Anaconda (jun 2023)
 base:
-- python >= 3.9.13
-- numpy >= 1.21.5
-- scipy >= 1.9.1
-- matplotlib >= 3.5.2
-- ipython >= 7.31.1
+- numpy >= 1.24
+- scipy >= 1.10
+- matplotlib >= 3.7
 - pyyaml >= 6.0
+- ipython >= 8.12
+- python-sounddevice >= 0.4.6
 
 ## python sounddevice
 For linux, mac, or windows without ASIO or OSX/Linux
