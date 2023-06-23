@@ -38,8 +38,8 @@ def ir_extract(rec,fileinv,fileout='ir_out',loopback=None,dur=None,fs=48000):
     # ir dimensions: Nrep, nsamples, nchan
     Nrep,N,_ = ir_stack.shape
     if loopback is not None:
-        # usar el loopback para alinear todos los otros canales
-        n0 = np.argmax(ir_stack[:,:,loopback-1],axis=1)
+        # usar el loopback para alinear todos los otros canales loopback es indice del canal
+        n0 = np.argmax(ir_stack[:,:,loopback],axis=1)
     else:
         n0 = np.zeros((Nrep,),dtype=int)
     if dur is None:
@@ -53,8 +53,8 @@ def ir_extract(rec,fileinv,fileout='ir_out',loopback=None,dur=None,fs=48000):
     ir = np.mean(ir_align,axis=0)
     ir_std = np.std(ir_align,axis=0)
     if loopback is not None:
-        ir = np.delete(ir ,loopback-1,1)
-        ir_std = np.delete(ir_std ,loopback-1,1)  
+        ir = np.delete(ir ,loopback,1)
+        ir_std = np.delete(ir_std ,loopback,1)  
     wavfile.write(fileout + '.wav',fs,ir)
     if Nrep>1:
         np.savez(fileout,ir=ir,ir_std=ir_std,ir_stack=ir_stack,fs=fs,loopback=loopback)

@@ -51,15 +51,20 @@ class RecordingSession:
         return prefix
 
     def record_ir(self,speaker,microphone,direction=None,take=1,comment='',overwrite=False):
-        nchannels = len(self.input_channels)-1 if self.loopback is not None else len(self.input_channels)
+        if self.loopback:
+            nchannels = len(self.input_channels)-1 
+            chan_loop = self.input_channels.index(self.loopback)
+        else:    
+            nchannels =  len(self.input_channels)
+            chan_loop = None
         valid = True
         prefix = self.generate_audio_file_prefix(speaker, microphone, direction, nchannels, self.loopback, self.rtype, int(take),overwrite)
         print("Recording ... "+prefix)
         rec_temp = play_rec(self.sweep_file,os.path.join(self.recording_path,'rec_'+prefix),chanin=self.input_channels,chanout=self.output_channels)
-        rec_max = np.max(np.delete(rec_temp,self.loopback-1,axis=1)) if self.loopback is not None else np.max(rec_temp)
+        rec_max = np.max(np.delete(rec_temp,chan_loop,axis=1)) if self.loopback is not None else np.max(rec_temp)
         print(f"Maximum sample value = {rec_max}")
         print(f"Extracting ---> {prefix} using sr = {self.sampling_rate}")
-        ir_temp = ir_extract(rec_temp,self.sweep_file,os.path.join(self.recording_path,'ir_'+prefix),loopback=self.loopback,fs=self.sampling_rate)
+        ir_temp = ir_extract(rec_temp,self.sweep_file,os.path.join(self.recording_path,'ir_'+prefix),loopback=chan_loop,fs=self.sampling_rate)
         print(f"IR shape = {ir_temp.shape}")
         rec_dic = dict(
             spk=speaker,

@@ -137,3 +137,5 @@ ir_*.*
 .DS_Store
 dist/acousticfield_gui.exe
 temp.png
+src/notebooks/*.npy
+src/notebooks/*.npz
