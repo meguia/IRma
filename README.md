@@ -1,4 +1,4 @@
-# IRMA (Impulse Response Measurement and Analysis)
+# IR-ma (Impulse Response Measurement and Analysis)
 a.k.a. acousticfield
 Tools for acoustic field measurement and analysis
 based on the the Impulse Response
