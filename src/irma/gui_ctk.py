@@ -140,7 +140,7 @@ class Acousticfield_ctk():
         self.root.title("ACOUSTIC FIELD")
         self.root.geometry(f"{1200}x{700}")
         self.root.minsize(600, 400)
-        #self.root.iconbitmap("src/acousticfield/icon.ico")
+        #self.root.iconbitmap("src/irma/icon.ico")
         self.root.protocol("WM_DELETE_WINDOW", self.root.quit)
         # initialization fonts
         self.fbig = ctk.CTkFont(family="Roboto", size=32)
@@ -190,7 +190,7 @@ class Acousticfield_ctk():
         # create status an message bar
         self.status = ctk.CTkTextbox(self.root,height=40, font=self.fnorm)
         self.status.grid(row=1, column=1, padx=(20, 10), pady=(10, 10), sticky="nsew")
-        self.status.insert("0.0", "Welcome to Acoustic Field! Please create a new session or load an existing one")
+        self.status.insert("0.0", "Welcome to IRMA! Please create a new session or load an existing one")
         # MAIN TABS
         self.tabview = ctk.CTkTabview(self.root, width=900)
         self.tabview.grid(row=0, column=1, padx=(20, 10), pady=(0, 0), sticky="nsew")

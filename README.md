@@ -1,5 +1,7 @@
-# acousticfield
-Tools for soundscape / acoustic field / recording, processing and analysis
+# IRMA (Impulse Response Measurement and Analysis)
+a.k.a. acousticfield
+Tools for acoustic field measurement and analysis
+based on the the Impulse Response
 
 ## Instalation with Anaconda (jun 2023)
 base:
@@ -30,17 +32,12 @@ https://www.lfd.uci.edu/~gohlke/pythonlibs/#sounddevice
 for example:
 `pip install sounddevice‑0.4.4‑pp38‑pypy38_pp73‑win_amd64.whl`
 
-## acousticfield
-
-Download the latest dist or install via pip with
-
-`pip install -i https://test.pypi.org/simple/ acousticfield --no-deps`
 
 ## Usage
 
 Two jupyter notebooks (still in spanish) provide the basics for interactive use
 
-`notebooks/test_acousticfield.ipynb`
+`notebooks/test_irma.ipynb`
 
 and for a session-based operation:
 
@@ -57,4 +54,4 @@ If you want to give a try you will need:
 
 And then you can run the example with
 
-`python examples/acousticfield_gui.py`
+`python examples/irma_gui.py`

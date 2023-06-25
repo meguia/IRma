@@ -1,5 +1,5 @@
-from acousticfield.gui_ctk import *
-from acousticfield.process import make_filterbank
+from irma.gui_ctk import *
+from irma.process import make_filterbank
 
 def main():
     #inicia audio

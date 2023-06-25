@@ -135,8 +135,8 @@ ir_*.*
 *.yaml
 *.code-workspace
 .DS_Store
-dist/acousticfield_gui.exe
+dist/irma_gui.exe
 temp.png
 src/notebooks/*.npy
 src/notebooks/*.npz
-src/acousticfield/examples/acousticfield_gui.spec
+src/irma/examples/irma_gui.spec
