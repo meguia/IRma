@@ -18,7 +18,7 @@ def pars_print(pars, keys=None, cols=None, chan=1):
     tabla = np.vstack(list(pars[key][:,chan-1] for key in keys))
     display_table(tabla,cols,keys)    
 
-def echo_display(data, nechoes, pw=0.7, scale=0.1, wplot=True, table=True, fs=48000, axs=None,redraw=True):
+def echo_display(data, nechoes, pw=0.7, scale=0.1, wplot=True, table=True, fs=48000, labels=None, axs=None,redraw=True):
     '''
     Imprime una tabla en formati HTML con los echoes y el directo ordenados
     y si wplot es True grafica espigas en los echoes junto a la RI
@@ -30,6 +30,8 @@ def echo_display(data, nechoes, pw=0.7, scale=0.1, wplot=True, table=True, fs=48
     if data.ndim == 1:
         data = data[:,np.newaxis] # el array debe ser 2D
     nchan = echoes_multi.shape[2]
+    if labels is None:
+        labels = ['Ch ' + str(n) for n in range(nchan)]
     for n in range(nchan):
         echoes = echoes_multi[:,:,n]
         echoes[:,0] *= 1000
@@ -51,7 +53,7 @@ def echo_display(data, nechoes, pw=0.7, scale=0.1, wplot=True, table=True, fs=48
             if redraw:
                 axs[n].clear()
             echoes = echoes_multi[:,:,n]
-            axs[n].plot(t,data[:,n],label='RI')
+            axs[n].plot(t,data[:,n],label=labels[n])
             for m in range(nechoes):
                 amp = scale*(echoes[m,1]+20)*np.max(data)
                 axs[n].plot([echoes[m,0],echoes[m,0]],[0,amp],label=str(m))
@@ -165,35 +167,40 @@ def acorr_plot(data, trange=0.2, fs=48000):
     axs[n].set_xlabel('Time (ms)')
     return axs, fig
 
-def spectrum_plot(data, logscale=False, fmax=12000, fs=48000, lrange=60, overlay=False):
+def spectrum_plot(data, logscale=False, fmax=12000, fs=48000, lrange=60, figsize=None, overlay=True, axs=None, labels=None):
     if data.ndim == 1:
         data = data[:,np.newaxis] # el array debe ser 2D
     _, nchan = data.shape
     sp = spectrum(data, fs=fs)
-    if overlay:
-        fig, axs = plt.subplots(1,1,figsize=(18,4))
-    else:    
-        fig, axs = plt.subplots(nchan,1,figsize=(18,3*nchan))
+    if figsize is None:
+        figsize = (18,3*nchan)
+    if axs is None:    
+        _, axs = plt.subplots(nchan,1,figsize=figsize)  
     nmax = np.argmax(sp['f']>fmax)
     smax = np.max(sp['s'][:,:nmax])
     smin = smax-lrange
+    if nchan==1:
+        axs = [axs]
+    if labels is None:
+        labels = ['Ch ' + str(n) for n in range(nchan)]
     for n in range(nchan):
-        if overlay or nchan==1:
-            ax = axs
-        else:    
-            ax = axs[n]
+        if not overlay:
+            axs[n].clear()
         if logscale:
-            ax.semilogx(sp['f'],sp['s'][n],label=str(n))
-            ax.set_xlim([10,fmax])
+            axs[n].semilogx(sp['f'],sp['s'][n],label=labels[n])
+            axs[n].set_xlim([10,fmax])
         else:
-            ax.plot(sp['f'],sp['s'][n],label=str(n))
-            ax.set_xlim([0,fmax])
-        ax.set_ylim([smin,smax])    
+            axs[n].plot(sp['f'],sp['s'][n],label=labels[n])
+            axs[n].set_xlim([0,fmax])
+        axs[n].set_ylim([smin,smax])    
+        axs[n].grid()
         if n==0:
-            ax.set_title('POWER SPECTRAL DENSITY')
-    ax.set_xlabel('Frequency (Hz)')
-    ax.legend()
-    return axs, fig
+            axs[n].set_title('TRANSFER FUNCTION')
+    axs[n].set_xlabel('Frequency (Hz)')
+    axs[n].legend()
+    return axs
+
+
 
 def spectrogram_plot(data,window,overlap,fs,chan=0,fmax=22000,tmax=2.0,normalized=False,logf=False,lrange=60):
     kwargs = {'windowSize': window,'overlap': overlap,'fs': fs, 'windowType': 'hanning',
@@ -338,7 +345,7 @@ def parsdecay_plot(pars, chan=1, fs=48000):
     return axs, fig            
 
     
-def plot_transfer(data,f=None,logscale=False, fmax=6000, fmin=60,fs=48000, lrange=60, overlay=True):
+def transfer_plot(data,f=None,logscale=False, fmax=6000, fmin=60,fs=48000, lrange=60, overlay=True):
     if type(data) == dict:
         f = data['f']
         H = data['H']
@@ -376,6 +383,7 @@ def plot_transfer(data,f=None,logscale=False, fmax=6000, fmin=60,fs=48000, lrang
             ax1.set_title('Transfer Power')
     ax2.set_xlabel('Frequency (Hz)')
     return axs, fig
+
 
 
     # grafica los modos recibe la salidad de find_modes

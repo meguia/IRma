@@ -3,7 +3,7 @@ import sounddevice as sd
 from .generate import sweep
 from .process import ir_list_to_multichannel,make_filterbank,load_filterbank
 from .room import paracoustic
-from .display import ir_plot, pars_compared_axes,irstat_plot,parsdecay_plot,echo_display
+from .display import ir_plot, pars_compared_axes,irstat_plot,parsdecay_plot,echo_display, spectrum_plot
 from .session import RecordingSession
 from .utils.ctkutils import *
 from .utils.audioutils import *
@@ -137,7 +137,7 @@ class Acousticfield_ctk():
         self.root = ctk.CTk()
         self.save_and_close = False
         # configure window
-        self.root.title("ACOUSTIC FIELD")
+        self.root.title("IRMA Impulse Response Measurement and Analysis")
         self.root.geometry(f"{1200}x{700}")
         self.root.minsize(600, 400)
         #self.root.iconbitmap("src/irma/icon.ico")
@@ -198,14 +198,17 @@ class Acousticfield_ctk():
         self.tab_recording = self.tabview.add(" RECORDING ")
         self.tab_data = self.tabview.add(" DATA ")
         self.tab_stats = self.tabview.add(" IR ")
+        self.tab_transfer = self.tabview.add(" TRANSFER ")
         self.tab_table = self.tabview.add(" TABLE ")
         self.tab_plot = self.tabview.add(" PLOT ")
         self.tab_decays = self.tabview.add(" DECAYS ")
         self.tab_settings = self.tabview.add(" SETTINGS")
+
         self.tab_session.grid_columnconfigure(2, weight=1)
         self.tab_recording.grid_columnconfigure(0, weight=1)
         self.tab_data.grid_columnconfigure(0, weight=1)
         self.tab_stats.grid_columnconfigure(0, weight=1)
+        self.tab_transfer.grid_columnconfigure(0, weight=1)
         self.tab_table.grid_columnconfigure(0, weight=1)
         self.tab_table.grid_rowconfigure(2, weight=1)
         self.tab_plot.grid_columnconfigure(0, weight=1)
@@ -323,21 +326,23 @@ class Acousticfield_ctk():
         self.load_button = ctk.CTkButton(master=self.tab_data,text="Load",command=self.load_irs)
         self.load_button.grid(row=0, column=0, sticky="w", padx=20, pady=20)
 
-        #self.tab_ir - IR Stats
+        #self.tab_stats - IR Stats
         self.label_tmax = ctk.CTkLabel(self.tab_stats, text="Time Max")
-        self.label_tmax.grid(row=0, column=1, padx=10, pady=0, sticky="e")
+        self.label_tmax.grid(row=0, column=0, padx=10, pady=0, sticky="e")
         self.tmax_entry = ctk.CTkEntry(master=self.tab_stats, width=50,textvariable=self.tmax)
-        self.tmax_entry.grid(row=0, column=2, padx=10, pady=0, sticky="e")
+        self.tmax_entry.grid(row=0, column=1, padx=10, pady=0, sticky="e")
         self.label_file_s = ctk.CTkLabel(self.tab_stats, text="File")
-        self.label_file_s.grid(row=0, column=3, padx=10, pady=0, sticky="w")
+        self.label_file_s.grid(row=0, column=2, padx=10, pady=0, sticky="w")
         self.select_file_box_s = ctk.CTkComboBox(master=self.tab_stats, values=[" "], width=180,variable=self.current_file,command=self.set_channel)
-        self.select_file_box_s.grid(row=0, column=4, padx=10, pady=0, sticky="w")
+        self.select_file_box_s.grid(row=0, column=3, padx=10, pady=0, sticky="w")
         self.label_channel_s = ctk.CTkLabel(self.tab_stats, text="Channel")
-        self.label_channel_s.grid(row=0, column=5, padx=10, pady=0, sticky="w")
+        self.label_channel_s.grid(row=0, column=4, padx=10, pady=0, sticky="w")
         self.select_channel_box_s = ctk.CTkComboBox(master=self.tab_stats, values=['0'], width=30,variable=self.current_channel)
-        self.select_channel_box_s.grid(row=0, column=6, padx=10, pady=0, sticky="w")
+        self.select_channel_box_s.grid(row=0, column=5, padx=10, pady=0, sticky="w")
         self.select_plot_stats_box = ctk.CTkComboBox(master=self.tab_stats, values=["IR Plot","IR Echo","IR Stats"], variable=self.current_plot_stats)
-        self.select_plot_stats_box.grid(row=0, column=7, sticky="w", padx=10, pady=0)
+        self.select_plot_stats_box.grid(row=0, column=6, sticky="w", padx=10, pady=0)
+        self.plot_stats_overlay = ctk.CTkSwitch(self.tab_stats, text="Over", onvalue="on", offvalue="off")
+        self.plot_stats_overlay.grid(row=0, column=7, padx=10, pady=0, sticky="w")
         self.plot_stats_button = ctk.CTkButton(self.tab_stats, text="Plot", command=self.plot_stats)
         self.plot_stats_button.grid(row=0, column=8, padx=10, pady=0, sticky="e")
         self.plot_stats_frame = ctk.CTkFrame(self.tab_stats, corner_radius=25)
@@ -345,6 +350,28 @@ class Acousticfield_ctk():
         self.matplotlib_stats_frame = PlotFrame(self.plot_stats_frame, corner_radius=25)
         self.matplotlib_stats_frame.pack(fill=ctk.BOTH, expand=True)
         self.matplotlib_stats_axes = self.matplotlib_stats_frame.axes
+
+        #self.tab_transfer - Transfer Function
+        self.label_file_t = ctk.CTkLabel(self.tab_transfer, text="File")
+        self.label_file_t.grid(row=0, column=2, padx=10, pady=0, sticky="w")
+        self.select_file_box_t = ctk.CTkComboBox(master=self.tab_transfer, values=[" "], width=180,variable=self.current_file,command=self.set_channel)
+        self.select_file_box_t.grid(row=0, column=3, padx=10, pady=0, sticky="w")
+        self.label_channel_t = ctk.CTkLabel(self.tab_transfer, text="Channel")
+        self.label_channel_t.grid(row=0, column=4, padx=10, pady=0, sticky="w")
+        self.select_channel_box_t = ctk.CTkComboBox(master=self.tab_transfer, values=['0'], width=30,variable=self.current_channel)
+        self.select_channel_box_t.grid(row=0, column=5, padx=10, pady=0, sticky="w")
+        self.plot_transfer_log = ctk.CTkSwitch(self.tab_transfer, text="Log f", variable=self.logscale, onvalue="on", offvalue="off")
+        self.plot_transfer_log.grid(row=0, column=6, padx=10, pady=0, sticky="w")
+        self.plot_transfer_overlay = ctk.CTkSwitch(self.tab_transfer, text="Over", onvalue="on", offvalue="off")
+        self.plot_transfer_overlay.grid(row=0, column=7, padx=10, pady=0, sticky="w")
+        self.plot_transfer_button = ctk.CTkButton(self.tab_transfer, text="Plot", command=self.plot_transfer)
+        self.plot_transfer_button.grid(row=0, column=8, padx=10, pady=0, sticky="e")
+        self.plot_transfer_frame = ctk.CTkFrame(self.tab_transfer, corner_radius=25)
+        self.plot_transfer_frame.grid(row=1, column=0, columnspan=9, sticky="nsew")
+        self.matplotlib_transfer_frame = PlotFrame(self.plot_transfer_frame, corner_radius=25)
+        self.matplotlib_transfer_frame.pack(fill=ctk.BOTH, expand=True)
+        self.matplotlib_transfer_axes = self.matplotlib_transfer_frame.axes
+
 
         #self.tab_table - Parameters Table
         self.parameter_table_keys = ['Band',self.rtmethod,'rvalue','EDT','C50','C80','TS','DRR','SNR']
@@ -546,6 +573,7 @@ class Acousticfield_ctk():
         self.loaded_files = []
         self.ir_list = []
         self.files = [] # list of files in recording_path
+        self.logscale = ctk.StringVar(value="on")
         # check if fbankfile exists
         self.parameter_table_headers, _ = load_filterbank(self.fbankname)
         self.parameter_table_headers.insert(0,'')
@@ -817,9 +845,13 @@ class Acousticfield_ctk():
         ir = self.ir_list[self.list_files.index(self.current_file)]
         fs = ctkstring_to_value(self.sampling_rate, type='int')
         self.current_channel = int(self.select_channel_box_s.get())
+        redraw = (self.plot_stats_overlay.get()=="off")
+        labels = [' '.join(self.current_file.split('_')[1:4]) + ' ch ' + str(self.current_channel)]
+        self.rewrite_textbox(self.status,f"Plotting {self.current_plot_stats} of {self.current_file}")
         if (self.current_plot_stats == "IR Plot"):
             #plot IR
-            ir_plot(ir[:,self.current_channel],fs=fs, tmax=float(self.tmax.get()), axs=self.matplotlib_stats_axes)
+            ir_plot(ir[:,self.current_channel],fs=fs, tmax=float(self.tmax.get()), redraw=redraw, \
+                    labels=labels, axs=self.matplotlib_stats_axes)
             self.matplotlib_stats_frame.canvas.draw()
             self.matplotlib_stats_frame.canvas.flush_events()
         elif (self.current_plot_stats == "IR Stats"):    
@@ -831,13 +863,29 @@ class Acousticfield_ctk():
         elif (self.current_plot_stats == "IR Echo"):    
             #plot echogram
             echo_display(ir[:,self.current_channel], 7, pw=0.7, scale=0.1, wplot=True, table=False, fs=fs, \
-                         axs=self.matplotlib_stats_axes)
+                         redraw=redraw, labels=labels, axs=self.matplotlib_stats_axes)
             self.matplotlib_stats_frame.canvas.draw()
             self.matplotlib_stats_frame.canvas.flush_events()    
         else:
             raise ValueError("Plot type not recognized")
         return  
     
+    def plot_transfer(self):
+        self.current_file = self.select_file_box_t.get()
+        ir = self.ir_list[self.list_files.index(self.current_file)]
+        fs = ctkstring_to_value(self.sampling_rate, type='int')
+        self.current_channel = int(self.select_channel_box_t.get())
+        self.logscale = (self.plot_transfer_log.get()=="on")
+        overlay = (self.plot_transfer_overlay.get()=="on")
+        labels = [' '.join(self.current_file.split('_')[1:4]) + ' ch ' + str(self.current_channel)]
+        print(self.logscale)
+        self.rewrite_textbox(self.status,f"Computing Transfer Function of {self.current_file}")
+        spectrum_plot(ir[:,self.current_channel],logscale=self.logscale, fs=fs, overlay=overlay, axs=self.matplotlib_transfer_axes,   
+                      labels= labels)
+        self.matplotlib_transfer_frame.canvas.draw()
+        self.matplotlib_transfer_frame.canvas.flush_events()
+        return
+
     def plot_decays(self):
         self.current_file = self.select_file_box_d.get()
         ir = self.ir_list[self.list_files.index(self.current_file)]
@@ -866,6 +914,8 @@ class Acousticfield_ctk():
             self.select_file_box.set(self.list_files[0])
             self.select_file_box_s.configure(values=self.list_files)
             self.select_file_box_s.set(self.list_files[0])
+            self.select_file_box_t.configure(values=self.list_files)
+            self.select_file_box_t.set(self.list_files[0])
             self.select_file_box_d.configure(values=self.list_files)
             self.select_file_box_d.set(self.list_files[0])
             self.select_file_box_p.configure(values=["ALL"] + self.list_files)
@@ -873,6 +923,7 @@ class Acousticfield_ctk():
             self.select_method_box.set(self.rtmethod) 
             self.select_channel_box.set(self.current_channel)
             self.select_channel_box_s.set(self.current_channel)
+            self.select_channel_box_t.set(self.current_channel)
             self.select_channel_box_d.set(self.current_channel)
             self.select_channel_box_p.set(self.plot_channels)
         self.sidebar_label_2.configure(text=self.session_id.get())
