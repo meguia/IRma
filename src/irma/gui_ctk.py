@@ -1,4 +1,5 @@
 import customtkinter as ctk
+import csv
 import sounddevice as sd
 from .generate import sweep
 from .process import ir_list_to_multichannel,make_filterbank,load_filterbank
@@ -120,7 +121,7 @@ class GenerateFilterBank(ctk.CTkToplevel):
         make_filterbank(fmin=self.fmin,noct=self.noct,bwoct=self.bwoct,fs=self.sampling_rate,\
                         order=self.order,N=10000,bankname=self.fbankfile)
         self.parent.parameter_table_headers, _ = load_filterbank(self.fbankfile)
-        self.parent.parameter_table_headers.insert(0,'')
+        self.parent.parameter_table_headers.insert(0,'Band')
         self.parent.rewrite_textbox(self.parent.status,f"Filter Bank generated in {self.fbankfile}.npz")
         #remake table with new headers
         self.parent.parameter_table.destroy_table()
@@ -337,7 +338,7 @@ class Acousticfield_ctk():
         self.select_file_box_s.grid(row=0, column=3, padx=10, pady=0, sticky="w")
         self.label_channel_s = ctk.CTkLabel(self.tab_stats, text="Channel")
         self.label_channel_s.grid(row=0, column=4, padx=10, pady=0, sticky="w")
-        self.select_channel_box_s = ctk.CTkComboBox(master=self.tab_stats, values=['0'], width=30,variable=self.current_channel)
+        self.select_channel_box_s = ctk.CTkComboBox(master=self.tab_stats, values=['1'], width=30,variable=self.current_channel)
         self.select_channel_box_s.grid(row=0, column=5, padx=10, pady=0, sticky="w")
         self.select_plot_stats_box = ctk.CTkComboBox(master=self.tab_stats, values=["IR Plot","IR Echo","IR Stats"], variable=self.current_plot_stats)
         self.select_plot_stats_box.grid(row=0, column=6, sticky="w", padx=10, pady=0)
@@ -358,7 +359,7 @@ class Acousticfield_ctk():
         self.select_file_box_t.grid(row=0, column=3, padx=10, pady=0, sticky="w")
         self.label_channel_t = ctk.CTkLabel(self.tab_transfer, text="Channel")
         self.label_channel_t.grid(row=0, column=4, padx=10, pady=0, sticky="w")
-        self.select_channel_box_t = ctk.CTkComboBox(master=self.tab_transfer, values=['0'], width=30,variable=self.current_channel)
+        self.select_channel_box_t = ctk.CTkComboBox(master=self.tab_transfer, values=['1'], width=30,variable=self.current_channel)
         self.select_channel_box_t.grid(row=0, column=5, padx=10, pady=0, sticky="w")
         self.plot_transfer_log = ctk.CTkSwitch(self.tab_transfer, text="Log f", variable=self.logscale, onvalue="on", offvalue="off")
         self.plot_transfer_log.grid(row=0, column=6, padx=10, pady=0, sticky="w")
@@ -394,10 +395,12 @@ class Acousticfield_ctk():
         self.select_file_box.grid(row=0, column=4, padx=10, pady=0, sticky="w")
         self.label_channel = ctk.CTkLabel(self.tab_table, text="Channel")
         self.label_channel.grid(row=0, column=5, padx=10, pady=0, sticky="w")
-        self.select_channel_box = ctk.CTkComboBox(master=self.tab_table, values=['0'], width=30,variable=self.current_channel)
+        self.select_channel_box = ctk.CTkComboBox(master=self.tab_table, values=['1'], width=30,variable=self.current_channel)
         self.select_channel_box.grid(row=0, column=6, padx=10, pady=0, sticky="w")
         self.table_button = ctk.CTkButton(master=self.tab_table,text="Display",command=self.display_params)
         self.table_button.grid(row=0, column=7, sticky="w", padx=10, pady=20)
+        self.table_save_button = ctk.CTkButton(master=self.tab_table,text="Save",command=self.save_table)
+        self.table_save_button.grid(row=3, column=7, sticky="w", padx=10, pady=20)
 
         #self.tab_plot - Parameters Plots
         self.parameter_plot_keys = [self.rtmethod,'EDT','C50','C80','TS','DRR','SNR']
@@ -412,7 +415,7 @@ class Acousticfield_ctk():
         self.select_file_box_p.grid(row=0, column=4, padx=10, pady=0, sticky="w")
         self.label_channel_p = ctk.CTkLabel(self.tab_plot, text="Channel")
         self.label_channel_p.grid(row=0, column=5, padx=10, pady=0, sticky="w")
-        self.select_channel_box_p = ctk.CTkComboBox(master=self.tab_plot, values=["0"], width=100,variable=self.plot_channels)
+        self.select_channel_box_p = ctk.CTkComboBox(master=self.tab_plot, values=["1"], width=100,variable=self.plot_channels)
         self.select_channel_box_p.grid(row=0, column=6, padx=10, pady=0, sticky="w")
         self.analyze_button = ctk.CTkButton(self.tab_plot, text="Analyze", command=self.analyze)
         self.analyze_button.grid(row=0, column=7, padx=20, pady=20, sticky="e")
@@ -430,7 +433,7 @@ class Acousticfield_ctk():
         self.select_file_box_d.grid(row=0, column=4, padx=10, pady=0, sticky="w")
         self.label_channel_d = ctk.CTkLabel(self.tab_decays, text="Channel")
         self.label_channel_d.grid(row=0, column=5, padx=10, pady=0, sticky="w")
-        self.select_channel_box_d = ctk.CTkComboBox(master=self.tab_decays, values=['0'], width=30,variable=self.current_channel)
+        self.select_channel_box_d = ctk.CTkComboBox(master=self.tab_decays, values=['1'], width=30,variable=self.current_channel)
         self.select_channel_box_d.grid(row=0, column=6, padx=10, pady=0, sticky="w")
         self.plot_decay_button = ctk.CTkButton(self.tab_decays, text="Plot Decays", command=self.plot_decays)
         self.plot_decay_button.grid(row=0, column=7, padx=20, pady=20, sticky="e")
@@ -519,7 +522,7 @@ class Acousticfield_ctk():
         self.current_direction = None
         self.current_take = None
         self.current_file = None
-        self.current_channel = "0"
+        self.current_channel = 1
         self.plot_files = None
         self.plot_channels = "ALL"
         self.current_key = None
@@ -560,7 +563,7 @@ class Acousticfield_ctk():
         self.current_direction = None
         self.current_take = None
         self.current_file = None
-        self.current_channel = "0"
+        self.current_channel = 1
         self.plot_files = None
         self.plot_channels = "ALL"
         self.current_key = None
@@ -576,7 +579,7 @@ class Acousticfield_ctk():
         self.logscale = ctk.StringVar(value="on")
         # check if fbankfile exists
         self.parameter_table_headers, _ = load_filterbank(self.fbankname)
-        self.parameter_table_headers.insert(0,'')
+        self.parameter_table_headers.insert(0,'Band')
         #speaker_pos = self.speaker_pos_entry.get()
         #microphone_pos = self.microphone_pos_entry.get()
         self.inchan = ctk.StringVar(value="")
@@ -748,10 +751,14 @@ class Acousticfield_ctk():
 
     def set_channel(self,file):
         nchannels = self.list_nchan[self.list_files.index(file)]
-        self.select_channel_box.configure(values=[str(n) for n in np.arange(nchannels)])
-        self.select_channel_box.set('0')
-        self.select_channel_box_s.configure(values=[str(n) for n in np.arange(nchannels)])
-        self.select_channel_box_s.set('0')
+        self.select_channel_box.configure(values=[str(n+1) for n in np.arange(nchannels)])
+        self.select_channel_box.set('1')
+        self.select_channel_box_s.configure(values=[str(n+1) for n in np.arange(nchannels)])
+        self.select_channel_box_s.set('1')
+        self.select_channel_box_t.configure(values=[str(n+1) for n in np.arange(nchannels)])
+        self.select_channel_box_t.set('1')
+        self.select_channel_box_d.configure(values=[str(n+1) for n in np.arange(nchannels)])
+        self.select_channel_box_d.set('1')
 
     def set_plot_channels(self, plotfile):
         if len(self.ir_list) == 0:
@@ -760,11 +767,11 @@ class Acousticfield_ctk():
             return
         if plotfile == "ALL":
             nchannels = min(self.list_nchan)
-            self.select_channel_box_p.configure(values=[str(n) for n in np.arange(nchannels)])
-            self.select_channel_box_p.set('0')
+            self.select_channel_box_p.configure(values=[str(n+1) for n in np.arange(nchannels)])
+            self.select_channel_box_p.set('1')
         else:
             nchannels = self.list_nchan[self.list_files.index(plotfile)]
-            self.select_channel_box_p.configure(values=["ALL"] + [str(n) for n in np.arange(nchannels)])
+            self.select_channel_box_p.configure(values=["ALL"] + [str(n+1) for n in np.arange(nchannels)])
             self.select_channel_box_p.set("ALL")
             #self.set_channel(plotfile) # why is this needed?
 
@@ -794,7 +801,7 @@ class Acousticfield_ctk():
                 labels = [' '.join(f.split('_')[1:4]) for f in self.list_files]
             else :    
                 # case 2 all files, single channel
-                chan = int(self.plot_channels)
+                chan = int(self.plot_channels)-1
                 # arma un multicanal con las ir cargadas en ir_list con un nsamples maximo
                 self.ir_stacked = ir_list_to_multichannel(self.ir_list,chan=chan)
                 self.params = paracoustic(self.ir_stacked, method=self.rtmethod,bankname=self.fbankname,tmax=float(self.tmax.get()))
@@ -807,8 +814,8 @@ class Acousticfield_ctk():
                 labels = [' '.join(self.plot_files.split('_')[1:4]) + ' ch ' + str(n) for n in range(ir.shape[1])]
             else:
                 # case 4 single file, single channel
-                nchan = int(self.plot_channels)
-                self.params = paracoustic(ir[:,nchan], method=self.rtmethod,bankname=self.fbankname,tmax=float(self.tmax.get()))
+                chan = int(self.plot_channels)-1
+                self.params = paracoustic(ir[:,chan], method=self.rtmethod,bankname=self.fbankname,tmax=float(self.tmax.get()))
                 labels = [' '.join(self.plot_files.split('_')[1:4]) + ' ch ' + self.plot_channels]
         self.current_key = self.select_key_box.get()
         self.plot_params(self.current_key,labels)
@@ -817,7 +824,7 @@ class Acousticfield_ctk():
     def display_params(self,channel=0):
         # table for channel =0 and index = idx  
         self.current_file = self.select_file_box.get()
-        self.current_channel = int(self.select_channel_box.get())
+        self.current_channel = int(self.select_channel_box.get())-1
         ir = self.ir_list[self.list_files.index(self.current_file)]
         self.comment = self.list_comment[self.list_files.index(self.current_file)]
         self.comment_box.delete('1.0',ctk.END)
@@ -829,6 +836,19 @@ class Acousticfield_ctk():
                 for col in range(1,self.parameter_table.columns):
                     self.parameter_table.insert(row, col, self.params[key][col-1,self.current_channel].round(decimals=2))
         return
+    
+    def save_table(self):
+        fname = self.current_file.split('.')[0] + "chan_" + str(self.current_channel) + ".csv"
+        file = open(fname, 'w')
+        print(f"Saving parameters to {fname}")
+        self.rewrite_textbox(self.status,f"Saving parameters to {fname}")
+        writer = csv.writer(file)
+        writer.writerow(self.parameter_table_headers)
+        for row,key in enumerate(self.parameter_table_keys):
+            if (row > 0):
+                    writer.writerow([key] + list(self.params[key][:,self.current_channel].round(decimals=2)))
+        file.close()           
+
     
 # PLOTS
 # TODO: move to a separate class
@@ -844,9 +864,9 @@ class Acousticfield_ctk():
         self.current_file = self.select_file_box_s.get()
         ir = self.ir_list[self.list_files.index(self.current_file)]
         fs = ctkstring_to_value(self.sampling_rate, type='int')
-        self.current_channel = int(self.select_channel_box_s.get())
+        self.current_channel = int(self.select_channel_box_s.get())-1
         redraw = (self.plot_stats_overlay.get()=="off")
-        labels = [' '.join(self.current_file.split('_')[1:4]) + ' ch ' + str(self.current_channel)]
+        labels = [' '.join(self.current_file.split('_')[1:4]) + ' ch ' + str(self.current_channel+1)]
         self.rewrite_textbox(self.status,f"Plotting {self.current_plot_stats} of {self.current_file}")
         if (self.current_plot_stats == "IR Plot"):
             #plot IR
@@ -874,10 +894,10 @@ class Acousticfield_ctk():
         self.current_file = self.select_file_box_t.get()
         ir = self.ir_list[self.list_files.index(self.current_file)]
         fs = ctkstring_to_value(self.sampling_rate, type='int')
-        self.current_channel = int(self.select_channel_box_t.get())
+        self.current_channel = int(self.select_channel_box_t.get())-1
         self.logscale = (self.plot_transfer_log.get()=="on")
         overlay = (self.plot_transfer_overlay.get()=="on")
-        labels = [' '.join(self.current_file.split('_')[1:4]) + ' ch ' + str(self.current_channel)]
+        labels = [' '.join(self.current_file.split('_')[1:4]) + ' ch ' + str(self.current_channel+1)]
         print(self.logscale)
         self.rewrite_textbox(self.status,f"Computing Transfer Function of {self.current_file}")
         spectrum_plot(ir[:,self.current_channel],logscale=self.logscale, fs=fs, overlay=overlay, axs=self.matplotlib_transfer_axes,   
@@ -890,7 +910,7 @@ class Acousticfield_ctk():
         self.current_file = self.select_file_box_d.get()
         ir = self.ir_list[self.list_files.index(self.current_file)]
         fs = ctkstring_to_value(self.sampling_rate, type='int')
-        self.current_channel = int(self.select_channel_box_d.get())
+        self.current_channel = int(self.select_channel_box_d.get())-1
         self.rewrite_textbox(self.status,f"Computing Decays of {self.current_file} using filterbank {self.fbankname}")
         self.params = paracoustic(ir, method=self.rtmethod,bankname=self.fbankname,tmax=float(self.tmax.get()))      
         _, fig = parsdecay_plot(self.params, chan=self.current_channel, fs=fs)
@@ -921,10 +941,10 @@ class Acousticfield_ctk():
             self.select_file_box_p.configure(values=["ALL"] + self.list_files)
             self.select_file_box_p.set("ALL")
             self.select_method_box.set(self.rtmethod) 
-            self.select_channel_box.set(self.current_channel)
-            self.select_channel_box_s.set(self.current_channel)
-            self.select_channel_box_t.set(self.current_channel)
-            self.select_channel_box_d.set(self.current_channel)
+            self.select_channel_box.set(self.current_channel+1)
+            self.select_channel_box_s.set(self.current_channel+1)
+            self.select_channel_box_t.set(self.current_channel+1)
+            self.select_channel_box_d.set(self.current_channel+1)
             self.select_channel_box_p.set(self.plot_channels)
         self.sidebar_label_2.configure(text=self.session_id.get())
         self.root.update_idletasks()
