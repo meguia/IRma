@@ -913,9 +913,9 @@ class Acousticfield_ctk():
         self.current_channel = int(self.select_channel_box_d.get())-1
         self.rewrite_textbox(self.status,f"Computing Decays of {self.current_file} using filterbank {self.fbankname}")
         self.params = paracoustic(ir, method=self.rtmethod,bankname=self.fbankname,tmax=float(self.tmax.get()))      
-        _, fig = parsdecay_plot(self.params, chan=self.current_channel, fs=fs)
-        img = figure_to_image(fig,width=900,height=500)
-        self.image_decay_frame.configure(image=img)
+        #_, fig = parsdecay_plot(self.params, chan=self.current_channel, fs=fs)
+        #img = figure_to_image(fig,width=900,height=500)
+        #self.image_decay_frame.configure(image=img)
         return
 
 

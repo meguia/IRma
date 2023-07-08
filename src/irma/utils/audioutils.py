@@ -16,9 +16,13 @@ def get_device_number(device):
     return  int(device.split(",")[0])
 
 def get_device_name(device_number):
+    if device_number < 0 :
+        device_number = 0
     return  sd.query_devices(device_number)['name']
 
 def get_device_number_name(device_number):
+    if device_number < 0 :
+        device_number = 0
     return  ",".join([str(device_number), sd.query_devices(device_number)['name']])
 
 def get_default_samplerate(device_name):

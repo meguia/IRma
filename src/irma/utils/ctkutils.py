@@ -5,7 +5,6 @@
 import customtkinter as ctk
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, NavigationToolbar2Tk)
-from PIL import Image
 
 dark_color = "#5a5a5a"
 NavigationToolbar2Tk.toolitems = (
@@ -45,9 +44,9 @@ def ctkstring_to_value(ctkstring, type='str', convert=False):
     else:
         return None
     
-def figure_to_image(fig,width=500,height=400):
-    fig.savefig(r"temp.png", dpi=300)
-    return ctk.CTkImage(Image.open(r"temp.png"),size=(width,height))
+#def figure_to_image(fig,width=500,height=400):
+#    fig.savefig(r"temp.png", dpi=300)
+#    return ctk.CTkImage(Image.open(r"temp.png"),size=(width,height))
     
 
 class CustomToolbar(NavigationToolbar2Tk):  # for matplotlib 3.7.1
