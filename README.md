@@ -9,7 +9,6 @@ base:
 - scipy >= 1.10
 - matplotlib >= 3.7
 - pyyaml >= 6.0
-- ipython >= 8.12
 - python-sounddevice >= 0.4.6
 
 ## python sounddevice

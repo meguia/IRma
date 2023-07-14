@@ -17,6 +17,7 @@ lib/
 lib64/
 parts/
 sdist/
+dist/
 var/
 wheels/
 pip-wheel-metadata/
@@ -133,10 +134,9 @@ ir_*.*
 *.wav
 *.npz
 *.yaml
+*.zip
 *.code-workspace
 .DS_Store
-dist/irma_gui.exe
 temp.png
-src/notebooks/*.npy
-src/notebooks/*.npz
 src/irma/examples/irma_gui.spec
+
