@@ -218,7 +218,7 @@ def pars_plot(pars, keys, chan=1):
 
 def pars_plot_compared(pars, keys, chans=[1],labels=None,title=None,axs=None):
     # busca la ocurrencia de 'RT' 'EDT' 'SNR' 'C80' 'C50' 'TS' 'DRR' en keys
-    rtype = list(filter(lambda x: 'rt' in x, pars.keys()))
+    rtype = list(filter(lambda x: 'RT' in x, pars.keys()))
     pgraph = ['SNR',rtype[0],'EDT','C50','C80','TS','DRR']
     isplot = []
     for pl in pgraph:
