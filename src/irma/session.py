@@ -7,7 +7,7 @@ from .generate import sweep
 from .io import play_rec
 from .process import ir_extract
 
-class RecordingSession:
+class Session:
     def __init__(self, session_id, speakers=None, microphones=None,speaker_pos=None,microphone_pos=None,
                  inchan=[1,2],outchan=[1,2],loopback=None,sampling_rate=48000,rtype=None,
                  date=None,hour=None,recordingpath=None,sweepfile=None,sweeprange=[30,22000],
@@ -84,21 +84,6 @@ class RecordingSession:
         if nrecording is None:
             nrecording = len(self.recordings)
         self.recordings[nrecording]['valid']=False
-
-    def playrec_file(self,filename,speaker,microphone,direction=1,take=1,channel=0,dim=1.0,comment=''):
-        nchannels = len(self.input_channels)
-        fs, fplay = wavfile.read(filename+".wav")
-        if fplay.ndim > 1:
-            data = fplay[:,channel]
-        else:    
-            data = fplay   
-        data = (dim*data)/float(np.max(np.abs(data)))    
-        prefix = self.generate_audio_file_prefix(speaker, microphone, direction, nchannels, self.loopback, self.rtype, take)
-        recfile = filename + "_" + prefix
-        print(f"Recording Audio file {filename} in {recfile}")
-        rec_temp = play_rec(data,os.path.join(self.recording_path,recfile),chanin=self.input_channels,chanout=self.output_channels,fs=fs) 
-        print(f"Maximum sample value = {np.max(rec_temp)}")
-        self.recordings.append([recfile, comment])
 
     def list_recordings(self,comments=False):
         for n,recordings in enumerate(self.recordings):
@@ -194,3 +179,22 @@ class RecordingSession:
         session.recordings = recordings
         session.saved = metadata.get('saved', False)
         return session    
+    
+
+
+class RecordingSession(Session):
+        
+    def playrec_file(self,filename,speaker,microphone,direction=1,take=1,channel=0,dim=1.0,comment=''):
+        nchannels = len(self.input_channels)
+        fs, fplay = wavfile.read(filename+".wav")
+        if fplay.ndim > 1:
+            data = fplay[:,channel]
+        else:    
+            data = fplay   
+        data = (dim*data)/float(np.max(np.abs(data)))    
+        prefix = self.generate_audio_file_prefix(speaker, microphone, direction, nchannels, self.loopback, self.rtype, take)
+        recfile = filename + "_" + prefix
+        print(f"Recording Audio file {filename} in {recfile}")
+        rec_temp = play_rec(data,os.path.join(self.recording_path,recfile),chanin=self.input_channels,chanout=self.output_channels,fs=fs) 
+        print(f"Maximum sample value = {np.max(rec_temp)}")
+        self.recordings.append([recfile, comment])   
