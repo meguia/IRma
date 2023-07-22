@@ -49,35 +49,27 @@ class RecordingSession:
             raise ValueError(f"Name already exists please use take a different take number")
         return prefix
 
-    def record_ir(self,speaker,microphone,direction=None,take=1,comment='',overwrite=False):
-        if self.loopback:
-            nchannels = len(self.input_channels)-1 
-            chan_loop = self.input_channels.index(self.loopback)
-        else:    
-            nchannels =  len(self.input_channels)
-            chan_loop = None
-        valid = True
-        prefix = self.generate_audio_file_prefix(speaker, microphone, direction, nchannels, self.loopback, self.rtype, int(take),overwrite)
-        print("Recording ... "+prefix)
-        rec_temp = play_rec(self.sweep_file,os.path.join(self.recording_path,'rec_'+prefix),chanin=self.input_channels,chanout=self.output_channels)
-        rec_max = np.max(np.delete(rec_temp,chan_loop,axis=1)) if self.loopback is not None else np.max(rec_temp)
-        print(f"Maximum sample value = {rec_max}")
-        print(f"Extracting ---> {prefix} using sr = {self.sampling_rate}")
-        ir_temp = ir_extract(rec_temp,self.sweep_file,os.path.join(self.recording_path,'ir_'+prefix),loopback=chan_loop,fs=self.sampling_rate)
-        print(f"IR shape = {ir_temp.shape}")
-        rec_dic = dict(
-            spk=speaker,
-            mic=microphone,
-            dir=direction,
-            take=take,
-            valid=valid,
-            filename=prefix,
-            nchan=nchannels,
-            comment=comment
-        )
-        self.recordings.append(rec_dic)
-        print("DONE")
-        return ir_temp
+    def load_rec_from_dir(self,recording_path=None,apply_filter=True):
+        if recording_path is None:
+            recording_path = self.recording_path
+        allfiles = os.listdir(recording_path)
+        files = [f for f in allfiles if f.endswith('.wav')]
+        for f in files:
+            fname = f[:-4]
+            if (apply_filter):
+                if fname.startswith('rec_'):
+                    prefix = fname[4:]
+                    ir_fname = os.path.join(self.recording_path,'ir_'+prefix)
+                    rec_fname = os.path.join(self.recording_path,fname)
+                    print(f"Extracting ---> {prefix} using sr = {self.sampling_rate}")
+                    ir_extract(rec_fname,self.sweep_file,ir_fname,fs=self.sampling_rate)
+                    rec_dic = dict(filename=prefix)
+                    self.recordings.append(rec_dic)
+            else:
+                if fname.startswith('ir_'):
+                    prefix = fname[3:]
+                    rec_dic = dict(filename=prefix)
+                    self.recordings.append(rec_dic)
 
     def label_invalid(self,nrecording=None):
         if nrecording is None:
