@@ -83,6 +83,12 @@ class RecordingSession:
                 line += f" -- {recordings['comment']}"
             print(line)
 
+    def recordings_tuples(s):
+        rec_tuples = []
+        for n,recordings in enumerate(s.recordings):
+            rec_tuples.append((recordings['filename'],n))
+        return rec_tuples    
+
     def load_ir(self,nrecording,ftype="wav"):
         if nrecording<len(self.recordings):
             fname =os.path.join(self.recording_path,'ir_'+self.recordings[nrecording]['filename'])

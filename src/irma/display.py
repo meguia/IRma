@@ -2,8 +2,41 @@ import numpy as np
 from matplotlib import pyplot as plt
 from .room import find_echoes, find_dir, irstats
 from .process import spectrum, spectrogram, fconvolve
+from IPython.display import display, HTML
 plt.style.use('dark_background')
-   
+
+def pars_print(pars, keys=None, cols=None, chan=1):
+    '''
+    Imprime una tabla en formati HTML a partir del diccionario param con las keys en filas
+    y usa como headers de las columnas cols (normalmente se usa 'fc' para esto)
+    '''
+    if keys is None:
+        rtype = list(filter(lambda x: 'RT' in x, pars.keys()))[0]
+        keys = ['SNR',rtype,'rvalue','EDT','C50','C80','TS','DRR']
+    if cols is None:
+        cols = pars['fc']    
+    tabla = np.vstack(list(pars[key][:,chan-1] for key in keys))
+    display_table(tabla,cols,keys)    
+
+def display_table(data,headers,rownames):
+    html = "<table class='table-condensed'>"
+    html += "<tr>"
+    html += "<td><h4>Band</h4><td>"
+    for header in headers:
+        html += "<td><h4>%s</h4><td>"%(header)
+    html += "</tr>" 
+    for n,row in enumerate(data):
+        html += "<tr>"
+        if rownames is not None:
+            html += "<td><h4>%s</h4><td>"%(rownames[n].upper())
+        else:
+            html += "<td><h4>%s</h4><td>"%(str(n+1))
+        for field in row:
+            html += "<td>%.3f<td>"%(field)
+        html += "</tr>"
+    html += "</table>"
+    display(HTML(html))     
+
 def echo_display(data, nechoes, pw=0.7, scale=0.1, wplot=True, fs=48000, labels=None, axs=None,redraw=True):
     '''
     Imprime una tabla en formati HTML con los echoes y el directo ordenados
