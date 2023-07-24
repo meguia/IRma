@@ -292,7 +292,7 @@ def pars_plot_compared(pars, keys, chans=[1],labels=None,title=None,axs=None):
             iplot +=1
     return axs
 
-def pars_compared_axes(pars, key, axs, chans=None,labels=None,title=None,redraw=True):
+def pars_compared_axes(pars, key, axs=None, chans=None,labels=None,title=None,redraw=True):
     # busca la ocurrencia de 'SNR' 'RT' 'EDT' 'C80' 'C50' 'TS' 'DRR' en keys[:2]
     idx = ['SN','RT','ED','C5','C8','TS','DR'].index(key[:2])
     ylabels = [
@@ -304,6 +304,8 @@ def pars_compared_axes(pars, key, axs, chans=None,labels=None,title=None,redraw=
         'Center Time (ms)',
         'Direct/Reverberant (dB)'
     ]
+    if axs is None:
+        _, axs = plt.subplots(1,1,figsize=(18,3))
     if chans is None:
         chans = np.arange(pars[key].shape[1]) + 1 
     nb = len(pars['fc'])
