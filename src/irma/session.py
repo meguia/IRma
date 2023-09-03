@@ -60,7 +60,7 @@ class RecordingSession:
         valid = True
         prefix = self.generate_audio_file_prefix(speaker, microphone, direction, nchannels, self.loopback, self.rtype, int(take),overwrite)
         print("Recording ... "+prefix)
-        rec_temp = play_rec(self.sweep_file,os.path.join(self.recording_path,'rec_'+prefix),chanin=self.input_channels,chanout=self.output_channels)
+        rec_temp = play_rec(self.sweep_file,os.path.join(self.recording_path,'rec_'+prefix),chanin=self.input_channels,chanout=self.output_channels,fs=self.sampling_rate)
         rec_max = np.max(np.delete(rec_temp,chan_loop,axis=1)) if self.loopback is not None else np.max(rec_temp)
         print(f"Maximum sample value = {rec_max}")
         print(f"Extracting ---> {prefix} using sr = {self.sampling_rate}")
