@@ -3,8 +3,7 @@ from .generate import sigmoid
 from scipy import signal
 from scipy.io import wavfile
 from scipy.interpolate import interp1d
-from scipy.signal import convolve
-from scipy.fft import next_fast_len, rfft, irfft, fft, ifft
+from scipy.fft import next_fast_len, rfft, fft, ifft
 from numpy.fft.helper import rfftfreq
 
 def fast_ccf(x1,x2):
@@ -12,9 +11,9 @@ def fast_ccf(x1,x2):
     wf = np.hanning(wav_len)
     x1 = x1*wf
     x2 = x2*wf
-    X1 = np.fft.fft(x1,2*wav_len-1)# equivalent to add zeros
-    X2 = np.fft.fft(x2,2*wav_len-1)
-    ccf_unshift = np.real(np.fft.ifft(np.multiply(X1,np.conjugate(X2))))
+    X1 = fft(x1,2*wav_len-1)# equivalent to add zeros
+    X2 = fft(x2,2*wav_len-1)
+    ccf_unshift = np.real(ifft(np.multiply(X1,np.conjugate(X2))))
     ccf = np.concatenate([ccf_unshift[wav_len:],ccf_unshift[:wav_len]],axis=0)
     return ccf
 
@@ -64,16 +63,16 @@ def spectral_centroid_dr(data,ndr,s=2,fmin=20,fmax=20000,fs=48000):
     SC_dir = np.zeros(nchan)
     SC_rev = np.zeros(nchan)
     SC_tot = np.zeros(nchan)
-    freq = fft.rfftfreq(N,d = 1/fs)
+    freq = rfftfreq(N,d = 1/fs)
     nf = np.argmax(freq>fmax)
     ni = np.argmax(freq>fmin)
     cross = sigmoid(np.arange(N),ndr,s)
     for n in range(nchan):
-        spec = np.abs(fft.rfft(data[:,n]))
+        spec = np.abs(rfft(data[:,n]))
         SC_tot[n] = np.sum(spec[ni:nf]*freq[ni:nf])/np.sum(spec[ni:nf])
-        spec = np.abs(fft.rfft(data[:,n])*(1-cross))
+        spec = np.abs(rfft(data[:,n])*(1-cross))
         SC_dir[n] = np.sum(spec[ni:nf]*freq[ni:nf])/np.sum(spec[ni:nf]*(1-cross))
-        spec = np.abs(fft.rfft(data[:,n])*cross)
+        spec = np.abs(rfft(data[:,n])*cross)
         SC_rev[n] = np.sum(spec[ni:nf]*freq[ni:nf])/np.sum(spec[ni:nf]*cross)
     return SC_tot,SC_dir,SC_rev
 
@@ -84,18 +83,18 @@ def spectral_variance_dr(data,ndr,s=2,fmin=20,fmax=20000,fs=48000):
     SV_dir = np.zeros(nchan)
     SV_rev = np.zeros(nchan)
     SV_tot = np.zeros(nchan)
-    freq = fft.rfftfreq(N,d = 1/fs)
+    freq = rfftfreq(N,d = 1/fs)
     nf = np.argmax(freq>fmax)
     ni = np.argmax(freq>fmin)
     cross = sigmoid(np.arange(N),ndr,s)
     for n in range(nchan):
-        spec = np.abs(fft.rfft(data[:,n]))
+        spec = np.abs(rfft(data[:,n]))
         il = 20*np.log10(spec[ni:nf]/np.mean(spec[ni:nf]))
         SV_tot[n] = np.sqrt(np.var(il))
-        spec = np.abs(fft.rfft(data[:,n])*(1-cross))
+        spec = np.abs(rfft(data[:,n])*(1-cross))
         il = 20*np.log10(spec[ni:nf]/np.mean(spec[ni:nf]))
         SV_dir[n] = np.sqrt(np.var(il))
-        spec = np.abs(fft.rfft(data[:,n])*cross)
+        spec = np.abs(rfft(data[:,n])*cross)
         il = 20*np.log10(spec[ni:nf]/np.mean(spec[ni:nf]))
         SV_rev[n] = np.sqrt(np.var(il))
     return SV_tot,SV_dir,SV_rev
