@@ -58,7 +58,7 @@ def lbinaural_dr(data,ndr,dt,s=1,eref=1.0):
   Lrev = lbinaural(data*cross[:,np.newaxis],dt,eref)
   return Ltot,Ldir,Lrev
 
-def spectral_centroid_dr(data,ndr,s=2,fmin=20,fmax=20000,fs=48000):
+def spectral_centroid_dr(data,ndr,s=2,fmin=20,fmax=20000,fs=48000, average_channels=True):
     N, nchan = np.shape(data)
     SC_dir = np.zeros(nchan)
     SC_rev = np.zeros(nchan)
@@ -71,15 +71,18 @@ def spectral_centroid_dr(data,ndr,s=2,fmin=20,fmax=20000,fs=48000):
         spec = np.abs(rfft(data[:,n]))
         SC_tot[n] = np.sum(spec[ni:nf]*freq[ni:nf])/np.sum(spec[ni:nf])
         spec = np.abs(rfft(data[:,n]*(1-cross)))
-        SC_dir[n] = np.sum(spec[ni:nf]*freq[ni:nf])/np.sum(spec[ni:nf]*(1-cross))
+        SC_dir[n] = np.sum(spec[ni:nf]*freq[ni:nf])/np.sum(spec[ni:nf])
         spec = np.abs(rfft(data[:,n]*cross))
-        SC_rev[n] = np.sum(spec[ni:nf]*freq[ni:nf])/np.sum(spec[ni:nf]*cross)
-    return SC_tot,SC_dir,SC_rev
+        SC_rev[n] = np.sum(spec[ni:nf]*freq[ni:nf])/np.sum(spec[ni:nf])
+    if average_channels:
+      return np.mean(SC_tot),np.mean(SC_dir),np.mean(SC_rev)
+    else:
+      return SC_tot,SC_dir,SC_rev  
 
-def spectral_variance_dr(data,ndr,s=2,fmin=20,fmax=20000,fs=48000):
+def spectral_variance_dr(data,ndr,s=2,fmin=20,fmax=20000,fs=48000, average_channels=True):
     # devuelve la varianza espectral total del directo y del reverberante entre fmin y fmax
     # xb senal binaural, ndr numero se sample que separa el d/r, dt, el paso temporal, s pendiente de la sigmoidea
-    nchan = np.shape(data)
+    N, nchan = np.shape(data)
     SV_dir = np.zeros(nchan)
     SV_rev = np.zeros(nchan)
     SV_tot = np.zeros(nchan)
@@ -89,13 +92,13 @@ def spectral_variance_dr(data,ndr,s=2,fmin=20,fmax=20000,fs=48000):
     cross = sigmoid(np.arange(N),ndr,s)
     for n in range(nchan):
         spec = np.abs(rfft(data[:,n]))
-        il = 20*np.log10(spec[ni:nf]/np.mean(spec[ni:nf]))
-        SV_tot[n] = np.sqrt(np.var(il))
+        SV_tot[n] = np.var(20*np.log10(spec[ni:nf]/np.mean(spec[ni:nf])))
         spec = np.abs(rfft(data[:,n]*(1-cross)))
-        il = 20*np.log10(spec[ni:nf]/np.mean(spec[ni:nf]))
-        SV_dir[n] = np.sqrt(np.var(il))
+        SV_dir[n] = np.var(20*np.log10(spec[ni:nf]/np.mean(spec[ni:nf])))
         spec = np.abs(rfft(data[:,n]*cross))
-        il = 20*np.log10(spec[ni:nf]/np.mean(spec[ni:nf]))
-        SV_rev[n] = np.sqrt(np.var(il))
-    return SV_tot,SV_dir,SV_rev
+        SV_rev[n] = np.var(20*np.log10(spec[ni:nf]/np.mean(spec[ni:nf])))
+    if average_channels:
+      return np.sqrt(np.mean(SV_tot)),np.sqrt(np.mean(SV_dir)),np.sqrt(np.mean(SV_rev))
+    else:
+      return np.sqrt(SV_tot),np.sqrt(SV_dir),np.sqrt(SV_rev)
     
