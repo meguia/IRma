@@ -43,19 +43,19 @@ def get_ITD(x,fs,max_delay=None,inter_method='parabolic'):
 def get_ILD(x):
   return 10*np.log10(np.sum(x[:,1]**2)/np.sum(x[:,0]**2)+1e-10)
 
-def lbinaural(xb,dt,eref=1.0):
+def lbinaural(data,dt,eref=1.0):
   # calcula la intensidad binaural de la senal xb de dos canales
-  el = np.sum(np.sum(np.square(xb[:,0])))*dt
-  er = np.sum(np.sum(np.square(xb[:,1])))*dt
+  el = np.sum(np.sum(np.square(data[:,0])))*dt
+  er = np.sum(np.sum(np.square(data[:,1])))*dt
   return 10*np.log10(np.sqrt(el*er)/eref)
 
-def lbinaural_dr(xb,ndr,dt,s=1,eref=1.0):
+def lbinaural_dr(data,ndr,dt,s=1,eref=1.0):
   # xb senal binaural, ndr numero se sample que separa el d/r, dt, el paso temporal, s pendiente de la sigmoidea
-  N, _ = xb.shape
+  N, _ = data.shape
   cross = sigmoid(np.arange(N),ndr,s)
-  Ltot = lbinaural(xb,dt,eref)
-  Ldir = lbinaural(xb*(1-cross[:,np.newaxis]),dt,eref)
-  Lrev = lbinaural(xb*cross[:,np.newaxis],dt,eref)
+  Ltot = lbinaural(data,dt,eref)
+  Ldir = lbinaural(data*(1-cross[:,np.newaxis]),dt,eref)
+  Lrev = lbinaural(data*cross[:,np.newaxis],dt,eref)
   return Ltot,Ldir,Lrev
 
 def spectral_centroid_dr(data,ndr,s=2,fmin=20,fmax=20000,fs=48000):
@@ -70,9 +70,9 @@ def spectral_centroid_dr(data,ndr,s=2,fmin=20,fmax=20000,fs=48000):
     for n in range(nchan):
         spec = np.abs(rfft(data[:,n]))
         SC_tot[n] = np.sum(spec[ni:nf]*freq[ni:nf])/np.sum(spec[ni:nf])
-        spec = np.abs(rfft(data[:,n])*(1-cross))
+        spec = np.abs(rfft(data[:,n]*(1-cross)))
         SC_dir[n] = np.sum(spec[ni:nf]*freq[ni:nf])/np.sum(spec[ni:nf]*(1-cross))
-        spec = np.abs(rfft(data[:,n])*cross)
+        spec = np.abs(rfft(data[:,n]*cross))
         SC_rev[n] = np.sum(spec[ni:nf]*freq[ni:nf])/np.sum(spec[ni:nf]*cross)
     return SC_tot,SC_dir,SC_rev
 
@@ -91,10 +91,10 @@ def spectral_variance_dr(data,ndr,s=2,fmin=20,fmax=20000,fs=48000):
         spec = np.abs(rfft(data[:,n]))
         il = 20*np.log10(spec[ni:nf]/np.mean(spec[ni:nf]))
         SV_tot[n] = np.sqrt(np.var(il))
-        spec = np.abs(rfft(data[:,n])*(1-cross))
+        spec = np.abs(rfft(data[:,n]*(1-cross)))
         il = 20*np.log10(spec[ni:nf]/np.mean(spec[ni:nf]))
         SV_dir[n] = np.sqrt(np.var(il))
-        spec = np.abs(rfft(data[:,n])*cross)
+        spec = np.abs(rfft(data[:,n]*cross))
         il = 20*np.log10(spec[ni:nf]/np.mean(spec[ni:nf]))
         SV_rev[n] = np.sqrt(np.var(il))
     return SV_tot,SV_dir,SV_rev
