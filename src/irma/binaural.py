@@ -50,13 +50,57 @@ def lbinaural(data,dt,eref=1.0):
   return 10*np.log10(np.sqrt(el*er)/eref)
 
 def lbinaural_dr(data,ndr,dt,s=1,eref=1.0):
-  # xb senal binaural, ndr numero se sample que separa el d/r, dt, el paso temporal, s pendiente de la sigmoidea
+  # data senal binaural, ndr numero se sample que separa el d/r, dt, el paso temporal, s pendiente de la sigmoidea
   N, _ = data.shape
   cross = sigmoid(np.arange(N),ndr,s)
   Ltot = lbinaural(data,dt,eref)
   Ldir = lbinaural(data*(1-cross[:,np.newaxis]),dt,eref)
   Lrev = lbinaural(data*cross[:,np.newaxis],dt,eref)
   return Ltot,Ldir,Lrev
+
+def iacc_dr(data,ndr,fs):
+  N, _ = data.shape # binaural
+  nt = int(fs/1000) # 1 ms to each side
+  # total
+  cc = signal.correlate(data[:,0],data[:,1])
+  norm = np.sqrt(np.sum(np.square(data[:,0]))*np.sum(np.square(data[:,1])))
+  iacf_tot = cc[N-nt-1:N+nt-1]/norm
+  # direct sound
+  cc = signal.correlate(data[:ndr,0],data[:ndr,1])
+  norm = np.sqrt(np.sum(np.square(data[:ndr,0]))*np.sum(np.square(data[:ndr,1])))
+  iacf_dir = cc[ndr-nt-1:ndr+nt-1]/norm
+  # reverberant
+  cc = signal.correlate(data[ndr:,0],data[ndr:,1])
+  norm = np.sqrt(np.sum(np.square(data[ndr:,0]))*np.sum(np.square(data[ndr:,1])))
+  iacf_rev = cc[N-ndr-nt-1:N-ndr+nt-1]/norm
+  return iacf_tot, iacf_dir, iacf_rev
+  
+
+
+def hrtf_binned(data,ndr,fmin=20,fmax=20000,fs=48000,nbins=50):
+    # devuelve la hrtf binned para la senal data
+    # data senal binaural, ndr numero se sample que separa el d/r
+    N, _ = np.shape(data)
+    cross = sigmoid(np.arange(N),ndr,2)
+    lfreq = fmin*np.logspace(0,np.log2(fmax/fmin),nbins,base=2)
+    freq = rfftfreq(N,d = 1/fs)
+    nfreq = [np.argmax(freq>lf) for lf in lfreq]
+    spL_tot = np.abs(rfft(data[:,:,0],axis=-1))
+    cfreqL_tot = np.array([np.mean(spL_tot[:,nfreq[n]:nfreq[n+1]],axis=-1) for n in range(len(nfreq)-1)])
+    spR_tot = np.abs(rfft(data[:,:,1],axis=-1))
+    cfreqR_tot = np.array([np.mean(spR_tot[:,nfreq[n]:nfreq[n+1]],axis=-1) for n in range(len(nfreq)-1)])
+    spL_dir = np.abs(rfft(data[:,0]*(1-cross),axis=-1))
+    cfreqL_dir = np.array([np.mean(spL_dir[:,nfreq[n]:nfreq[n+1]],axis=-1) for n in range(len(nfreq)-1)])
+    spR_dir = np.abs(rfft(data[:,1]*(1-cross),axis=-1))
+    cfreqR_dir = np.array([np.mean(spR_dir[:,nfreq[n]:nfreq[n+1]],axis=-1) for n in range(len(nfreq)-1)])
+    spL_rev = np.abs(rfft(data[:,0]*cross,axis=-1))
+    cfreqL_rev = np.array([np.mean(spL_rev[:,nfreq[n]:nfreq[n+1]],axis=-1) for n in range(len(nfreq)-1)])
+    spR_rev = np.abs(rfft(data[:,1]*cross,axis=-1))
+    cfreqR_rev = np.array([np.mean(spR_rev[:,nfreq[n]:nfreq[n+1]],axis=-1) for n in range(len(nfreq)-1)])
+    return cfreqL_tot,cfreqR_tot,cfreqL_dir,cfreqR_dir,cfreqL_rev,cfreqR_rev
+
+
+
 
 def spectral_centroid_dr(data,ndr,s=2,fmin=20,fmax=20000,fs=48000, average_channels=True):
     N, nchan = np.shape(data)

@@ -30,10 +30,10 @@ def revtime(ir_input, method='RT20', fs=48000, tmax=3.0):
     nmax = int(min(tmax*fs,nsamples))
     schr = np.zeros((nchan,nmax))
     SNR = np.zeros((nchan,))
-    rt = np.zeros((nchan,))
+    rt = np.zeros((nchan,))*np.nan
     t12 = np.zeros((nchan,2))
     l12 = np.zeros((nchan,2))
-    rvalue = np.zeros((nchan,))
+    rvalue = np.zeros((nchan,))*np.nan
     for n, ir in enumerate(data.T):
         #ns = np.mean(ir[nmax:-1][0]**2)  por que estaba esto antes?
         ns = np.mean(ir[nmax:-1]**2)
