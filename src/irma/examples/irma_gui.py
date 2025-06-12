@@ -8,9 +8,7 @@ def main():
     # lee archivo de configuracion fs
     fs = 48000
     # crea banco de filtros
-    if not Path('fbank.npz').is_file:
-        # si no existe el banco de filtros, lo crea 
-        make_filterbank(fs = fs,bankname='fbank')
+    make_filterbank(fs = fs,bankname='fbank')
     # Crea Ventanas
     app = IRMA_ctk()
     #app.root.mainloop()

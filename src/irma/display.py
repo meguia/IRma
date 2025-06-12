@@ -45,7 +45,7 @@ def echo_display(data, nechoes, pw=0.7, scale=0.1, wplot=True, fs=48000, labels=
     keys = [str(n) for n in np.arange(nechoes)]
     cols = ['time (ms)', 'level (dB)', 'distance (m)', 'DIRECT']    
     echoes_multi = find_echoes(data,nechoes,pw,fs=fs)
-    print(echoes_multi)
+    #print(echoes_multi)
     if data.ndim == 1:
         data = data[:,np.newaxis] # el array debe ser 2D
     nchan = echoes_multi.shape[2]
