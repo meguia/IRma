@@ -1,6 +1,7 @@
 import customtkinter as ctk
 import csv
 import sounddevice as sd
+import time
 from .generate import sweep
 from .process import ir_list_to_multichannel,make_filterbank,load_filterbank
 from .room import paracoustic
@@ -52,11 +53,11 @@ class GenerateSweep(ctk.CTkToplevel):
         self.generate_button.grid(row=6,column=0,columnspan=2,padx=20, pady=20)
 
     def generate(self):
-        self.sweep_fmin = int(self.sweep_fmin_entry.get())
-        self.sweep_fmax = int(self.sweep_fmax_entry.get())
-        self.sweep_dur = float(self.sweep_dur_entry.get())
-        self.sweep_post = float(self.sweep_post_entry.get())
-        self.sweep_rep = int(self.sweep_rep_entry.get())
+        self.sweep_fmin = self.parent.validate_entry(self.sweep_fmin_entry, type='int')
+        self.sweep_fmax = self.parent.validate_entry(self.sweep_fmax_entry, type='int')
+        self.sweep_dur = self.parent.validate_entry(self.sweep_dur_entry, type='float')
+        self.sweep_post = self.parent.validate_entry(self.sweep_post_entry, type='float')
+        self.sweep_rep = self.parent.validate_entry(self.sweep_rep_entry, type='int')
 
         srkhz = self.sampling_rate//1000
         maxrange = self.sweep_fmax//1000
@@ -108,11 +109,11 @@ class GenerateFilterBank(ctk.CTkToplevel):
         self.generate_button.grid(row=6,column=0,padx=20, pady=20)
 
     def generate(self):
-        self.fmin = float(self.fmin_entry.get())
-        self.noct = int(self.noct_entry.get())  
-        self.bwoct = int(self.bwoct_entry.get())
-        self.fs = int(self.fs_entry.get())
-        self.order = int(self.order_entry.get())
+        self.fmin = self.parent.validate_entry(self.fmin_entry, type='float')
+        self.noct = self.parent.validate_entry(self.noct_entry, type='int')
+        self.bwoct = self.parent.validate_entry(self.bwoct_entry, type='int')
+        self.fs = self.parent.validate_entry(self.fs_entry, type='int')
+        self.order = self.parent.validate_entry(self.order_entry, type='int')
         #self.name = self.name_entry.get()
         #srkhz = self.sampling_rate//1000
         #self.fbankfile = f"fbank_{srkhz}k_{self.noct}_{self.bwoct}"
@@ -133,7 +134,7 @@ class GenerateFilterBank(ctk.CTkToplevel):
         
 
 # MAIN WINDOW
-class Acousticfield_ctk():
+class IRMA_ctk():
     def __init__(self):
         self.root = ctk.CTk()
         self.save_and_close = False
@@ -490,6 +491,9 @@ class Acousticfield_ctk():
         #if self.recording_session.saved:
             #popup window warning
         #    return
+        self.entries_to_pars()
+        print(self.pars)
+        self.pars_to_session()
         fname = self.session_id.get() + ".yaml"
         self.recording_session.save_metadata(fname)
         print("Session saved in: " + fname)
@@ -610,6 +614,10 @@ class Acousticfield_ctk():
 
     def create_recording_session(self):
         # check if sesion already exists
+        if self.recording_session is not None:
+            print("Session already exists, please save it first and then clean.")
+            self.rewrite_textbox(self.status,f"Session already exists, please save it first.")
+            return
         self.print_entries()
         self.entries_to_pars()
         # check if sweepfile is present
@@ -635,13 +643,28 @@ class Acousticfield_ctk():
 
     def entries_to_pars(self):
         # Convert some values to their appropriate types
-        self.pars['session_id'] = ctkstring_to_value(self.session_id)
-        self.pars['speakers'] = ctkstring_to_value(self.speakers, type='list')
-        self.pars['microphones'] = ctkstring_to_value(self.microphones, type='list')
-        self.pars['inchan'] = ctkstring_to_value(self.inchan, type='list', convert=True)
-        self.pars['outchan'] = ctkstring_to_value(self.outchan, type='list', convert=True)
-        self.pars['loopback'] = ctkstring_to_value(self.loopback, type='int') 
-        self.pars['sampling_rate'] = ctkstring_to_value(self.sampling_rate, type='int')
+        self.pars['session_id'] = self.validate_entry(self.session_id_entry)
+        self.pars['speakers'] = self.validate_entry(self.speakers_entry,'list')
+        self.pars['microphones'] = self.validate_entry(self.microphones_entry,'list')
+        self.pars['inchan'] =self. validate_entry(self.input_channels_entry,'array')
+        self.pars['outchan'] = self.validate_entry(self.output_channels_entry,'array')
+        self.pars['loopback'] = self.validate_entry(self.loopback_entry,'int',empty_allowed=True)
+        self.pars['recording_path'] = self.validate_entry(self.recording_path_entry)
+        self.pars['sweep_file'] = self.validate_entry(self.sweep_file_entry)
+        self.pars['sampling_rate'] = int(self.sampling_rate.get())
+
+    def pars_to_session(self):
+        # Convert some values to their appropriate types
+        self.recording_session.session_id = self.pars['session_id']
+        self.recording_session.speakers = self.pars['speakers'] 
+        self.recording_session.microphones = self.pars['microphones']
+        self.recording_session.inchan = self.pars['inchan']
+        self.recording_session.outchan = self.pars['outchan']
+        self.recording_session.loopback = self.pars['loopback']
+        self.recording_session.sampling_rate = self.pars['sampling_rate']
+        self.recording_session.recording_path = self.pars['recording_path']
+        self.recording_session.sweep_file = self.pars['sweep_file']
+
 
     def rewrite_entry(self, entry, value):
         entry.delete(0, ctk.END)
@@ -677,7 +700,7 @@ class Acousticfield_ctk():
         self.rewrite_textbox(self.status,f"Speak into the microphone...")
         for _ in range(20):
             temp=test_input_tic(self.input_device.get(), self.output_device.get(),int(self.sampling_rate.get()))
-            maxval = np.max(np.abs(temp))
+            maxval = np.log10(np.max(np.abs(temp)))
             self.test_input_bar.set(maxval)
             self.root.update_idletasks()
         self.rewrite_textbox(self.status,f"Maximum input level: {maxval}")    
@@ -686,11 +709,13 @@ class Acousticfield_ctk():
 
     def test_output(self):
         self.rewrite_textbox(self.status,f"Check your speakers...")
+        time.sleep(1)
         test_output(self.input_device.get(),self.output_device.get(), int(self.sampling_rate.get()))    
 
     def start_recording(self):
         print("start recording")
-        self.rewrite_textbox(self.status,f"Recording started ....")
+        self.rewrite_textbox(self.status,f"Recording starting wait ....")
+        self.status.update_idletasks() 
         self.current_speaker = self.speaker_box.get()
         self.current_microphone = self.microphone_box.get()
         self.current_direction = self.direction_box.get()
@@ -860,6 +885,11 @@ class Acousticfield_ctk():
             self.matplotlib_analysis_frame.canvas.flush_events()
 
     def plot_stats(self):
+        # check if there are IRs loaded
+        if len(self.ir_list) == 0:
+            print("There are no IRs loaded")
+            self.rewrite_textbox(self.status,f"Load some IRs first")
+            return
         self.current_plot_stats = self.select_plot_stats_box.get()
         self.current_file = self.select_file_box_s.get()
         ir = self.ir_list[self.list_files.index(self.current_file)]
@@ -882,7 +912,7 @@ class Acousticfield_ctk():
             self.matplotlib_stats_frame.canvas.flush_events()
         elif (self.current_plot_stats == "IR Echo"):    
             #plot echogram
-            echo_display(ir[:,self.current_channel], 7, pw=0.7, scale=0.1, wplot=True, table=False, fs=fs, \
+            echo_display(ir[:,self.current_channel], 7, pw=0.7, scale=0.1, wplot=True, fs=fs, \
                          redraw=redraw, labels=labels, axs=self.matplotlib_stats_axes)
             self.matplotlib_stats_frame.canvas.draw()
             self.matplotlib_stats_frame.canvas.flush_events()    
@@ -957,3 +987,50 @@ class Acousticfield_ctk():
         print("Stopping")
         self.save_and_close = True    
         #self.root.destroy()
+
+# VALIDATION METHODS
+# 
+    def validate_entry(self,entry, type='string', empty_allowed=False):
+        """
+        Validate the entry based on the type.
+        """
+        value = entry.get()
+        if type == 'int':
+            if value == "" and empty_allowed:
+                return None
+            try:
+                s = int(value)
+                return s
+            except ValueError:
+                self.rewrite_textbox(self.status,f"{entry} must be an integer")
+                return
+        elif type == 'float':
+            try:
+                s = float(value)
+                return s
+            except ValueError:
+                self.rewrite_textbox(self.status,f"{entry} must be a float")
+                return
+        elif type == 'array':
+            if value == "" and empty_allowed:
+                return None
+            try:
+                s = [int(x.strip()) for x in value.split(',')]
+                return s
+            except ValueError:
+                self.rewrite_textbox(self.status,f"{entry} must be a list of integers separated by commas")
+                return
+        elif type == 'list':
+            if value == "" and empty_allowed:
+                return None
+            try:
+                s = [x.strip() for x in value.split(',')]
+                return s
+            except ValueError:
+                self.rewrite_textbox(self.status,f"{entry} must be a list of strings separated by commas")
+                return
+        else:
+            if isinstance(value, str):
+                if value == "" and empty_allowed:
+                    return None
+                return value

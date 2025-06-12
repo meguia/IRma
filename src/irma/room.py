@@ -140,7 +140,7 @@ def paracoustic(ir, method='RT20', bankname='fbank', tmax=3.0, fs_default=48000)
             raise Exception('Inconsistent sample rate between audio file and filter bank')
     elif type(ir) is np.ndarray:
         data = ir
-        fs = fbank['fs']
+        fs = int(fbank['fs'])
         print('Using sample rate from filter bank:' + str(fs))
     else:
         raise TypeError('Input must be ndarray or filename')    
