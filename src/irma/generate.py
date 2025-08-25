@@ -7,11 +7,10 @@ from .process import fadeinout, burst
 
 def sweep(T, f1=30, f2=22000,filename=None,fs=48000,Nrep=1,order=2,post=2.0,rms=-3.2):
     '''
-    Genera un sweep exponencial de duracion T con frecuencia de sampleo fs desde la frecuencia f1
-    hasta f2, lo almacena en filename.wav y guarda el filtro inverso en filename_inv.npy
-    como parametros opcionales se pueden modificar el fadein y fadeout de la senal con fade
-    usa el metodo de Muller and Massarani, "Transfer Function Measurement with Sweeps" 
-    que era el implementado en Matlab. El unico cambio es que puede elegirse el orden del filtro
+    Generates an exponential sweep signal of duration T with a sampling frequency fs 
+    starting from frequency f1 to f2, stores it in filename.wav and saves the inverse filter in filename_inv.npy
+    optional parameters can modify the fadein and fadeout of the signal with fade
+    uses the method of Muller and Massarani, "Transfer Function Measurement with Sweeps" 
     '''
     if filename is None:
         filename = 'sweep' + str(T) + 's_' + str(f1) + '_' + str(f2)   
@@ -85,6 +84,9 @@ def sweep(T, f1=30, f2=22000,filename=None,fs=48000,Nrep=1,order=2,post=2.0,rms=
 
 #Golay complementary sequences
 def golay(filename,N=18,fs=48000, Nrep=1):
+    """
+    Generate Golay complementary sequences.
+    """
     a = np.array([1.0,1.0])
     b = np.array([1.0,-1.0])
     for n in range(N):
@@ -105,6 +107,10 @@ def golay(filename,N=18,fs=48000, Nrep=1):
 
 
 def sigmoid(x,x0,s=1.0):
+    """
+    Compute the sigmoid function.
+    The input x is the value (or array) to be transformed, x0 is the midpoint, and s is the slope.
+    """
     x1 = 2*(x-x0)/s
     sig = np.zeros_like(x1)
     ncut = np.argmax(x1>0)
@@ -113,14 +119,17 @@ def sigmoid(x,x0,s=1.0):
     return sig    
 
 def puretone(T,f,fadein=None,fadeout=None,fs=48000):
+    """
+    Generate a pure tone signal of frequency f.
+    """
     data = np.sin(2.0*np.pi*f*np.arange(0,T,1/fs))
     fadeinout(data, fadein=fadein, fadeout=fadeout, fs=fs)
     return data
 
 def whitenoise(T, flow=None, fhigh=None, fslow=None, fshigh=None, nchannels=1, fadein=None, fadeout=None, fs=48000, filename="wnoise"):
     """
-    Genera ruido blanco de duracion T limitado en banda entre flow y fhigh (fslow y fshigh dan las pendientes de
-    la sigmoidea del limite de banda) puede generar nchannels canales
+    Generate white noise of duration T limited to the band between flow and fhigh (fslow and fshigh give the slopes of
+    the sigmoid function for the band limits) can generate nchannels channels
     """
     nsamples = int(fs*T)
     freqs = np.fft.rfftfreq(nsamples, 1/fs)
@@ -150,8 +159,8 @@ def whitenoise(T, flow=None, fhigh=None, fslow=None, fshigh=None, nchannels=1, f
 
 def pinknoise(T, ncols=16, fadein=None, fadeout=None, fs=48000):
     """
-    Genera ruido rosa de duracion T usando el algoritmo de Voss-McCartney
-    ncols: numero de fuente indeptes
+    Generate pink noise of duration T using the Voss-McCartney algorithm.
+    ncols: number of independent sources
     """
     nsamples = int(T*fs)
     array = np.full((nsamples, ncols), np.nan)

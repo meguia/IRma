@@ -137,7 +137,6 @@ def drlevel_bands(data,bankname,ndr=None,s=2.0,eref=1.0,fs=48000):
     Ldir = np.zeros((nbands,nchan))
     Lrev = np.zeros((nbands,nchan))
     for n in range(nchan):
-        print(ndr[n])
         cross = sigmoid(np.arange(nsamples),ndr[n],s)
         direct = data[:,n]*(1-cross)
         reverb = data[:,n]*cross

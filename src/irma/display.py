@@ -7,8 +7,8 @@ plt.style.use('dark_background')
 
 def pars_print(pars, keys=None, cols=None, chan=1):
     '''
-    Imprime una tabla en formati HTML a partir del diccionario param con las keys en filas
-    y usa como headers de las columnas cols (normalmente se usa 'fc' para esto)
+    Print a table in HTML format from the dictionary params with the keys as rows
+    and use as headers the columns cols (normally 'fc' is used for this)
     '''
     if keys is None:
         rtype = list(filter(lambda x: 'RT' in x, pars.keys()))[0]
@@ -19,6 +19,9 @@ def pars_print(pars, keys=None, cols=None, chan=1):
     display_table(tabla,cols,keys)    
 
 def display_table(data,headers,rownames):
+    """
+    Display a table in HTML format
+    """
     html = "<table class='table-condensed'>"
     html += "<tr>"
     html += "<td><h4>Band</h4><td>"
@@ -39,8 +42,8 @@ def display_table(data,headers,rownames):
 
 def echo_display(data, nechoes, pw=0.7, scale=0.1, wplot=True, fs=48000, labels=None, axs=None,redraw=True):
     '''
-    Imprime una tabla en formati HTML con los echoes y el directo ordenados
-    y si wplot es True grafica espigas en los echoes junto a la RI
+    Print a table in HTML format with the echoes and the direct sound ordered
+    and if wplot is True plot spikes in the echoes along with the IR
     '''
     keys = [str(n) for n in np.arange(nechoes)]
     cols = ['time (ms)', 'level (dB)', 'distance (m)', 'DIRECT']    
@@ -83,7 +86,8 @@ def echo_display(data, nechoes, pw=0.7, scale=0.1, wplot=True, fs=48000, labels=
 
 
 def ir_plot(data, fs=48000, tmax=3.0, labels=None, figsize=None, redraw=True, axs=None):
-    """ data (nsamples,nchannel) must be a 2D array
+    """
+    Plot the impulse response from the given data.
     """
     if data.ndim == 1:
         data = data[:,np.newaxis] # el array debe ser 2D
@@ -113,6 +117,9 @@ def ir_plot(data, fs=48000, tmax=3.0, labels=None, figsize=None, redraw=True, ax
 
 
 def irstat_plot(data, window=0.01, overlap=0.002, fs=48000, logscale=True, tmax=2.0, axs = None):
+    """
+    Plot the statistics of the impulse response.
+    """
     if data.ndim == 1:
         data = data[:,np.newaxis] # el array debe ser 2D
     pstat = irstats(data, window=window, overlap=overlap, fs=fs)
@@ -148,6 +155,9 @@ def irstat_plot(data, window=0.01, overlap=0.002, fs=48000, logscale=True, tmax=
 
 
 def acorr_plot(data, trange=0.2, fs=48000):
+    """
+    Plot the autocorrelation of the impulse response.
+    """
     if data.ndim == 1:
         data = data[:,np.newaxis] # el array debe ser 2D
     nsamples, nchan = data.shape
@@ -167,6 +177,9 @@ def acorr_plot(data, trange=0.2, fs=48000):
     return axs, fig
 
 def spectrum_plot(data, logscale=False, fmax=12000, fs=48000, lrange=60, figsize=None, overlay=True, axs=None, labels=None):
+    """
+    Plot the spectrum of the impulse response.
+    """
     if data.ndim == 1:
         data = data[:,np.newaxis] # el array debe ser 2D
     _, nchan = data.shape
@@ -202,6 +215,9 @@ def spectrum_plot(data, logscale=False, fmax=12000, fs=48000, lrange=60, figsize
 
 
 def spectrogram_plot(data,window,overlap,fs,chan=0,fmax=22000,tmax=2.0,normalized=False,logf=False,lrange=60):
+    """
+    Plot the spectrogram of the impulse response.
+    """
     kwargs = {'windowSize': window,'overlap': overlap,'fs': fs, 'windowType': 'hanning',
           'normalized': normalized, 'logf': logf}
     spec = spectrogram(data[:,chan], **kwargs )
@@ -217,7 +233,10 @@ def spectrogram_plot(data,window,overlap,fs,chan=0,fmax=22000,tmax=2.0,normalize
     return ax, fig
 
 def pars_plot(pars, keys, chan=1):
-    # busca la ocurrencia de 'RT' 'EDT' 'SNR' 'C80' 'C50' 'TS' 'DRR' en keys
+    """
+    Plot the acoustic parameters, and look for the occurrence of specific keys
+    (RT, EDT, SNR, C80, C50, TS, DRR)
+    """
     rtype = list(filter(lambda x: 'rt' in x, pars.keys()))
     pgraph = [['SNR'],[rtype[0],'EDT'],['C50','C80'],['TS'],['DRR']]
     isplot = []
@@ -250,7 +269,9 @@ def pars_plot(pars, keys, chan=1):
 
 
 def pars_plot_compared(pars, keys, chans=[1],labels=None,title=None,axs=None):
-    # busca la ocurrencia de 'RT' 'EDT' 'SNR' 'C80' 'C50' 'TS' 'DRR' en keys
+    """
+    Plot the acoustic parameters for the specified channels.
+    """
     rtype = list(filter(lambda x: 'RT' in x, pars.keys()))
     pgraph = ['SNR',rtype[0],'EDT','C50','C80','TS','DRR']
     isplot = []
@@ -293,7 +314,6 @@ def pars_plot_compared(pars, keys, chans=[1],labels=None,title=None,axs=None):
     return axs
 
 def pars_compared_axes(pars, key, axs=None, chans=None,labels=None,title=None,redraw=True):
-    # busca la ocurrencia de 'SNR' 'RT' 'EDT' 'C80' 'C50' 'TS' 'DRR' en keys[:2]
     idx = ['SN','RT','ED','C5','C8','TS','DR'].index(key[:2])
     ylabels = [
         'Signal/Noise (dB)',
@@ -329,7 +349,10 @@ def pars_compared_axes(pars, key, axs=None, chans=None,labels=None,title=None,re
 
 
 
-def parsdecay_plot(pars, chan=1, fs=48000):    
+def parsdecay_plot(pars, chan=1, fs=48000):
+    """
+    Plot the decay of the impulse response. (CHECK)
+    """
     nb = pars['nbands']
     nsamples = pars['schr'].shape[2]
     t = np.arange(nsamples)/fs
@@ -347,6 +370,9 @@ def parsdecay_plot(pars, chan=1, fs=48000):
 
     
 def transfer_plot(data,f=None,logscale=False, fmax=6000, fmin=60,fs=48000, lrange=60, overlay=True):
+    """
+    Plot the transfer function from the given data.
+    """
     if type(data) == dict:
         f = data['f']
         H = data['H']
@@ -386,9 +412,3 @@ def transfer_plot(data,f=None,logscale=False, fmax=6000, fmin=60,fs=48000, lrang
     return axs, fig
 
 
-
-    # grafica los modos recibe la salidad de find_modes
-    
-    # grafica la o las IRS junto con la transferencia como opcion
-    
-    # graficos comparativos por fuente direccion receptor

@@ -4,30 +4,30 @@ from scipy.io import wavfile
 
 def time_rec(filerec,duration,delay=0,chanin=[1],fs=48000,sdevice=None,write_wav=True):
     '''
-    funcion grabar durante dur segundos en una cantidad arbitraria de canales de entrada dada por chanin (lista)
-    en archivo filerec. 
+    it records audio for a specified duration using an arbitrary number of input channels given by chanin (list)
+    in file filerec.
     '''
-    #agregar una alerta de clipeo y la opcion de correr dummy
+    # add clipping alert and dummy run option
     if sdevice is not None:
         sd.default.device = sdevice
     sd.default.samplerate = fs
-    # loop sobre repeat
+    # loop over repeat
     rec = sd.rec(int(duration*fs),samplerate=fs,mapping=chanin,dtype='float64') # graba con 64 bits para proceso
-    sd.wait() # espera que termine la grabacion
+    sd.wait() # wait 
     print('finished')
     if write_wav:
         wavfile.write(filerec + '.wav',fs,rec) # guarda el array grabado en wav con 32 bits
-    # fin loop   
+    # end loop
     return rec
 
 def play_rec(fplay,filerec,delay=0,chanout=[1],chanin=[1],revtime=2.0,sdevice=None,write_wav=True,fs=48000):
     '''
-    funcion para reproducir el archivo mono wav fileplay a traves de los canales de salida chanout (lista)
-    y grabarlo simultaneamente en una cantidad arbitraria de canales de entrada dada por chanin (lista)
-    en archivo filerec. Puede cambiarse la cantidad de segundos que graba luego de que se extinguio 
-    la senal revtime y cambiar el device si no se usa el default 
+    function to play the mono wav file fplay through the output channels chanout (list)
+    and record it simultaneously in an arbitrary number of input channels given by chanin (list)
+    in file filerec. The number of seconds to record after the signal has faded out can be changed
+    with the parameter revtime and the device can be changed if the default is not used
     '''
-    #agregar una alerta de clipeo y la opcion de correr dummy
+    
     if sdevice is not None:
         sd.default.device = sdevice
     if type(fplay) is str:
@@ -42,22 +42,22 @@ def play_rec(fplay,filerec,delay=0,chanout=[1],chanin=[1],revtime=2.0,sdevice=No
         raise TypeError('Input must be ndarray or filename')     
     sd.default.samplerate = fs2
     nchanout = len(chanout)
-    data = np.append(data,np.zeros(int(revtime*fs))) # extiende data para agregar la reverberacion
-    data = np.repeat(data[:,np.newaxis],nchanout,1) # repite el array 
-    # wait delay e imprimir algun algun mensaje
-    # loop sobre repeat
-    rec = sd.playrec(data, input_mapping=chanin,output_mapping=chanout,dtype='float64') # graba con 64 bits para proceso
-    sd.wait() # espera que termine la grabacion
+    data = np.append(data,np.zeros(int(revtime*fs))) # extends data for reverb
+    data = np.repeat(data[:,np.newaxis],nchanout,1) # repeat the array
+    # wait delay and print some message
+    # loop over repeat
+    rec = sd.playrec(data, input_mapping=chanin,output_mapping=chanout,dtype='float64') # records with 64 bits for processing
+    sd.wait() # wait for recording to finish
     print('finished')
     if write_wav:
         wavfile.write(filerec + '.wav',fs,rec) # guarda el array grabado en wav con 32 bits
-    # fin loop   
+    # end loop
     return rec
 
 def play(fplay,chanout=[1],sdevice=None,normalized=False,fs=48000,block=False):
     '''
-    funcion para reproducir el array fplay (solo el primer canal) o archivo mono fplay.wav a traves de los canales de salida chanout (lista)
-    Puede cambiar el device si no se usa el default. Block True bloquea hasta el fin de la reprocduccion
+    function to play the array fplay (only the first channel) or mono file fplay.wav through the output channels chanout (list)
+    The device can be changed if the default is not used. Block True blocks until the end of playback
     '''
     if sdevice is not None:
         sd.default.device = sdevice

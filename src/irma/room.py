@@ -7,23 +7,23 @@ eps = np.finfo(float).eps
 
 def revtime(ir_input, method='RT20', fs=48000, tmax=3.0):
     '''
-    Calcula el tiempo de reverberacion y la integral de Schroeder a partir de la respuesta
-    impulso almacenada en ir_input (array numpy o nombre de archivo wav) usando el metodo 'RT30' 'RT20' o 'EDT'
-    Lo hace para cada canal del archivo fileir.
-    Atencion asume por defecto una decaimiento maximo de 3 segundos (no TR, decaimiento a piso de ruido
-    lo cual es un asuncion razonable en la mayor parte de los casos)
-    Devuelve por orden: 
-    - el (los) tiempos de reverberacion en segundos
-    - tiempo incial y final en los que ajusto la recta del decaimiento 
-    - nivel inicial y final en dB de la recta del decaimiento (util para el metodo rmax todavia no implementado)
-    - integral(es) de Schroeder de toda la respuesta impulso
+    Calculates the reverberation time and the Schroeder integral from the impulse response
+    stored in ir_input (numpy array or wav file name) using the method 'RT30' 'RT20' or 'EDT'
+    It does this for each channel of the fileir.
+    Attention assumes by default a maximum decay of 3 seconds (not TR, decay to noise floor
+    which is a reasonable assumption in most cases)
+    Returns in order:
+    - the (the) reverberation times in seconds
+    - initial and final time in which the decay line was adjusted
+    - initial and final level in dB of the decay line (useful for the rmax method not yet implemented)
+    - integral(s) of Schroeder of the entire impulse response
     '''
     if type(ir_input) is str:
         fs, data = wavfile.read(ir_input + '.wav')
     elif type(ir_input) is np.ndarray:
         data = ir_input
     else:
-        raise TypeError('Primer argumento debe ser el array devuelto por extractir o un nombre de archivo')
+        raise TypeError('First argument must be the array returned by extractir or a file name')
     if data.ndim == 1:
         data = data[:,np.newaxis] # el array debe ser 2D
     nsamples, nchan = np.shape(data)
@@ -73,15 +73,15 @@ def revtime(ir_input, method='RT20', fs=48000, tmax=3.0):
 
 def clarity(ir_input, fs=48000, tmax = 3.0):
     '''
-    Calcula valores de claridad C80 C50 y centro temporal TS a partir de la respuesta impulso ir
-    mas adelante deberia tener en cuenta la relacion senal ruido para no sobreestimar la reverberacion
+    Calculates clarity values C80 C50 and temporal center TS from the impulse response ir
+    later it should take into account the signal-to-noise ratio to avoid overestimating reverberation
     '''
     if type(ir_input) is str:
         fs, data = wavfile.read(ir_input + '.wav')
     elif type(ir_input) is np.ndarray:
         data = ir_input
     else:
-        raise TypeError('Primer argumento debe ser el array devuelto por extractir o un nombre de archivo')
+        raise TypeError('First argument must be the array returned by extractir or a file name')
     if data.ndim == 1:
         data = data[:,np.newaxis] # el array debe ser 2D
     nsamples, nchan = np.shape(data)
@@ -105,16 +105,16 @@ def clarity(ir_input, fs=48000, tmax = 3.0):
 
 def paracoustic(ir, method='RT20', bankname='fbank', tmax=3.0, fs_default=48000):
     '''
-    Calcula los siguientes parametros acusticos POR BANDAS con los nombres de las keys correspondientes
-    Reververacion: 'RT30' (o el metodo que se pida), 'EDT'
-    Claridad: 'C80', 'C50', 'TS', 
-    Relacion senal ruido 'SNR'
-    Directo reverberante 'DRR'
-    a partir de la respuesta impulso almacenada en ir (array numpy o nombre de archivo wav) 
-    Lo hace para cada canal del archivo fileir y para el banco de filtros almacenado en bankname (extension npz)
-    devueve un diccionario rev que tiene las siguientes keys: nchan (num canales), nbands (num bandas), fc (frecuencias)
-    tr20 (o tr30 o EDT, array de nbands x nchan con los tiempos de reverberancia) tfit, lfit, dchr, lvalues son 
-    las salidas de revtime (ver) para cada banda. La banda 0 es wideband (fc = 1)
+    Calculates the following acoustic parameters BY BANDS with the corresponding key names
+    Reverberation: 'RT30' (or the requested method), 'EDT'
+    Clarity: 'C80', 'C50', 'TS',
+    Signal-to-noise ratio 'SNR'
+    Direct reverberant 'DRR'
+    from the impulse response stored in ir (numpy array or wav file name)
+    It does this for each channel of the fileir and for the filter bank stored in bankname (npz extension)
+    returns a dictionary rev that has the following keys: nchan (num channels), nbands (num bands), fc (frequencies)
+    tr20 (or tr30 or EDT, array of nbands x nchan with reverberation times) tfit, lfit, dchr, lvalues are
+    the outputs of revtime (see) for each band. Band 0 is wideband (fc = 1)
     '''
     # si bankname es None lo hace wideband
     # dar la opcion de no calcular el filtro A
@@ -278,13 +278,13 @@ def irstats(ir, window=0.01, overlap=0.005, fs=48000):
     pars['tnoise'][0,:] = pars['tframe'][nnoise][:,0]
     return pars    
 
-# echo density 
-#     
+# echo density
+#
 #def find_modes # encuentra modos hasta una frecuencia
 
-#def sti # inteligilibilidad del habla
-
-#def spatial # fraccion de energia lateral
+#def sti # speech intelligibility
+    
+#def spatial # lateral energy fraction
 
 
 
