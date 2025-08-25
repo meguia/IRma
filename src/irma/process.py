@@ -3,20 +3,102 @@ from scipy import signal
 from scipy.io import wavfile
 from scipy.interpolate import interp1d
 from scipy.signal import convolve
-from scipy.fft import next_fast_len, rfft, irfft, fft, ifft
-from numpy.fft.helper import fftfreq
+from scipy.fft import next_fast_len, rfft, irfft, fft, ifft, fftfreq
+
+#####################################
+# SIGNAL PROCESSING 
+
+def fast_ccf(x1,x2):
+    '''
+    Compute the fast cross-correlation between two signals.
+    '''
+    wav_len = x1.shape[0]
+    wf = np.hanning(wav_len)
+    x1 = x1*wf
+    x2 = x2*wf
+    X1 = fft(x1,2*wav_len-1)# equivalent to add zeros
+    X2 = fft(x2,2*wav_len-1)
+    ccf_unshift = np.real(ifft(np.multiply(X1,np.conjugate(X2))))
+    ccf = np.concatenate([ccf_unshift[wav_len:],ccf_unshift[:wav_len]],axis=0)
+    return ccf
+
+def fconvolve(in1,in2):
+    '''
+    Fast convolution of two signals.
+    '''
+    #the samples must be along axis -1
+    n1 = np.max(in1.shape)
+    n2 = np.max(in2.shape)
+    ntot = n1+n2-1
+    if np.argmin(in1.shape)>0:
+        in1_fft=rfft(in1.T,ntot)
+    else:
+        in1_fft=rfft(in1,ntot) 
+    if np.argmin(in2.shape)>0:
+        in2_fft=rfft(in2.T,ntot)
+    else:
+        in2_fft=rfft(in2,ntot) 
+    return irfft(in1_fft*in2_fft).T
+
+
+def array_convolve2D(a1,a2,axis=0):
+  """
+  Convolves two 2D array along axis assuming same number of elements in the other axis
+  and returns a 2D array with the result
+  """
+  if a1.shape[axis-1] != a2.shape[axis-1]:
+      raise ValueError("Same number of elements required along axis")
+  na = a1.shape[axis-1]
+  if axis==0:
+    c = np.zeros((a1.shape[0]+a2.shape[0]-1,na))
+    for n in np.arange(na):
+      c[:,n] = convolve(a1[:,n],a2[:,n])
+  else:
+    c = np.zeros((na,a1.shape[0]+a2.shape[0]-1))
+    for n in np.arange(na):
+      c[n,:] = convolve(a1[n,:],a2[n,:])    
+  return c    
+
+# function to perform time stretch and compensate for temperature variations or correct clock drift
+#def ir_stretch(ir,threshold):
+
+# function to detect outliers in a set of IR
+#def ir_average(ir,reject_outliers=True,threshold): # with option to remove outliers
+
+
+########################################
+# IR PROCESSING
+
+def find_dir(data, pw=1.0, fs=48000):
+    """ 
+    Find the direct sound onset and offset in the signal data
+    pw is the peak width in milliseconds
+    Returns a 2D array with the maximum, offset and onset samples values for each channel
+    """
+    nw = int(np.floor(pw*fs/1000))
+    if data.ndim == 1:
+        data = data[:,np.newaxis] # el array debe ser 2D
+    _, nchan = np.shape(data)
+    ndir = np.zeros((3,nchan),dtype=int)
+    # find first local maximum 20 dB below the absolute maximum value
+    for n in range(nchan):
+        pmax = np.max(np.abs(data[:,n]))
+        n0 = np.argmax(np.abs(data[:,n])>pmax/10)
+        n0=max(n0,nw+1) 
+        npk = np.argmax(np.abs(data[n0-nw:n0+nw,n]))
+        nc = n0+npk-nw-2
+        ndir[0,n] = np.maximum(1,int(nc-1.0*nw))
+        ndir[1,n] = int(nc+1.5*nw)
+        ndir[2,n] = nc
+    return ndir
 
 def ir_extract(rec,fileinv,fileout='ir_out',loopback=None,dur=None,fs=48000):
     '''
-    extrae la respuesta impulso a partir de la grabacion del sweep (rec) y el filtro inverso 
-    almacenado en fileinv (archivo npy), ambos parametros obligatorios.
-    rec puede ser el array numpy de nsamp x nchan o el nombre del archivo wav. 
-    Si hay un canal de loopback lo usa para alinear y hay que proporcionar el numero de canal
-    devuelve la ri obtenida (puede ser mas de un canal) y la almacena en fileout 
-    (si la entrada fue un archivo) con una duracion dur (la ir completa por defecto)
+    Extract the impulse response from the sweep recording (rec) and the inverse filter (fileinv, npy file),
+    both are required. rec can be the numpy array of nsamp x nchan or the name of the wav file.
+    If there is a loopback channel, it is used to align all other channels and the channel number must be provided.
+    It returns the obtained ir (can be more than one channel) and saves it in fileout (if the input was a file)
     '''
-    # rec puede ser un nombre de un archivo o un prefijo
-    
     if type(rec) is str:
         fs, data = wavfile.read(rec + '.wav')
     elif type(rec) is np.ndarray:
@@ -63,6 +145,7 @@ def ir_extract(rec,fileinv,fileout='ir_out',loopback=None,dur=None,fs=48000):
     return ir
 
 def ir_sweep(data,datainv,nchan):
+
     invsweepfft = datainv['invsweepfft']
     N = invsweepfft.shape[0]
     Nrep = datainv['Nrep']
@@ -73,6 +156,9 @@ def ir_sweep(data,datainv,nchan):
     return ir_stack
 
 def ir_golay(data,datainv,nchan):
+    '''
+    Extract the impulse response from the Golay sweep recording.
+    '''
     a = datainv['a']
     b = datainv['b']
     Ng = len(a)
@@ -103,33 +189,13 @@ def ir_list_to_multichannel(ir_list,nsamples=None,chan=0):
             ir_multichannel[:,n] = ir[:nsamples]    
     return ir_multichannel
 
-def fconvolve(in1,in2):
-    '''
-    in1 can be multichannel, in2 single channel
-    '''
-    #the samples must be along axis -1
-    n1 = np.max(in1.shape)
-    n2 = np.max(in2.shape)
-    ntot = n1+n2-1
-    if np.argmin(in1.shape)>0:
-        in1_fft=rfft(in1.T,ntot)
-    else:
-        in1_fft=rfft(in1,ntot) 
-    if np.argmin(in2.shape)>0:
-        in2_fft=rfft(in2.T,ntot)
-    else:
-        in2_fft=rfft(in2,ntot) 
-    return irfft(in1_fft*in2_fft).T
-
-# funcion para hacer time stretch y compensar variaciones de temperatura o corregir drift en el clock
-#def ir_stretch(ir,threshold):
-
-# funcion para detectar outliers en un conjunto de IR
-#def ir_average(ir,reject_outliers=True,threshold): # con opcion de eliminar outliers
-
-# fadeinout
+####################################################
+# SIGNAL MODIFIERS
 
 def fadeinout(data, fadein=0.05, fadeout=None, fs=48000):
+    '''
+    Apply fade-in and fade-out to the input audio data.
+    '''
     if fadein is not None:
         nin = int(fadein*fs)
         a = (1.0-np.cos(np.linspace(0,np.pi,nin)))/2.0 
@@ -149,6 +215,9 @@ def fadeinout(data, fadein=0.05, fadeout=None, fs=48000):
     return
     
 def burst(data, nburst=3, dur=0.05, gap=0.02, fadein=0.01, fadeout=None, fs=48000):
+    '''
+    Apply burst noise to the input audio data.
+    '''
     a = np.zeros((len(data),))
     dn = int(np.floor(dur*fs))
     for n in range(nburst):
@@ -168,7 +237,8 @@ def burst(data, nburst=3, dur=0.05, gap=0.02, fadein=0.01, fadeout=None, fs=4800
         data *= a        
     return
 
-#filtros
+##################################################
+# FILTERS
 
 def butter_bandpass(lowcut, highcut, fs, order=5, N=10000):
     nyq = 0.5 * fs
@@ -180,8 +250,8 @@ def butter_bandpass(lowcut, highcut, fs, order=5, N=10000):
 
 def make_filterbank(fmin=62.5,noct=8,bwoct=1,fs=48000,order=5,N=10000,bankname='fbank_8_1',show=False):
     '''
-    Arma un banco de filtros de noct octavas desde la frecuencia fmin con bwoct filtros
-    por octava con filtros butter de orden order en formato sos y los guarda en bankname
+    Create a filter bank with noct octaves starting from frequency fmin with bwoct filters
+    per octave using butterworth filters of order 'order' in sos format and saves it in 'bankname'
     '''
     nfilt = (noct-1)*bwoct+1 # las octavas inicial y final inclusive
     fc = np.array([fmin* 2 ** (n * 1 / bwoct) for n in range(nfilt)])
@@ -192,8 +262,8 @@ def make_filterbank(fmin=62.5,noct=8,bwoct=1,fs=48000,order=5,N=10000,bankname='
         #if show:
         #    plt.semilogx((fs * 0.5 / np.pi) * w, abs(h))
     np.savez_compressed(bankname,sos=sos,fc=fc,fs=fs,order=order)
-    print('Banco de filtros generado: ' + str(noct) + ' octavas,' + str(bwoct) + ' bandas/octava,' +
-          'desde ' + str(fmin) + ' Hz,' + 'Almacenada en archivo ' + bankname)
+    print('Filter bank generated: ' + str(noct) + ' octaves,' + str(bwoct) + ' bands/octave,' +
+          'from ' + str(fmin) + ' Hz,' + 'Stored in file ' + bankname)
     #if show:
     #    plt.show()
     return
@@ -219,8 +289,8 @@ def load_filterbank(bankname):
     
 def A_weighting(fs=48000):
     """
-    Diseña filtro A para la frecuencia de sampleo fs
-    adaptado de https://gist.github.com/endolith/148112
+    Designs an A-weighting filter for the sampling frequency fs
+    adapted from https://gist.github.com/endolith/148112
     Usage: B, A = A_weighting(fs) 
     """
     z = [0, 0, 0, 0]
@@ -240,8 +310,8 @@ def A_weighting(fs=48000):
 
 def apply_bands(data, bankname='fbank_10_1', fs=48000, norma=True):
     """
-    Aplica el banco de filtros almacenado en bankname a la senal data
-    por defecto normaliza las senales filtradas, sino hacer norma=false
+    Applies the filter bank stored in bankname to the signal data
+    by default normalizes the filtered signals, otherwise set norma=false
     """
     try:     
         fbank = np.load(bankname + '.npz')
@@ -259,6 +329,22 @@ def apply_bands(data, bankname='fbank_10_1', fs=48000, norma=True):
         data_filt[:,n] = temp
     # agregar fadeinfadeout    
     return data_filt    
+
+def hipass_filter(data, **kwargs):
+    nyq = 0.5 * kwargs['fs']
+    low = kwargs['lowcut'] / nyq
+    sos = signal.butter(kwargs['order'], low, btype='highpass', output='sos')
+    return signal.sosfiltfilt(sos, data, axis=0)
+
+def lowpass_filter(data, **kwargs):
+    nyq = 0.5 * kwargs['fs']
+    hicut = kwargs['hicut'] / nyq
+    sos = signal.butter(kwargs['order'], hicut, btype='lowpass', output='sos')
+    return signal.sosfiltfilt(sos, data, axis=0)    
+
+
+##########################################################
+# SPECTRUM AND SPECTROGRAM
 
 def spectrum(data_input, fs=48000):
     """
@@ -378,36 +464,9 @@ def spectrogram(data, **kwargs):
             spec['env'][n] = spec['env'][n]/np.max(spec['env'][n])    
     return spec        
 
-def hipass_filter(data, **kwargs):
-    nyq = 0.5 * kwargs['fs']
-    low = kwargs['lowcut'] / nyq
-    sos = signal.butter(kwargs['order'], low, btype='highpass', output='sos')
-    return signal.sosfiltfilt(sos, data, axis=0)
 
-def lowpass_filter(data, **kwargs):
-    nyq = 0.5 * kwargs['fs']
-    hicut = kwargs['hicut'] / nyq
-    sos = signal.butter(kwargs['order'], hicut, btype='lowpass', output='sos')
-    return signal.sosfiltfilt(sos, data, axis=0)    
-
-
-def array_convolve2D(a1,a2,axis=0):
-  """
-  Convolves two 2D array along axis assuming same number of elements in the other axis
-  and returns a 2D array with the result
-  """
-  if a1.shape[axis-1] != a2.shape[axis-1]:
-      raise ValueError("Same number of elements required along axis")
-  na = a1.shape[axis-1]
-  if axis==0:
-    c = np.zeros((a1.shape[0]+a2.shape[0]-1,na))
-    for n in np.arange(na):
-      c[:,n] = convolve(a1[:,n],a2[:,n])
-  else:
-    c = np.zeros((na,a1.shape[0]+a2.shape[0]-1))
-    for n in np.arange(na):
-      c[n,:] = convolve(a1[n,:],a2[n,:])    
-  return c    
+################################################
+# AMBISONICS
 
 def ambiAtoB(data,format="FuMa",filt=None):
     """

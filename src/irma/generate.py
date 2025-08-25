@@ -104,10 +104,13 @@ def golay(filename,N=18,fs=48000, Nrep=1):
     return ab
 
 
-def sigmoid(x,x0=0,a=1):
-    x1 = 2*(x-x0)/a
-    sig = np.where(x1 < 0, np.exp(x1)/(1 + np.exp(x1)), 1/(1 + np.exp(-x1)))
-    return sig
+def sigmoid(x,x0,s=1.0):
+    x1 = 2*(x-x0)/s
+    sig = np.zeros_like(x1)
+    ncut = np.argmax(x1>0)
+    sig[:ncut] = np.exp(x1[:ncut])/(1.0 + np.exp(x1[:ncut]))
+    sig[ncut:] = 1.0/(1.0 + np.exp(-x1[ncut:]))
+    return sig    
 
 def puretone(T,f,fadein=None,fadeout=None,fs=48000):
     data = np.sin(2.0*np.pi*f*np.arange(0,T,1/fs))
@@ -177,4 +180,4 @@ def burst_noise(nburst, dur, gap, type='white', flow=None, fhigh=None, fslow=Non
         raise Exception("Invalid noise type")
     burst(data, nburst=nburst, dur=dur, gap=gap, fadein=fadein, fadeout=fadeout, fs=fs)
     return data
-    
+

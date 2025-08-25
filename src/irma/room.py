@@ -2,7 +2,7 @@ import numpy as np
 from scipy import signal
 from scipy.io import wavfile
 from scipy.stats import linregress, kurtosis
-from .process import make_filterbank, A_weighting
+from .process import make_filterbank, A_weighting, find_dir
 eps = np.finfo(float).eps
 
 def revtime(ir_input, method='RT20', fs=48000, tmax=3.0):
@@ -70,7 +70,6 @@ def revtime(ir_input, method='RT20', fs=48000, tmax=3.0):
         l12[n] = intercept+slope*tv[[pt1,pt2]]
         rvalue[n] = r_value    
     return rt, t12, l12, schr, SNR, rvalue 
-
 
 def clarity(ir_input, fs=48000, tmax = 3.0):
     '''
@@ -191,6 +190,9 @@ def paracoustic(ir, method='RT20', bankname='fbank', tmax=3.0, fs_default=48000)
     return pars
 
 def direct_to_reverb(data, nmax, ndir=None, fs=48000):
+    '''
+    Compute the direct-to-reverberant energy ratio (DRR) for the given signal data.
+    '''
     nsamples,nchan = data.shape
     nmax = np.minimum(nmax,nsamples)
     if ndir is None:
@@ -203,27 +205,12 @@ def direct_to_reverb(data, nmax, ndir=None, fs=48000):
     EREV = np.sum(np.square(revs),axis=1)
     return  10.0*np.log10(EDIR/EREV)
 
-def find_dir(data, pw=1.0, fs=48000):
-    """ Multichannel
-    """
-    nw = int(np.floor(pw*fs/1000))
-    if data.ndim == 1:
-        data = data[:,np.newaxis] # el array debe ser 2D
-    _, nchan = np.shape(data)
-    ndir = np.zeros((3,nchan),dtype=int)
-    # find first local maximum 20 dB below the absolute maximum value
-    for n in range(nchan):
-        pmax = np.max(np.abs(data[:,n]))
-        n0 = np.argmax(np.abs(data[:,n])>pmax/10)
-        n0=max(n0,nw+1) 
-        npk = np.argmax(np.abs(data[n0-nw:n0+nw,n]))
-        nc = n0+npk-nw-2
-        ndir[0,n] = np.maximum(1,int(nc-1.0*nw))
-        ndir[1,n] = int(nc+1.5*nw)
-        ndir[2,n] = nc
-    return ndir
+
 
 def find_echoes(data, nechoes=10, pw=1.0, fs=48000):
+    '''
+    Find the echoes in the signal data
+    '''
     nw = int(np.floor(0.5*pw*fs/1000))
     if data.ndim == 1:
         data = data[:,np.newaxis] # el array debe ser 2D
@@ -294,8 +281,6 @@ def irstats(ir, window=0.01, overlap=0.005, fs=48000):
 # echo density 
 #     
 #def find_modes # encuentra modos hasta una frecuencia
-
-#def binaural # aca va ITD ILD e intensidad binaural IACC
 
 #def sti # inteligilibilidad del habla
 
