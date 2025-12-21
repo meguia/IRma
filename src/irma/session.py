@@ -86,6 +86,7 @@ class RecordingSession:
         self.recordings[nrecording]['valid']=False
 
     def playrec_file(self,filename,speaker,microphone,direction=1,take=1,channel=0,dim=1.0,comment=''):
+        """ Play and record an existing audio file (not a sweep)"""
         nchannels = len(self.input_channels)
         fs, fplay = wavfile.read(filename+".wav")
         if fplay.ndim > 1:
@@ -98,7 +99,17 @@ class RecordingSession:
         print(f"Recording Audio file {filename} in {recfile}")
         rec_temp = play_rec(data,os.path.join(self.recording_path,recfile),chanin=self.input_channels,chanout=self.output_channels,fs=fs) 
         print(f"Maximum sample value = {np.max(rec_temp)}")
-        self.recordings.append([recfile, comment])
+        rec_dic = dict(
+            spk=speaker,
+            mic=microphone,
+            dir=direction,
+            take=take,
+            valid=True,
+            filename=prefix,
+            nchan=nchannels,
+            comment=comment
+        )
+        self.recordings.append(rec_dic)
 
     def list_recordings(self,comments=False):
         for n,recordings in enumerate(self.recordings):
@@ -138,7 +149,7 @@ class RecordingSession:
             self.comments += f"\n{new_comment}"
         else:    
             if nrecording<len(self.recordings):
-                new_comment = input("Enter a comment for recording "+self.recordings[nrecording][0])
+                new_comment = input("Enter a comment for recording "+self.recordings[nrecording]['filename'])
                 self.recordings[nrecording]['comment']+= f"\n{new_comment}"
             else:
                 raise ValueError("recording out of range") 
@@ -176,11 +187,11 @@ class RecordingSession:
         microphones = metadata['microphones']
         speaker_pos = metadata.get('speaker_positions', [0, 0])
         microphone_pos = metadata.get('microphone_positions', [0, 0])
-        inchan = metadata.get('input_channels', [0, 1])
-        outchan = metadata.get('output_channels', [0, 1])
+        inchan = metadata.get('input_channels', [1, 2])
+        outchan = metadata.get('output_channels', [1, 2])
         loopback = metadata.get('loopback', None)
         sampling_rate = metadata.get('sampling_rate', 48000)
-        rtype = metadata.get('rype',None)
+        rtype = metadata.get('rtype',None)
         date = metadata.get('date')
         hour = metadata.get('hour')
         comments = metadata.get('comments', '')

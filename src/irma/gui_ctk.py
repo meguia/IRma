@@ -827,7 +827,7 @@ class IRMA_ctk():
             else :    
                 # case 2 all files, single channel
                 chan = int(self.plot_channels)-1
-                # arma un multicanal con las ir cargadas en ir_list con un nsamples maximo
+                # build a multichannel IR from ir_list using the specified channel
                 self.ir_stacked = ir_list_to_multichannel(self.ir_list,chan=chan)
                 self.params = paracoustic(self.ir_stacked, method=self.rtmethod,bankname=self.fbankname,tmax=float(self.tmax.get()))
                 labels = [' '.join(f.split('_')[1:4]) + ' ch ' + self.plot_channels for f in self.list_files]

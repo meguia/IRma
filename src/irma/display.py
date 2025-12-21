@@ -50,7 +50,7 @@ def echo_display(data, nechoes, pw=0.7, scale=0.1, wplot=True, fs=48000, labels=
     echoes_multi = find_echoes(data,nechoes,pw,fs=fs)
     #print(echoes_multi)
     if data.ndim == 1:
-        data = data[:,np.newaxis] # el array debe ser 2D
+        data = data[:,np.newaxis] # array must be 2D
     nchan = echoes_multi.shape[2]
     if labels is None:
         labels = ['Ch ' + str(n) for n in range(nchan)]
@@ -90,7 +90,7 @@ def ir_plot(data, fs=48000, tmax=3.0, labels=None, figsize=None, redraw=True, ax
     Plot the impulse response from the given data.
     """
     if data.ndim == 1:
-        data = data[:,np.newaxis] # el array debe ser 2D
+        data = data[:,np.newaxis] # array must be 2D
     nsamples, nchan = np.shape(data)
     t = np.arange(nsamples)/fs
     if figsize is None:
@@ -121,7 +121,7 @@ def irstat_plot(data, window=0.01, overlap=0.002, fs=48000, logscale=True, tmax=
     Plot the statistics of the impulse response.
     """
     if data.ndim == 1:
-        data = data[:,np.newaxis] # el array debe ser 2D
+        data = data[:,np.newaxis] # array must be 2D
     pstat = irstats(data, window=window, overlap=overlap, fs=fs)
     nsamples, nchan = np.shape(data)
     t = np.arange(1,nsamples+1)/fs
@@ -159,7 +159,7 @@ def acorr_plot(data, trange=0.2, fs=48000):
     Plot the autocorrelation of the impulse response.
     """
     if data.ndim == 1:
-        data = data[:,np.newaxis] # el array debe ser 2D
+        data = data[:,np.newaxis] # array must be 2D
     nsamples, nchan = data.shape
     acorr = fconvolve(data[::-1],data)
     fig, axs = plt.subplots(nchan,1,figsize=(18,3*nchan))
@@ -181,7 +181,7 @@ def spectrum_plot(data, logscale=False, fmax=12000, fs=48000, lrange=60, figsize
     Plot the spectrum of the impulse response.
     """
     if data.ndim == 1:
-        data = data[:,np.newaxis] # el array debe ser 2D
+        data = data[:,np.newaxis] # array must be 2D
     _, nchan = data.shape
     sp = spectrum(data, fs=fs)
     if figsize is None:
@@ -379,7 +379,7 @@ def transfer_plot(data,f=None,logscale=False, fmax=6000, fmin=60,fs=48000, lrang
     else:
         H = data
     if H.ndim == 1:
-        H = H[:,np.newaxis] # el array debe ser 2D
+        H = H[:,np.newaxis] # array must be 2D
     nsamples, nchan = H.shape
     if f is None:
         f = np.linspace(0,fs/2,nsamples)    

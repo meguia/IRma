@@ -77,7 +77,7 @@ def find_dir(data, pw=1.0, fs=48000):
     """
     nw = int(np.floor(pw*fs/1000))
     if data.ndim == 1:
-        data = data[:,np.newaxis] # el array debe ser 2D
+        data = data[:,np.newaxis] # array must be 2D
     _, nchan = np.shape(data)
     ndir = np.zeros((3,nchan),dtype=int)
     # find first local maximum 20 dB below the absolute maximum value
@@ -106,7 +106,7 @@ def ir_extract(rec,fileinv,fileout='ir_out',loopback=None,dur=None,fs=48000):
     else:
         raise TypeError('First argument must be the array given by play_rec or a file name')
     if data.ndim == 1:
-        data = data[:,np.newaxis] # el array debe ser 2D    
+        data = data[:,np.newaxis] # array must be 2D    
     datainv = np.load(fileinv + '_inv.npz')
     _, nchan = np.shape(data)
     if fs != datainv['fs']:
@@ -120,7 +120,7 @@ def ir_extract(rec,fileinv,fileout='ir_out',loopback=None,dur=None,fs=48000):
     # ir dimensions: Nrep, nsamples, nchan
     Nrep,N,_ = ir_stack.shape
     if loopback is not None:
-        # usar el loopback para alinear todos los otros canales loopback es indice del canal
+        # use loopback to align all other channels; loopback is the channel index
         n0 = np.argmax(ir_stack[:,:,loopback],axis=1)
     else:
         n0 = np.zeros((Nrep,),dtype=int)
@@ -334,7 +334,7 @@ def hipass_filter(data, **kwargs):
     nyq = 0.5 * kwargs['fs']
     low = kwargs['lowcut'] / nyq
     sos = signal.butter(kwargs['order'], low, btype='highpass', output='sos')
-    return signal.sosfiltfilt(sos, data, axis=0)
+        # add fade-in/fade-out    
 
 def lowpass_filter(data, **kwargs):
     nyq = 0.5 * kwargs['fs']
@@ -361,9 +361,9 @@ def spectrum(data_input, fs=48000):
     elif type(data_input) is np.ndarray:
         data = data_input
     else:
-        raise TypeError('Primer argumento debe ser el array devuelto por extractir o un nombre de archivo')
+        raise TypeError('First argument must be the array returned by extractir or a file name')
     if data.ndim == 1:
-        data = data[:,np.newaxis] # el array debe ser 2D
+        data = data[:,np.newaxis] # array must be 2D
     nsamples, nchan = np.shape(data)
     nf = int(np.ceil((nsamples+1)/2))
     freq = fftfreq(nsamples, d=1/fs)
@@ -430,7 +430,7 @@ def spectrogram(data, **kwargs):
     windowSize = next_fast_len(kwargs['windowSize'])
     overlap = kwargs['overlap']
     if data.ndim == 1:
-        data = data[:,np.newaxis] # el array debe ser 2D
+        data = data[:,np.newaxis] # array must be 2D
     nsamples, nchan = np.shape(data)
     nt = int(np.floor((nsamples-windowSize)/(windowSize-overlap)))+1
     nenv = next_fast_len(nsamples)

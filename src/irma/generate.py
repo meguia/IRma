@@ -15,11 +15,11 @@ def sweep(T, f1=30, f2=22000,filename=None,fs=48000,Nrep=1,order=2,post=2.0,rms=
     if filename is None:
         filename = 'sweep' + str(T) + 's_' + str(f1) + '_' + str(f2)   
     N = int(T*fs)
-    Gd_start = int(np.ceil(min(N/10,max(fs/f1, N/200)))) # inicio del group delay fs/f1 acotado entre N/10 y N/200
-    postfade = int(np.ceil(min(N/10,max(fs/f2,N/200)))) # fadeout 
+    Gd_start = int(np.ceil(min(N/10,max(fs/f1, N/200)))) # group delay start fs/f1 bounded between N/10 and N/200
+    postfade = int(np.ceil(min(N/10,max(fs/f2,N/200)))) # fade-out length
     Nsweep = N - Gd_start - postfade
     tsweep = Nsweep/fs
-    # filtros pasabanda para crear la respuesta en frecuencia deseada
+    # bandpass filters to create the desired frequency response
     if (f2 < fs/2):
         B2, A2 = signal.butter(order,f2/(fs/2)) # lowpass
         B1, A1 = signal.butter(order,f1/(fs/2),'highpass') # higpass
@@ -29,55 +29,55 @@ def sweep(T, f1=30, f2=22000,filename=None,fs=48000,Nrep=1,order=2,post=2.0,rms=
         B1, A1 = signal.butter(2,f1/(fs/2),'highpass' ) # order 2
     W1, H1 = signal.freqz(B1,A1,N+1,fs=fs)
     W2, H2 = signal.freqz(B2,A2,N+1,fs=fs)   
-    # espectro rosa (-10dB por decada, or 1/(sqrt(f)) 
+    # pink spectrum (-10 dB per decade, or 1/sqrt(f))
     mag = np.sqrt(f1/W1[1:])
-    mag = np.insert(mag,0,mag[0]) # completamos f=0
-    mag = mag*np.abs(H1)*np.abs(H2) # y aplicamos pasabanda\
-    Gd = tsweep * np.cumsum(mag**2)/np.sum(mag**2) # calculo del group delay
-    Gd = Gd + Gd_start/fs # agrega el predelay
-    Gd = Gd*fs/2;   # convierte a samples
-    ph = -2.0*np.pi*np.cumsum(Gd)/(N+1) # obtiene la fase integrando el GD
-    ph = ph - (W1/(fs/2))*np.mod(ph[-1],2.0*np.pi) # fuerza la fase a terminar en multiplo de 2 pi
-    cplx = mag*np.exp(1.0j*ph) # arma el espectro del sweep a partir de la magnitud y la fase
-    cplx = np.append(cplx,np.conj(cplx[-2:0:-1])) # completa el espectro con f negativas para sweep real
-    sweep = np.real(ifft(cplx)) # Y aca esta el sweep finalmente
-    sweep = sweep/max(np.abs(sweep)) # normaliza
+    mag = np.insert(mag,0,mag[0]) # fill f=0
+    mag = mag*np.abs(H1)*np.abs(H2) # apply bandpass
+    Gd = tsweep * np.cumsum(mag**2)/np.sum(mag**2) # compute group delay
+    Gd = Gd + Gd_start/fs # add pre-delay
+    Gd = Gd*fs/2   # convert to samples
+    ph = -2.0*np.pi*np.cumsum(Gd)/(N+1) # obtain phase by integrating GD
+    ph = ph - (W1/(fs/2))*np.mod(ph[-1],2.0*np.pi) # force phase to end at multiple of 2π
+    cplx = mag*np.exp(1.0j*ph) # build sweep spectrum from magnitude and phase
+    cplx = np.append(cplx,np.conj(cplx[-2:0:-1])) # complete spectrum with negative freqs for real sweep
+    sweep = np.real(ifft(cplx)) # final sweep
+    sweep = sweep/max(np.abs(sweep)) # normalize
     
     if post is not None: # zeropadding for better accuracy
         npost = int(fs*post)
-        NL = next_fast_len(N+npost)
-    else:    
-        NL = next_fast_len(N)
+    else:
+        npost = 0    
+    NL = next_fast_len(N+npost)
     if NL>len(sweep):
         print("PAD")
-        np.pad(sweep,(0,NL-len(sweep)))    
+        sweep = np.pad(sweep,(0,NL-len(sweep)))    
     else:
         sweep = sweep[:NL]
-    rms_sweep = 10.0*np.log10(np.mean(np.square(sweep[:NL-npost]))) # deberia ser -3 dB
+    rms_sweep = 10.0*np.log10(np.mean(np.square(sweep[:NL-npost]))) # should be about -3 dB
     rms_diff = rms - rms_sweep
     if (rms_diff<0):
-        sweep = sweep*np.power(10.0,rms_diff/20.0) # ajusta la rams
+        sweep = sweep*np.power(10.0,rms_diff/20.0) # adjust RMS
     else:
-        print('Warning RMS pedido mayor al RMS de corte que es {0:.2f} dB '.format(rms_sweep))  
+        print('Warning: requested RMS exceeds cutoff RMS of {0:.2f} dB'.format(rms_sweep))  
     rms_sweep = 10*np.log10(np.mean(np.square(sweep[:NL-npost])))
     print('Sweep RMS = {0:.2f} dB '.format(rms_sweep))    
-    w = signal.windows.hann(2*Gd_start) # ventana para fadein
+    w = signal.windows.hann(2*Gd_start) # window for fade-in
     sweep[:Gd_start] = sweep[:Gd_start]*w[:Gd_start]
-    w = signal.windows.hann(2*postfade) # ventana para fadeout
+    w = signal.windows.hann(2*postfade) # window for fade-out
     sweep[-postfade:] = sweep[-postfade:]*w[-postfade:]
-    # Calculo del filtro inverso normalizado
+    # Compute normalized inverse filter
     sweepfft = fft(sweep)
     invsweepfft = 1.0/sweepfft
-    #  para evitar divergencias re aplicamos el pasabanda
+    # re-apply bandpass to avoid divergences
     W1, H1 = signal.freqz(B1,A1,NL,whole=True,fs=fs)
     W2, H2 = signal.freqz(B2,A2,NL,whole=True,fs=fs)
     invsweepfftmag  = np.abs(invsweepfft)*np.abs(H1)*np.abs(H2)
     invsweepfftphase = np.angle(invsweepfft)
-    invsweepfft = invsweepfftmag*np.exp(1.0j*invsweepfftphase) # resintesis
+    invsweepfft = invsweepfftmag*np.exp(1.0j*invsweepfftphase) # resynthesis
     print('Sweep generated with {0} samples.'.format(len(sweep)))
     print('Total signal with {0} repetitions has a duration of {1:.2f} seconds'.format(Nrep,Nrep*len(sweep)/fs))
     np.savez(filename + '_inv',invsweepfft=invsweepfft,type='sweep',fs=fs,Nrep=Nrep) 
-    wavfile.write(filename + '.wav',fs,np.tile(sweep,Nrep)) # guarda el sweep en wav con formato float 32 bits
+    wavfile.write(filename + '.wav',fs,np.tile(sweep,Nrep)) # saves the sweep to WAV in 32-bit float format
     return sweep
 
 # Multitone

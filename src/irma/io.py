@@ -12,11 +12,11 @@ def time_rec(filerec,duration,delay=0,chanin=[1],fs=48000,sdevice=None,write_wav
         sd.default.device = sdevice
     sd.default.samplerate = fs
     # loop over repeat
-    rec = sd.rec(int(duration*fs),samplerate=fs,mapping=chanin,dtype='float64') # graba con 64 bits para proceso
+    rec = sd.rec(int(duration*fs),samplerate=fs,mapping=chanin,dtype='float64') # records with 64 bits for processing
     sd.wait() # wait 
     print('finished')
     if write_wav:
-        wavfile.write(filerec + '.wav',fs,rec) # guarda el array grabado en wav con 32 bits
+        wavfile.write(filerec + '.wav',fs,rec.astype(np.float32)) # saves the recorded array to WAV with 32-bit float
     # end loop
     return rec
 
@@ -42,7 +42,7 @@ def play_rec(fplay,filerec,delay=0,chanout=[1],chanin=[1],revtime=2.0,sdevice=No
         raise TypeError('Input must be ndarray or filename')     
     sd.default.samplerate = fs2
     nchanout = len(chanout)
-    data = np.append(data,np.zeros(int(revtime*fs))) # extends data for reverb
+    data = np.append(data,np.zeros(int(revtime*fs2))) # extends data for reverb
     data = np.repeat(data[:,np.newaxis],nchanout,1) # repeat the array
     # wait delay and print some message
     # loop over repeat
@@ -50,7 +50,7 @@ def play_rec(fplay,filerec,delay=0,chanout=[1],chanin=[1],revtime=2.0,sdevice=No
     sd.wait() # wait for recording to finish
     print('finished')
     if write_wav:
-        wavfile.write(filerec + '.wav',fs,rec) # guarda el array grabado en wav con 32 bits
+        wavfile.write(filerec + '.wav',fs2,rec.astype(np.float32)) 
     # end loop
     return rec
 
@@ -73,7 +73,7 @@ def play(fplay,chanout=[1],sdevice=None,normalized=False,fs=48000,block=False):
     sd.default.samplerate = fs
     # nchanout = chanout[-1]+1
     mapping = [c for c in chanout]
-    # data = np.repeat(data[:,np.newaxis],nchanout,1) # repite el array 
+    # data = np.repeat(data[:,np.newaxis],nchanout,1) # repeats the array 
     if normalized:
         sd.play(data/np.max(np.abs(data)), mapping=mapping,blocking=block) 
     else:

@@ -5,6 +5,9 @@ from scipy.stats import linregress, kurtosis
 from .process import make_filterbank, A_weighting, find_dir
 eps = np.finfo(float).eps
 
+def clamp(i, lo, hi):
+    return max(lo, min(i, hi))
+
 def revtime(ir_input, method='RT20', fs=48000, tmax=3.0):
     '''
     Calculates the reverberation time and the Schroeder integral from the impulse response
@@ -25,7 +28,7 @@ def revtime(ir_input, method='RT20', fs=48000, tmax=3.0):
     else:
         raise TypeError('First argument must be the array returned by extractir or a file name')
     if data.ndim == 1:
-        data = data[:,np.newaxis] # el array debe ser 2D
+        data = data[:,np.newaxis] # array must be 2D
     nsamples, nchan = np.shape(data)
     nmax = int(min(tmax*fs,nsamples))
     schr = np.zeros((nchan,nmax))
@@ -35,31 +38,30 @@ def revtime(ir_input, method='RT20', fs=48000, tmax=3.0):
     l12 = np.zeros((nchan,2))
     rvalue = np.zeros((nchan,))*np.nan
     for n, ir in enumerate(data.T):
-        #ns = np.mean(ir[nmax:-1][0]**2)  por que estaba esto antes?
         ns = np.mean(ir[nmax:-1]**2)
-        stemp = np.flip(np.cumsum(ir[::-1]**2)) # integral de Schroeder
+        stemp = np.flip(np.cumsum(ir[::-1]**2)) # Schroeder integral
         stemp = stemp[:nmax]
         mm = np.arange(nsamples,0,-1)*ns
         n_ns = np.argmax(stemp<mm[:nmax]*np.sqrt(2))
         xv = 10*np.log10(stemp)-10*np.log10(mm[:nmax])
         xv = xv - np.amax(xv)
-        tv =  np.arange(nsamples)/fs # array de tiempo
-        SNR[n] = -xv[-1] # full range del decaimiento SNR
+        tv =  np.arange(nsamples)/fs # time array
+        SNR[n] = -xv[-1] # full decay range SNR
         schr[n][:nmax] = xv
         if method == 'RT30' and SNR[n]>35:
-            #  Calcula RT usando la definicion del RT30
+            # Calculate RT using RT30 definition
             pt1 = np.argmax(xv<-5)
             pt2 = np.argmax(xv<-35)
         elif method == 'RT20' and SNR[n]>25:
-            # Idem la definicion del RT20
+            # Same as RT20 definition
             pt1 = np.argmax(xv<-5)
             pt2 = np.argmax(xv<-25)
         elif method == 'RT15' and SNR[n]>20:
-            # Idem la definicion del RT20
+            # Same as RT20 definition
             pt1 = np.argmax(xv<-5)
             pt2 = np.argmax(xv<-20)
         elif method == 'EDT' and SNR[n]>10.5:
-            # Calculo del decaimiento temprano EDT
+            # Calculate early decay time (EDT)
             pt1 = np.argmax(xv<-0.5)
             pt2 = np.argmax(xv<-10.5)
         else:
@@ -83,7 +85,7 @@ def clarity(ir_input, fs=48000, tmax = 3.0):
     else:
         raise TypeError('First argument must be the array returned by extractir or a file name')
     if data.ndim == 1:
-        data = data[:,np.newaxis] # el array debe ser 2D
+        data = data[:,np.newaxis] # array must be 2D
     nsamples, nchan = np.shape(data)
     nmax = int(min(tmax*fs,nsamples))
     ndir = find_dir(data, pw=1.0,fs=fs)
@@ -116,8 +118,8 @@ def paracoustic(ir, method='RT20', bankname='fbank', tmax=3.0, fs_default=48000)
     tr20 (or tr30 or EDT, array of nbands x nchan with reverberation times) tfit, lfit, dchr, lvalues are
     the outputs of revtime (see) for each band. Band 0 is wideband (fc = 1)
     '''
-    # si bankname es None lo hace wideband
-    # dar la opcion de no calcular el filtro A
+    # if bankname is None, perform wideband
+    # option to skip A-weighting filter
     try:     
         fbank = np.load(bankname + '.npz')
     except:
@@ -144,7 +146,7 @@ def paracoustic(ir, method='RT20', bankname='fbank', tmax=3.0, fs_default=48000)
     else:
         raise TypeError('Input must be ndarray or filename')    
     if data.ndim == 1:
-        data = data[:,np.newaxis] # el array debe ser 2D
+        data = data[:,np.newaxis] # array must be 2D
     nbands, _, _ = fbank['sos'].shape
     # some stats
     pstat = irstats(data, fs=fs)
@@ -169,7 +171,7 @@ def paracoustic(ir, method='RT20', bankname='fbank', tmax=3.0, fs_default=48000)
     pars['TS'] = np.zeros((pars['nbands'],pars['nchan']))
     pars['DRR'] = np.zeros((pars['nbands'],pars['nchan']))
     # By Frequency Bands
-    ndir = find_dir(data, pw=0.5,fs=fs)
+    ndir = find_dir(data, pw=1.0,fs=fs)
     #print(int(tnoise*fs))
     #print(data.shape)
     sos_a = A_weighting(fs)
@@ -189,21 +191,34 @@ def paracoustic(ir, method='RT20', bankname='fbank', tmax=3.0, fs_default=48000)
         pars['DRR'][n] = direct_to_reverb(data_filt,int(tnoise*fs),ndir,fs)
     return pars
 
-def direct_to_reverb(data, nmax, ndir=None, fs=48000):
+def direct_to_reverb(data, nmax, ndir=None, pw=1.0, fs=48000):
     '''
     Compute the direct-to-reverberant energy ratio (DRR) for the given signal data.
     '''
     nsamples,nchan = data.shape
-    nmax = np.minimum(nmax,nsamples)
+    nmax = int(np.minimum(nmax, nsamples))
     if ndir is None:
-        ndir = find_dir(data, pw=0.5,fs=fs)
-    ddirmax = np.max(np.diff(ndir,axis=0))
-    drevmin = nmax-np.max(ndir[1:])
-    dirs = [data[ndir[0,n]:ndir[0,n]+ddirmax,n] for n in range(nchan)]
-    revs = [data[ndir[1,n]:ndir[1,n]+drevmin,n] for n in range(nchan)]
-    EDIR = np.sum(np.square(dirs),axis=1)
-    EREV = np.sum(np.square(revs),axis=1)
-    return  10.0*np.log10(EDIR/EREV)
+        ndir = find_dir(data, pw=pw, fs=fs)  # assumed to return shape (2, nchan)
+    ddirmax = int(np.max(np.diff(ndir, axis=0)))
+    ddirmax = max(ddirmax, 1)
+    drevmin = int(nmax - np.max(ndir[1:]))
+    drevmin = max(drevmin, 1)
+    dirs = []
+    revs = []
+    for ch in range(nchan):
+        d0 = int(ndir[0, ch])
+        r0 = int(ndir[1, ch])
+        # Clamp slice bounds defensively
+        d1 = min(d0 + ddirmax, nsamples, nmax)
+        r1 = min(r0 + drevmin, nsamples, nmax)
+        dirs.append(data[d0:d1, ch])
+        revs.append(data[r0:r1, ch])
+
+    EDIR = np.array([np.sum(seg.astype(np.float64)**2) for seg in dirs], dtype=np.float64)
+    EREV = np.array([np.sum(seg.astype(np.float64)**2) for seg in revs], dtype=np.float64)
+    # Avoid division by zero / log(0)
+    drr_db = 10.0 * np.log10((EDIR + eps) / (EREV + eps))
+    return  drr_db
 
 
 
@@ -213,8 +228,8 @@ def find_echoes(data, nechoes=10, pw=1.0, fs=48000):
     '''
     nw = int(np.floor(0.5*pw*fs/1000))
     if data.ndim == 1:
-        data = data[:,np.newaxis] # el array debe ser 2D
-    _, nchan = np.shape(data)
+        data = data[:,np.newaxis] # array must be 2D
+    nsamples,nchan = np.shape(data)
     echoes = np.zeros((nechoes,2,nchan))
     amp = 1-np.exp(-np.square(np.linspace(-3.0,3.0,6*nw)))
     data_copy = np.copy(data)
@@ -222,8 +237,12 @@ def find_echoes(data, nechoes=10, pw=1.0, fs=48000):
         for m in range(nechoes):
             n0 = np.argmax(np.abs(data_copy[:,n]))
             echoes[m,0,n] = n0/fs
-            echoes[m,1,n] = np.mean(np.square(data[n0-nw:n0+nw,n]))
-            data_copy[n0-3*nw:n0+3*nw,n] *= amp
+            a = clamp(n0 - nw, 0, nsamples)
+            b = clamp(n0 + nw, 0, nsamples)
+            echoes[m,1,n] = np.mean(np.square(data[a:b,n]))
+            c = clamp(n0 - 3*nw, 0, nsamples)
+            d = clamp(n0 + 3*nw, 0, nsamples)
+            data_copy[c:d,n] *= amp
     return echoes
 
 def irstats(ir, window=0.01, overlap=0.005, fs=48000):
@@ -234,7 +253,7 @@ def irstats(ir, window=0.01, overlap=0.005, fs=48000):
     else:
         raise TypeError('Input must be ndarray or filename')    
     if data.ndim == 1:
-        data = data[:,np.newaxis] # el array debe ser 2D
+        data = data[:,np.newaxis] # array must be 2D
     kurt_confidence = 0.5
     excess_confidence = 0.9
     stdbup_confidence = 1.0
@@ -280,7 +299,7 @@ def irstats(ir, window=0.01, overlap=0.005, fs=48000):
 
 # echo density
 #
-#def find_modes # encuentra modos hasta una frecuencia
+#def find_modes # find modes up to a frequency
 
 #def sti # speech intelligibility
     

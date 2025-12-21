@@ -4,12 +4,12 @@ from pathlib import Path
 from irma.process import make_filterbank    
 
 def main():
-    #inicia audio
-    # lee archivo de configuracion fs
+    # start audio
+    # read configuration file fs
     fs = 48000
-    # crea banco de filtros
+    # create filter bank
     make_filterbank(fs = fs,bankname='fbank')
-    # Crea Ventanas
+    # create windows
     app = IRMA_ctk()
     #app.root.mainloop()
     while app.save_and_close == False:
