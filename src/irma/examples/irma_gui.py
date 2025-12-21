@@ -11,9 +11,9 @@ def main():
     make_filterbank(fs = fs,bankname='fbank')
     # create windows
     app = IRMA_ctk()
-    #app.root.mainloop()
-    while app.save_and_close == False:
-        app.root.update()
+    app.root.mainloop()
+    #while app.save_and_close == False:
+    #    app.root.update()
 
 
 if __name__ == "__main__":

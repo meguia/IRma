@@ -129,8 +129,11 @@ def irstat_plot(data, window=0.01, overlap=0.002, fs=48000, logscale=True, tmax=
     if axs is None:
         _, axs = plt.subplots(nchan,1,figsize=(18,3*nchan))
     irmax = np.max(np.abs(data))
+    irmax = irmax if irmax > 0 else 1.0
     kurtmax =  np.nanmax(pstat['kurtosis'])
+    kurtmax = kurtmax if np.isfinite(kurtmax) and (kurtmax != 0) else 1.0
     stdbupmax =  np.nanmax(pstat['stdbup'])
+    stdbupmax = stdbupmax if np.isfinite(stdbupmax) and (stdbupmax > 0) else 1.0
     if nchan==1:
         axs = [axs]
     for n in range(nchan):
@@ -145,8 +148,12 @@ def irstat_plot(data, window=0.01, overlap=0.002, fs=48000, logscale=True, tmax=
         axs[n].plot([pstat['tnoise'][0,n],pstat['tnoise'][0,n]],[-1,1],'c')
         if logscale:
             axs[n].set_xscale('log')
+            fmin_pos = max(1e-4,t[ndir[0,n]])
+            axs[n].set_xlim([fmin_pos, tmax])
+        else:
+            axs[n].set_xscale('linear')
+            axs[n].set_xlim([0.5*t[ndir[0,n]], tmax])
         axs[n].set_xlabel('Time (s)')
-        axs[n].set_xlim([0.5*t[ndir[0,n]],tmax])
         axs[n].legend()
         if n==0:
             axs[n].set_title('IMPULSE RESPONSE (Mixing Time)')
@@ -199,11 +206,14 @@ def spectrum_plot(data, logscale=False, fmax=12000, fs=48000, lrange=60, figsize
         if not overlay:
             axs[n].clear()
         if logscale:
-            axs[n].semilogx(sp['f'],sp['s'][n],label=labels[n])
-            axs[n].set_xlim([10,fmax])
+            axs[n].set_xscale("log")
+            axs[n].plot(sp["f"], sp["s"][n], label=labels[n])
+            fmin_pos = max(1.0, float(sp["f"][1]))
+            axs[n].set_xlim([fmin_pos, fmax])
         else:
-            axs[n].plot(sp['f'],sp['s'][n],label=labels[n])
-            axs[n].set_xlim([0,fmax])
+            axs[n].set_xscale("linear")
+            axs[n].plot(sp["f"], sp["s"][n], label=labels[n])
+            axs[n].set_xlim([0.0, fmax])
         axs[n].set_ylim([smin,smax])    
         axs[n].grid()
         if n==0:

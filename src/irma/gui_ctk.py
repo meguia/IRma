@@ -1,7 +1,18 @@
+# IRMA - Impulse Response Measurement and Analysis
+# 2020-2025 LAPSo - Laboratorio de Acústica y Percepción Sonora - Universidad Nacional de Quilmes
+# Licensed under MIT License - see LICENSE file in main directory
+# this file has blocks marked with #region and #endregion for better navigation
+# toggle the display of these blocks use the commands Ctrl+K and Ctrl+L in VSCode
+
+#region IMPORTS AND SETTINGS
 import customtkinter as ctk
+import os
 import csv
 import sounddevice as sd
-import time
+import pathlib
+import threading
+import queue
+import traceback
 from .generate import sweep
 from .process import ir_list_to_multichannel,make_filterbank,load_filterbank
 from .room import paracoustic
@@ -12,8 +23,9 @@ from .utils.audioutils import *
 
 ctk.set_appearance_mode("Dark")  
 ctk.set_default_color_theme("dark-blue")  
+#endregion
 
-# GENERATE SWEEP
+#region GENERATE SWEEP
 class GenerateSweep(ctk.CTkToplevel):
     def __init__(self, main_frame, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -57,7 +69,8 @@ class GenerateSweep(ctk.CTkToplevel):
         self.sweep_fmax = self.parent.validate_entry(self.sweep_fmax_entry, type='int')
         self.sweep_dur = self.parent.validate_entry(self.sweep_dur_entry, type='float')
         self.sweep_post = self.parent.validate_entry(self.sweep_post_entry, type='float')
-        self.sweep_rep = self.parent.validate_entry(self.sweep_rep_entry, type='int')
+        #self.sweep_rep = self.parent.validate_entry(self.sweep_rep_entry, type='int')
+        self.sweep_rep = 1 # not repetitions for session sweeps (to be added later)
 
         srkhz = self.sampling_rate//1000
         maxrange = self.sweep_fmax//1000
@@ -69,8 +82,9 @@ class GenerateSweep(ctk.CTkToplevel):
         self.parent.rewrite_entry(self.parent.sweep_file_entry,[self.sweepfile])
         self.parent.rewrite_textbox(self.parent.status,f"Sweep generated in {self.sweepfile}.wav")
         self.destroy()
+#endregion  
 
-# GENERATE FILTERBANK
+#region GENERATE FILTERBANK
 class GenerateFilterBank(ctk.CTkToplevel):
     def __init__(self, main_frame, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -131,9 +145,9 @@ class GenerateFilterBank(ctk.CTkToplevel):
         self.parent.parameter_table.draw_table()
         self.parent.parameter_table.edit_column(column=0,values=self.parent.parameter_table_keys)
         self.destroy()
-        
+#endregion        
 
-# MAIN WINDOW
+#region MAIN WINDOW
 class IRMA_ctk():
     def __init__(self):
         self.root = ctk.CTk()
@@ -143,7 +157,7 @@ class IRMA_ctk():
         self.root.geometry(f"{1200}x{700}")
         self.root.minsize(600, 400)
         #self.root.iconbitmap("src/irma/icon.ico")
-        self.root.protocol("WM_DELETE_WINDOW", self.root.quit)
+        self.root.protocol("WM_DELETE_WINDOW", self.stops)
         # initialization fonts
         self.fbig = ctk.CTkFont(family="Roboto", size=32)
         self.fnorm = ctk.CTkFont(family="Roboto", size=18)
@@ -158,8 +172,22 @@ class IRMA_ctk():
         self.create_static_widgets()
         self.create_settings_widgets()
         self.create_widgets()
+        # workers threading
+        self._worker_queue = queue.Queue()
+        self._worker_thread = None
+        self._test_input_queue = queue.Queue()
+        self._test_input_stop = threading.Event()
+        self._test_input_thread = None
+        self._test_output_queue = queue.Queue()
+        self._test_output_stop = threading.Event()
+        self._test_output_thread = None
+        self._busy = False
+        self._closing = False
+        self._after_ids = set()
 
-#STATIC WIDGETS
+#endregion
+
+#region STATIC WIDGETS
     def create_static_widgets(self):
         self.sidebar_frame = ctk.CTkFrame(self.root, width=140, corner_radius=0)
         self.sidebar_frame.grid(row=0, column=0, rowspan=2, sticky="nsew")
@@ -282,8 +310,9 @@ class IRMA_ctk():
         self.test_input_bar = ctk.CTkProgressBar(self.tab_settings, width=200, orientation='horizontal',mode='determinate')
         self.test_input_bar.grid(row=0, column=3, padx=10, pady=20, sticky="w")
         self.test_input_bar.set(0)    
+#endregion
 
-# WIDGETS
+#region WIDGETS
     def create_widgets(self):
         # sidebar frame with widgets
         self.sidebar_label_2 = ctk.CTkLabel(self.sidebar_frame, text=self.session_id.get(), text_color="#f5d2d2", font=self.fbig)
@@ -443,16 +472,15 @@ class IRMA_ctk():
         self.plot_decay_frame.grid(row=1, column=0, columnspan=8, sticky="nsew")
         self.image_decay_frame = ctk.CTkLabel(self.plot_decay_frame, image=None, text='')
         self.image_decay_frame.pack(fill=ctk.BOTH, expand=True)
-       
-# GEOMETRY
+#endregion
+
+#region GEOMETRY AND SESSION BUTTONS
     def change_appearance_mode_event(self, new_appearance_mode: str):
         ctk.set_appearance_mode(new_appearance_mode)
 
     def change_scaling_event(self, new_scaling: str):
         new_scaling_float = int(new_scaling.replace("%", "")) / 100
         ctk.set_widget_scaling(new_scaling_float)
-
-# SESSION BUTTONS
 
     def generate_sweep(self):
         if self.root.toplevel_window is None or not self.root.toplevel_window.winfo_exists():
@@ -477,28 +505,43 @@ class IRMA_ctk():
         filetypes = (('sweep files', 'sweep*.wav'),('wav files', '*.wav'),('npy files', '*.npy'))
         filename = ctk.filedialog.askopenfilename(title='Open a file',initialdir='./',filetypes=filetypes)
         self.sweep_file_entry.delete(0, ctk.END)    
-        self.sweep_file_entry.insert(ctk.END, filename.split(".")[-2])
-        self.sweep_file = filename.split(".")[-2]
+        self.sweep_file_entry.insert(ctk.END, os.path.splitext(filename)[0])
+        self.sweep_file = os.path.splitext(filename)[0]
+#endregion
 
-#SAVE CLEAR AND LOAD SESSION
+#region SAVE CLEAR AND LOAD SESSION
 
     def save_recording_session(self):
         #check if the recording session was created
         if self.recording_session is None:
-            #popup window warning
+            self.rewrite_textbox(self.status, "No session to save (create or load one first).")
             return
         #check if the recording session was saved
         #if self.recording_session.saved:
             #popup window warning
         #    return
         self.entries_to_pars()
-        print(self.pars)
         self.pars_to_session()
-        fname = self.session_id.get() + ".yaml"
-        self.recording_session.save_metadata(fname)
-        print("Session saved in: " + fname)
-        self.rewrite_textbox(self.status,f"Session saved in: {fname}")
-        #self.recording_session.saved = True
+        session_id = (self.pars.get("session_id") or "").strip()
+        if not session_id:
+            self.rewrite_textbox(self.status, "Session ID is empty; cannot save.")
+            return
+        recording_path = (self.pars.get("recording_path") or "").strip()
+        if not recording_path:
+            self.rewrite_textbox(self.status, "Recording path is empty; cannot save.")
+            return
+        outpath = pathlib.Path(recording_path) / f"{session_id}.yaml"
+
+        try:
+            self.recording_session.save_metadata(outpath)
+            msg = f"Session saved: {outpath}"
+            print(msg)
+            self.rewrite_textbox(self.status, msg)
+        except Exception as e:
+            print("Session save failed:", repr(e))
+            traceback.print_exc()
+            self.rewrite_textbox(self.status, f"Session save failed: {e!r}")
+            #self.recording_session.saved = True
         
     
     def load_recording_session(self):
@@ -634,7 +677,8 @@ class IRMA_ctk():
             sampling_rate=self.pars['sampling_rate'],
             rtype=self.rtype,
             recordingpath=self.recording_path,
-            sweepfile=self.sweep_file
+            sweepfile=self.sweep_file, 
+            sweeprep=1
         )
         print("Session created: " + self.pars['session_id'])
         self.rewrite_textbox(self.status,f"Session created: {self.pars['session_id']}")
@@ -658,8 +702,8 @@ class IRMA_ctk():
         self.recording_session.session_id = self.pars['session_id']
         self.recording_session.speakers = self.pars['speakers'] 
         self.recording_session.microphones = self.pars['microphones']
-        self.recording_session.inchan = self.pars['inchan']
-        self.recording_session.outchan = self.pars['outchan']
+        self.recording_session.input_channels = self.pars['inchan']
+        self.recording_session.output_channels = self.pars['outchan']
         self.recording_session.loopback = self.pars['loopback']
         self.recording_session.sampling_rate = self.pars['sampling_rate']
         self.recording_session.recording_path = self.pars['recording_path']
@@ -687,8 +731,9 @@ class IRMA_ctk():
             print("recording_path: " + self.recording_path)
         if self.sweep_file is not None:    
             print("sweep_file: " + self.sweep_file)
+#endregion
 
-# AUDIO AND RECORDING
+#region AUDIO SETTINGS AND TESTING
 
     def save_settings(self):
         assign_device(self.input_device.get(), self.output_device.get(),int(self.sampling_rate.get()))
@@ -696,49 +741,239 @@ class IRMA_ctk():
         self.rewrite_textbox(self.status,f"Settings saved")
 
     def test_input(self):
-        self.test_input_bar.start()
-        self.rewrite_textbox(self.status,f"Speak into the microphone...")
-        for _ in range(20):
-            temp=test_input_tic(self.input_device.get(), self.output_device.get(),int(self.sampling_rate.get()))
-            maxval = np.log10(np.max(np.abs(temp)))
-            self.test_input_bar.set(maxval)
-            self.root.update_idletasks()
-        self.rewrite_textbox(self.status,f"Maximum input level: {maxval}")    
+        # Prevent re-entry if already running
+        if self._test_input_thread is not None and self._test_input_thread.is_alive():
+            return
+        # UI setup (safe: main thread)
+        self._test_input_stop.clear()
+        self.test_input_button.configure(state="disabled")
         self.test_input_bar.set(0)
+        self.test_input_bar.start()
+        self.rewrite_textbox(self.status, "Speak into the microphone...")
+        # Start worker (background thread)
+        self._test_input_thread = threading.Thread(
+            target=self._test_input_worker,
+            daemon=True
+        )
+        self._test_input_thread.start()
+        self._after(50, self._poll_test_input_queue)
+
+    def _test_input_worker(self):
+        try:
+            max_db = -90.0 # floor for display
+            # 20 short measurements to get a stable reading
+            for _ in range(20):
+                if self._test_input_stop.is_set():
+                    self._test_input_queue.put(("cancelled", None))
+                    return
+
+                temp = test_input_tic(
+                    self.input_device.get(),
+                    self.output_device.get(),
+                    int(self.sampling_rate.get()),
+                    dur=0.3,
+                    stop_event=self._test_input_stop,
+                    blocksize=1024
+                )
+                if self._test_input_stop.is_set():
+                    self._test_input_queue.put(("cancelled", None))
+                    return
+                
+                peak = float(np.max(np.abs(temp))) if temp.size else 0.0
+                db = 20.0 * np.log10(max(peak, 1e-12))  # dBFS-like, range ~[-inf, 0]
+                max_db = max(max_db, db)
+                # Send progress to UI thread
+                self._test_input_queue.put(("progress", max_db))
+
+            self._test_input_queue.put(("done", max_db))
+        except Exception as e:
+            self._test_input_queue.put(("error", repr(e)))
+
+    def _poll_test_input_queue(self):
+        if self._closing:
+            return
+        finished = False
+        # Drain all queued messages quickly
+        try:
+            while True:
+                msg, payload = self._test_input_queue.get_nowait()
+                if msg == "progress_db":
+                    db = float(payload)
+                    p = self.db_to_progress(db, db_min=-90.0, db_max=0.0) 
+                    self.test_input_bar.set(p)
+
+                elif msg == "done":
+                    max_db = float(payload)
+                    self.rewrite_textbox(self.status, f"Maximum input level: {max_db:.1f} dB")
+                    finished = True
+                    break
+
+                elif msg == "cancelled":
+                    self.rewrite_textbox(self.status, "Input test cancelled.")
+                    finished = True
+                    break
+
+                elif msg == "error":
+                    self.rewrite_textbox(self.status, f"Test input failed:\n{payload}")
+                    finished = True
+                    break
+        except queue.Empty:
+            pass
+
+        if finished:
+            self._finish_test_input_ui()
+            return
+        # Not finished yet: reschedule only if worker is still alive
+        if self._test_input_thread is not None and self._test_input_thread.is_alive():
+            self._after(50, self._poll_test_input_queue)
+        else:
+            self.rewrite_textbox(self.status, "Input test ended unexpectedly.")
+            self._finish_test_input_ui()
+
+    def _finish_test_input_ui(self):
+        # cleanup UI (safe: main thread)
         self.test_input_bar.stop()
+        self.test_input_bar.set(0)
+        self.test_input_button.configure(state="normal")
+
+    def db_to_progress(db, db_min=-90.0, db_max=0.0):
+        # Map db_min -> 0, db_max -> 1
+        p = (db - db_min) / (db_max - db_min)
+        return float(np.clip(p, 0.0, 1.0))
 
     def test_output(self):
-        self.rewrite_textbox(self.status,f"Check your speakers...")
-        time.sleep(1)
-        test_output(self.input_device.get(),self.output_device.get(), int(self.sampling_rate.get()))    
+        # Prevent re-entry
+        if self._test_output_thread is not None and self._test_output_thread.is_alive():
+            return
+        self._test_output_stop.clear()
+        self.test_output_button.configure(state="disabled")
+        self.rewrite_textbox(self.status, "Playing output signal...")
+        # Start worker thread
+        self._test_output_thread = threading.Thread(
+            target=self._test_output_worker,
+            daemon=True
+        )
+        self._test_output_thread.start()
+        # Start polling
+        self._after(50, self._poll_test_output_queue)
+
+    def _test_output_worker(self):
+        try:
+            if self._test_output_stop.is_set():
+                self._test_output_queue.put(("cancelled", None))
+                return
+            test_output_tic(
+                self.input_device.get(),
+                self.output_device.get(),
+                int(self.sampling_rate.get()),
+                stop_event=self._test_output_stop
+            )
+            if self._test_output_stop.is_set():
+                self._test_output_queue.put(("cancelled", None))
+            else:
+                self._test_output_queue.put(("done", None))
+        except Exception as e:
+            self._test_output_queue.put(("error", repr(e)))
+
+    def _poll_test_output_queue(self):
+        if self._closing:
+            return
+        try:
+            msg, payload = self._test_output_queue.get_nowait()
+        except queue.Empty:
+            # Still working → poll again
+            if self._test_output_thread is not None and self._test_output_thread.is_alive():
+                self._after(50, self._poll_test_output_queue)
+            return
+        self.test_output_button.configure(state="normal")
+        if msg == "done":
+            self.rewrite_textbox(self.status, "Output signal played.")
+        elif msg == "cancelled":
+            self.rewrite_textbox(self.status, "Output test cancelled.")
+        elif msg == "error":
+            self.rewrite_textbox(self.status, f"Test output failed: {payload}")
+
+#endregion
+
+#region RECORDING
 
     def start_recording(self):
         print("start recording")
-        self.rewrite_textbox(self.status,f"Recording starting wait ....")
-        self.status.update_idletasks() 
+        if self.recording_session is None:
+            self.rewrite_textbox(self.status, "No session created/loaded.")
+            return
+        if self._busy:
+            self.rewrite_textbox(self.status, "Recording already running.")
+            return
+        self._busy = True
+        self.start_recording_button.configure(state="disabled")  # exists in UI? 
+        self.button_quit.configure(state="disabled")             # optional safety
+        self.rewrite_textbox(self.status, "Recording starting, please wait...")
+
+        #self.status.update_idletasks() 
         self.current_speaker = self.speaker_box.get()
         self.current_microphone = self.microphone_box.get()
         self.current_direction = self.direction_box.get()
         self.current_take = self.take_box.get()
         self.comment = self.comment_entry.get()
         textinfo=f"Parlante {self.current_speaker}, Microfono {self.current_microphone}, Direccion {self.current_direction}, Toma {self.current_take}"
-        #self.recording_session.start_recording()
-        ir_temp = self.recording_session.record_ir(
-            self.current_speaker,
-            self.current_microphone,
-            self.current_direction,
-            self.current_take,
-            self.comment
-        )
-        self.rewrite_textbox(self.status,f"Finished -> {textinfo}")
+        # Start worker thread
+        args = (self.current_speaker, self.current_microphone,
+            self.current_direction, self.current_take, self.comment, textinfo)
+        
+        self._worker_thread = threading.Thread(target=self._record_ir_worker,args=args,daemon=True)
+        self._worker_thread.start()
+
+        # Start polling for completion
+        self._after(100, self._poll_recording_worker)     
+      
+    def _record_ir_worker(self, speaker, microphone, direction, take, comment, textinfo):
+        try:
+            ir_temp = self.recording_session.record_ir(
+                speaker, microphone, direction, take, comment
+            )
+            # Send success back to UI thread
+            self._worker_queue.put(("ok", ir_temp, textinfo))
+        except Exception:
+            # Send error back to UI thread
+            self._worker_queue.put(("err", traceback.format_exc(), textinfo))
+
+    def _poll_recording_worker(self):
+        try:
+            msg = self._worker_queue.get_nowait()
+        except queue.Empty:
+            # Still working → poll again
+            self._after(100, self._poll_recording_worker)
+            return
+
+        kind, payload, textinfo = msg
+
+        # Re-enable controls (always)
+        self._busy = False
+        self.start_recording_button.configure(state="normal")
+        self.button_quit.configure(state="normal")
+
+        if kind == "err":
+            self.rewrite_textbox(self.status, f"Recording failed:\n{payload}")
+            return
+
+        # Success: payload is ir_temp
+        ir_temp = payload
+        self.rewrite_textbox(self.status, f"Finished -> {textinfo}")
         self.add_file()
-        #plot ir
-        fs = ctkstring_to_value(self.sampling_rate, type='int')
-        ir_plot(ir_temp[:,0], fs=fs, tmax=float(self.tmax.get()),axs=self.matplotlib_ir_axes)
+
+        fs = ctkstring_to_value(self.sampling_rate, type="int")
+        ir_plot(
+            ir_temp[:, 0],
+            fs=fs,
+            tmax=float(self.tmax.get()),
+            axs=self.matplotlib_ir_axes
+        )
         self.matplotlib_ir_frame.canvas.draw()
         self.matplotlib_ir_frame.canvas.flush_events()
+#endregion
 
-# DATA FILES        
+#region DATA FILES        
 
     def load_files(self):
         print("load files")
@@ -807,8 +1042,9 @@ class IRMA_ctk():
         self.select_key_box.set(self.rtmethod)
         self.parameter_table_keys = ['Band',self.rtmethod,'rvalue','EDT','C50','C80','TS','DRR','SNR']
         self.parameter_table.edit_column(column=0,values=self.parameter_table_keys)
+#endregion
 
-# ROOM ACOUSTICS
+#region ROOM ACOUSTICS
     def analyze(self):
         if len(self.ir_list) == 0:
             print("There are no IRs loaded")
@@ -873,9 +1109,9 @@ class IRMA_ctk():
             if (row > 0):
                     writer.writerow([key] + list(self.params[key][:,self.current_channel].round(decimals=2)))
         file.close()           
-
+#endregion
     
-# PLOTS
+#region PLOTS
 # TODO: move to a separate class
 
     def plot_params(self,key,labels):
@@ -947,9 +1183,9 @@ class IRMA_ctk():
         img = figure_to_image(fig,width=900,height=500)
         self.image_decay_frame.configure(image=img)
         return
+#endregion
 
-
-# UPDATE METHODS
+#region UPDATE AND STOP METHODS
 
     def update_window(self):
         if self.pars:
@@ -984,12 +1220,62 @@ class IRMA_ctk():
         self.update_window()
 
     def stops(self):
-        print("Stopping")
-        self.save_and_close = True    
-        #self.root.destroy()
+        if getattr(self, "_closing", False):
+            return
+        self._closing = True
 
-# VALIDATION METHODS
-# 
+        if getattr(self, "_busy", False):
+            self.rewrite_textbox(self.status, "Recording in progress. Please wait until it finishes.")
+            return
+        print("Stopping")
+        self.save_and_close = True
+        try:
+            self._test_input_stop.set()
+        except Exception:
+            pass
+        try:
+            self._test_output_stop.set()
+        except Exception:
+            pass
+        # stop any sounddevice streams
+        try:
+            sd.stop()
+        except Exception:
+            pass
+        # cancel scheduled callbacks
+        self._after_cancel_all()    
+        # exits mainloop
+        try:
+            self.root.quit()     
+        except Exception:
+            pass
+        # destroy window    
+        try:
+            self.root.destroy()
+        except Exception:
+            pass
+
+    def _after(self, ms, func, *args):
+        """Schedule a callback and track its ID so it can be cancelled on shutdown."""
+        if self._closing:
+            return None
+        after_id = self.root.after(ms, func, *args)
+        self._after_ids.add(after_id)
+        return after_id
+
+    def _after_cancel_all(self):
+        """Cancel all tracked callbacks (best-effort)."""
+        for after_id in list(self._after_ids):
+            try:
+                self.root.after_cancel(after_id)
+            except Exception:
+                pass
+        self._after_ids.clear()
+
+#endregion
+
+#region VALIDATION METHODS
+  
     def validate_entry(self,entry, type='string', empty_allowed=False):
         """
         Validate the entry based on the type.
@@ -1034,3 +1320,4 @@ class IRMA_ctk():
                 if value == "" and empty_allowed:
                     return None
                 return value
+#endregion            

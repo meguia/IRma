@@ -3,6 +3,8 @@ from scipy import signal
 from scipy.io import wavfile
 from scipy.stats import linregress, kurtosis
 from .process import make_filterbank, A_weighting, find_dir
+from .generate import sigmoid
+
 eps = np.finfo(float).eps
 
 def clamp(i, lo, hi):
@@ -191,34 +193,32 @@ def paracoustic(ir, method='RT20', bankname='fbank', tmax=3.0, fs_default=48000)
         pars['DRR'][n] = direct_to_reverb(data_filt,int(tnoise*fs),ndir,fs)
     return pars
 
-def direct_to_reverb(data, nmax, ndir=None, pw=1.0, fs=48000):
+def direct_to_reverb(data, nmax, ndir=None, pw=1.0, fs=48000, s=6.0):
     '''
     Compute the direct-to-reverberant energy ratio (DRR) for the given signal data.
     '''
+    if data.ndim == 1:
+        data = data[:, np.newaxis]  # array must be 2D
     nsamples,nchan = data.shape
     nmax = int(np.minimum(nmax, nsamples))
+
     if ndir is None:
         ndir = find_dir(data, pw=pw, fs=fs)  # assumed to return shape (2, nchan)
-    ddirmax = int(np.max(np.diff(ndir, axis=0)))
-    ddirmax = max(ddirmax, 1)
-    drevmin = int(nmax - np.max(ndir[1:]))
-    drevmin = max(drevmin, 1)
-    dirs = []
-    revs = []
-    for ch in range(nchan):
-        d0 = int(ndir[0, ch])
-        r0 = int(ndir[1, ch])
-        # Clamp slice bounds defensively
-        d1 = min(d0 + ddirmax, nsamples, nmax)
-        r1 = min(r0 + drevmin, nsamples, nmax)
-        dirs.append(data[d0:d1, ch])
-        revs.append(data[r0:r1, ch])
+    EDIR = np.zeros(nchan, dtype=float)
+    EREV = np.zeros(nchan, dtype=float)
 
-    EDIR = np.array([np.sum(seg.astype(np.float64)**2) for seg in dirs], dtype=np.float64)
-    EREV = np.array([np.sum(seg.astype(np.float64)**2) for seg in revs], dtype=np.float64)
-    # Avoid division by zero / log(0)
-    drr_db = 10.0 * np.log10((EDIR + eps) / (EREV + eps))
-    return  drr_db
+    t = np.arange(nmax)
+    for n in range(nchan):
+        ndr = int(min(max(ndir[1, n], 0), nmax))  # clamp
+        cross = sigmoid(t, ndr, s)   # 0 -> direct, 1 -> reverb (as in acoustics.py) :contentReference[oaicite:3]{index=3}
+        x = data[:nmax, n]
+        EDIR[n] = np.sum((x * (1.0 - cross))**2)
+        EREV[n] = np.sum((x * cross)**2)
+
+    # Aggregate across channels (typical DRR single number), but keep per-channel energies available
+    EDIR_tot = np.sum(EDIR)
+    EREV_tot = np.sum(EREV)
+    return 10.0 * np.log10((EDIR_tot + eps) / (EREV_tot + eps))
 
 
 
@@ -242,7 +242,7 @@ def find_echoes(data, nechoes=10, pw=1.0, fs=48000):
             echoes[m,1,n] = np.mean(np.square(data[a:b,n]))
             c = clamp(n0 - 3*nw, 0, nsamples)
             d = clamp(n0 + 3*nw, 0, nsamples)
-            data_copy[c:d,n] *= amp
+            data_copy[c:d,n] *= amp[:(d-c)]  # windowed attenuation
     return echoes
 
 def irstats(ir, window=0.01, overlap=0.005, fs=48000):
@@ -291,8 +291,16 @@ def irstats(ir, window=0.01, overlap=0.005, fs=48000):
     nmix = np.argmax(pars['stdexcess']>excess_confidence,axis=0)
     pars['mixing'][1,:] = pars['tframe'][nmix][:,0]
     for n in range(nchan):
-        stdb = signal.savgol_filter(10*np.log10(pars['std'][:,0]),51,3,axis=0)
-        pars['stdbup'][:,n] = stdb-np.nanmin(stdb)
+        std_safe = np.maximum(pars['std'][:, n], eps)
+        stdb_raw = 10.0 * np.log10(std_safe)
+        win = 51
+        if win > len(stdb_raw):
+            win = len(stdb_raw) if (len(stdb_raw) % 2 == 1) else max(1, len(stdb_raw) - 1)
+        if win >= 5:
+            stdb = signal.savgol_filter(stdb_raw, win, 3, axis=0)
+        else:
+            stdb = stdb_raw
+        pars['stdbup'][:,n] = stdb - np.nanmin(stdb)
     nnoise = np.argmax(pars['stdbup']<stdbup_confidence,axis=0)    
     pars['tnoise'][0,:] = pars['tframe'][nnoise][:,0]
     return pars    

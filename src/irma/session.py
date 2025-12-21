@@ -2,6 +2,7 @@ import os
 import yaml 
 import datetime
 import numpy as np
+import pathlib
 from scipy.io import wavfile
 from .generate import sweep
 from .io import play_rec
@@ -155,6 +156,8 @@ class RecordingSession:
                 raise ValueError("recording out of range") 
 
     def save_metadata(self, filename):
+        filename = pathlib.Path(filename)
+        filename.parent.mkdir(parents=True, exist_ok=True)
         metadata = {
             'session_id': self.session_id,
             'speakers': self.speakers,
@@ -172,16 +175,34 @@ class RecordingSession:
             'sweepfile': self.sweep_file,
             'recording_path': self.recording_path,
             'recordings': self.recordings,
-            'saved': self.saved
+            'saved': True,
         }
-        with open(filename, 'w') as file:
-            yaml.dump(metadata, file)
-        self.saved = True    
+        payload = self._to_builtin(metadata)
+        tmp = filename.with_suffix(filename.suffix + ".tmp")
+        with open(tmp, "w", encoding="utf-8") as f:
+            yaml.safe_dump(payload, f, sort_keys=False, allow_unicode=True)
+        tmp.replace(filename)
+        self.saved = True
+
+    def _to_builtin(self, obj):
+        #Convert numpy / Path-like types to plain Python types for YAML
+        import numpy as np
+        if isinstance(obj, pathlib.Path):
+            return str(obj)
+        if isinstance(obj, (np.integer, np.floating)):
+            return obj.item()
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        if isinstance(obj, dict):
+            return {str(k): self._to_builtin(v) for k, v in obj.items()}
+        if isinstance(obj, (list, tuple)):
+            return [self._to_builtin(v) for v in obj]
+        return obj
 
     @staticmethod
     def load_metadata(filename):
         with open(filename, 'r') as file:
-            metadata = yaml.load(file, Loader=yaml.FullLoader)
+            metadata = yaml.load(file, Loader=yaml.FullLoader) # trusted file
         session_id = metadata['session_id']
         speakers = metadata['speakers']
         microphones = metadata['microphones']

@@ -253,7 +253,7 @@ def make_filterbank(fmin=62.5,noct=8,bwoct=1,fs=48000,order=5,N=10000,bankname='
     Create a filter bank with noct octaves starting from frequency fmin with bwoct filters
     per octave using butterworth filters of order 'order' in sos format and saves it in 'bankname'
     '''
-    nfilt = (noct-1)*bwoct+1 # las octavas inicial y final inclusive
+    nfilt = (noct-1)*bwoct+1 # initial and final octaves inclusive
     fc = np.array([fmin* 2 ** (n * 1 / bwoct) for n in range(nfilt)])
     lf = 2. ** (-0.5/bwoct)*fc
     sos = np.zeros((nfilt,order,6),dtype=np.float64)
